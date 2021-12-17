@@ -6,4 +6,4 @@ occt version - https://git.dev.opencascade.org/gitweb/?p=occt.git;a=snapshot;h=8
 
 docker build -t xibyte/occt:wasm-builder_1.0 .
 
-docker run -it -v $(pwd)/build-wasm:/src xibyte/occt:builder_1.0 -i --entrypoint=/scripts/init-cmake.sh  
+docker run -it -v $(pwd)/build-wasm:/build xibyte/occt:wasm-builder_1.0 -i

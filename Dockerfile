@@ -28,3 +28,5 @@ COPY scripts /scripts
 RUN chmod -R 777 /scripts/
 
 WORKDIR /build
+
+ENTRYPOINT [ "/bin/bash" ]
