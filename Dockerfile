@@ -22,25 +22,9 @@ RUN \
     python3-setuptools \
     zlib1g-dev
 
-COPY occt ./occt
+COPY occt /occt
+COPY scripts /scripts
 
-RUN mkdir /build/ 
-WORKDIR /build/
-RUN emcmake cmake \
-  -DCMAKE_SUPPRESS_REGENERATION:BOOL=ON  \
-  -DBUILD_USE_PCH:BOOLEAN=OFF \
-  -DUSE_TBB:BOOLEAN=OFF \
-  -DBUILD_LIBRARY_TYPE=Static \
-  -DBUILD_SHARED_LIBS:BOOL=OFF \
-  -DBUILD_TESTING:BOOLEAN=OFF \
-  -DBUILD_MODULE_ApplicationFramework:BOOLEAN=OFF \
-  -DBUILD_MODULE_DataExchange:BOOLEAN=ON \
-  -DBUILD_MODULE_Draw:BOOLEAN=OFF \
-  -DBUILD_MODULE_FoundationClasses:BOOLEAN=ON \
-  -DBUILD_MODULE_MfcSamples:BOOLEAN=OFF \
-  -DBUILD_MODULE_ModelingAlgorithms:BOOLEAN=ON \
-  -DBUILD_MODULE_ModelingData:BOOLEAN=ON \
-  -DBUILD_MODULE_Visualization:BOOLEAN=OFF \
-  ../occt
+RUN chmod -R 777 /scripts/
 
-RUN emmake make -j16  
+WORKDIR /build
