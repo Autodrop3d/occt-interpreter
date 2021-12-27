@@ -18,7 +18,6 @@
 #include <Draw_Interpretor.hxx>
 #include <Draw_Appli.hxx>
 #include <DrawTrSurf.hxx>
-#include <DrawTrSurf_Curve2d.hxx>
 
 #include <Geom2d_Line.hxx>
 #include <Geom2d_Circle.hxx>
@@ -49,10 +48,6 @@
 
 #include <DBRep.hxx>
 #include <TopoDS.hxx>
-
-#ifdef _WIN32
-Standard_IMPORT Draw_Viewer dout;
-#endif
 
 static BRepMAT2d_BisectingLocus  MapBiLo;
 static BRepMAT2d_Explorer        anExplo;
@@ -193,77 +188,7 @@ static Standard_Integer result(Draw_Interpretor& , Standard_Integer, const char*
 void DrawCurve(const Handle(Geom2d_Curve)& aCurve,
 	       const Standard_Integer      Indice)
 {  
-  Handle(Standard_Type)      type = aCurve->DynamicType();
-  Handle(Geom2d_Curve)       curve,CurveDraw;
-  Handle(DrawTrSurf_Curve2d) dr;
-  Draw_Color                 Couleur;
-
-  if (type == STANDARD_TYPE(Geom2d_TrimmedCurve)) {
-    curve = Handle(Geom2d_TrimmedCurve)::DownCast (aCurve)->BasisCurve();
-    type = curve->DynamicType();    
-    if (type == STANDARD_TYPE(Bisector_BisecAna)) {
-      curve =Handle(Bisector_BisecAna)::DownCast (curve)->Geom2dCurve(); 
-      type = curve->DynamicType(); 
-    }
-    // PB of representation of semi_infinite curves.
-    gp_Parab2d gpParabola;
-    gp_Hypr2d  gpHyperbola;
-    Standard_Real Focus;
-    Standard_Real Limit = 50000.;
-    Standard_Real delta = 400;
-
-    // PB of representation of semi_infinite curves.
-    if (aCurve->LastParameter() == Precision::Infinite()) {
-      
-      if (type == STANDARD_TYPE(Geom2d_Parabola)) {
-	gpParabola = Handle(Geom2d_Parabola)::DownCast(curve)->Parab2d();
-	Focus = gpParabola.Focal();
-	Standard_Real Val1 = Sqrt(Limit*Focus);
-	Standard_Real Val2 = Sqrt(Limit*Limit);
-	              delta= (Val1 <= Val2 ? Val1:Val2);
-      }
-      else if (type == STANDARD_TYPE(Geom2d_Hyperbola)) {
-	gpHyperbola = Handle(Geom2d_Hyperbola)::DownCast(curve)->Hypr2d();
-	Standard_Real Majr  = gpHyperbola.MajorRadius();
-	Standard_Real Minr  = gpHyperbola.MinorRadius();
-	Standard_Real Valu1 = Limit/Majr;
-	Standard_Real Valu2 = Limit/Minr;
-	Standard_Real Val1  = Log(Valu1+Sqrt(Valu1*Valu1-1));
-	Standard_Real Val2  = Log(Valu2+Sqrt(Valu2*Valu2+1));
-	              delta  = (Val1 <= Val2 ? Val1:Val2);
-      }
-      if (aCurve->FirstParameter() == -Precision::Infinite())
-	CurveDraw = new Geom2d_TrimmedCurve(aCurve, -delta, delta);
-      else
-	CurveDraw = new Geom2d_TrimmedCurve(aCurve,
-					    aCurve->FirstParameter(),
-					    aCurve->FirstParameter() + delta);
-    }
-    else {
-      CurveDraw = aCurve;
-    }
-    // end PB.
-  }
-  else {
-    CurveDraw = aCurve;
-  }
-
-  if      (Indice == 1) Couleur = Draw_jaune;
-  else if (Indice == 2) Couleur = Draw_bleu;
-  else if (Indice == 3) Couleur = Draw_rouge;
-  else if (Indice == 4) Couleur = Draw_vert;
-
-  Standard_Integer Discret = 50;
-
-  if (type == STANDARD_TYPE(Geom2d_Circle))
-    dr = new DrawTrSurf_Curve2d(CurveDraw,Couleur,30,Standard_False);
-  else if (type  == STANDARD_TYPE(Geom2d_Line))
-    dr = new DrawTrSurf_Curve2d(CurveDraw,Couleur,2,Standard_False);
-  else
-    dr = new DrawTrSurf_Curve2d(CurveDraw,Couleur,Discret,Standard_False);
-
-  dout << dr;
-  dout.Flush();
+  
 }
 
 //==========================================================================

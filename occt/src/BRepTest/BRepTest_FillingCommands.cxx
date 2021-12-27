@@ -28,7 +28,6 @@
 
 #include <GeometryTest.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_Appli.hxx>
 #include <Draw_ProgressIndicator.hxx>
 #include <DrawTrSurf.hxx>
 #include <TopAbs_ShapeEnum.hxx>

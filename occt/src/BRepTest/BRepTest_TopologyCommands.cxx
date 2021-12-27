@@ -19,7 +19,6 @@
 #include <Draw_Interpretor.hxx>
 #include <DrawTrSurf.hxx>
 #include <Geom_Plane.hxx>
-#include <Draw_Appli.hxx>
 #include <BRep_Builder.hxx>
 
 #include <BRepFilletAPI_MakeFillet.hxx>

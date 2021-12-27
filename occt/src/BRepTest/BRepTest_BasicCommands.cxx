@@ -20,9 +20,7 @@
 #include <BRepTest.hxx>
 
 #include <DBRep.hxx>
-#include <Draw_Appli.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_Box.hxx>
 
 #include <BRepBuilderAPI.hxx>
 #include <BRepBuilderAPI_FindPlane.hxx>
@@ -48,21 +46,15 @@
 #include <Geom2dAdaptor_Curve.hxx>
 #include <GeomAdaptor_Curve.hxx>
 #include <ProjLib_ComputeApproxOnPolarSurface.hxx>
-#include <DrawTrSurf.hxx>
 #include <Geom_Plane.hxx>
 
 #include <OSD_Timer.hxx>
-#include <Draw_Segment3D.hxx>
-#include <Draw_Marker3D.hxx>
-#include <Draw_MarkerShape.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
 #include <BRepTools_PurgeLocations.hxx>
 #include <BRepTools.hxx>
 #include <Standard_Dump.hxx>
 
 #include <stdio.h>
-
-Standard_IMPORT Draw_Viewer dout;
 
 //=======================================================================
 //function : ConvertBndToShape
@@ -527,269 +519,7 @@ static Standard_Integer BoundBox(Draw_Interpretor& theDI,
                                  Standard_Integer theNArg,
                                  const char** theArgVal)
 {
-  // 1. Parse arguments
-
-  TopoDS_Shape aShape;
-  Bnd_Box anAABB;
-
-  Standard_Boolean doPrint = Standard_False;
-  Standard_Boolean doDumpJson = Standard_False;
-  Standard_Boolean useOldSyntax = Standard_False;
-  Standard_Boolean isOBB = Standard_False;
-  Standard_Boolean isTriangulationReq = Standard_True;
-  Standard_Boolean isOptimal = Standard_False;
-  Standard_Boolean isTolerUsed = Standard_False;
-  Standard_Boolean isFinitePart = Standard_False;
-  Standard_Boolean hasToDraw = Standard_True;
-  
-  TCollection_AsciiString anOutVars[6];
-  TCollection_AsciiString aResShapeName;
-  for (Standard_Integer anArgIter = 1; anArgIter < theNArg; ++anArgIter)
-  {
-    TCollection_AsciiString anArgCase (theArgVal[anArgIter]);
-    anArgCase.LowerCase();
-    if (anArgCase == "-obb")
-    {
-      isOBB = Standard_True;
-    }
-    else if (anArgCase == "-aabb")
-    {
-      isOBB = Standard_False;
-    }
-    else if (anArgCase == "-shape"
-          && anArgIter + 1 < theNArg
-          && aResShapeName.IsEmpty())
-    {
-      aResShapeName = theArgVal[++anArgIter];
-      hasToDraw = Standard_False;
-    }
-    else if (anArgCase == "-dump"
-          || anArgCase == "-print")
-    {
-      doPrint = Standard_True;
-    }
-    else if (anArgCase == "-dumpjson")
-    {
-      doDumpJson = Standard_True;
-    }
-    else if (anArgCase == "-save"
-          && anArgIter + 6 < theNArg
-          && anOutVars[0].IsEmpty())
-    {
-      for (int aCompIter = 0; aCompIter < 6; ++aCompIter)
-      {
-        anOutVars[aCompIter] = theArgVal[anArgIter + aCompIter + 1];
-      }
-      anArgIter += 6;
-    }
-    else if (anArgCase == "-notriangulation")
-    {
-      isTriangulationReq = Standard_False;
-    }
-    else if (anArgCase == "-optimal")
-    {
-      isOptimal = Standard_True;
-    }
-    else if (anArgCase == "-exttoler")
-    {
-      isTolerUsed = Standard_True;
-    }
-    else if (anArgCase == "-nodraw")
-    {
-      hasToDraw = Standard_False;
-    }
-    else if (anArgCase == "-finite"
-          || anArgCase == "-finitepart")
-    {
-      isFinitePart = Standard_True;
-    }
-    else if (aShape.IsNull()
-         && !DBRep::Get (theArgVal[anArgIter]).IsNull())
-    {
-      aShape = DBRep::Get (theArgVal[anArgIter]);
-    }
-    else if (anAABB.IsVoid()
-          && anArgIter + 5 < theNArg
-          && parseMinMax (theArgVal + anArgIter, anAABB))
-    {
-      anArgIter += 5;
-    }
-    else
-    {
-      Message::SendFail() << "Syntax error at argument '" << theArgVal[anArgIter] << "'";
-      return 1;
-    }
-  }
-
-  if (anAABB.IsVoid()
-   && aShape.IsNull())
-  {
-    Message::SendFail() << "Syntax error: input is not specified (neither shape nor coordinates)";
-    return 1;
-  }
-  else if (!anAABB.IsVoid()
-        && (isOBB || isOptimal || isTolerUsed))
-  {
-    Message::SendFail() << "Syntax error: Options -obb, -optimal and -extToler cannot be used for explicitly defined AABB";
-    return 1;
-  }
-  else if (isOBB
-       && !anOutVars[0].IsEmpty())
-  {
-    Message::SendFail() << "Error: Option -save works only with axes-aligned boxes";
-    return 1;
-  }
-
-  // enable printing (old syntax) if neither saving to shape nor to DRAW variables is requested
-  if (! doPrint && ! doDumpJson && anOutVars[0].IsEmpty() && aResShapeName.IsEmpty())
-  {
-    doPrint = Standard_True;
-    useOldSyntax = Standard_True;
-  }
-
-  // 2. Compute box and save results
-  Handle(Draw_Box) aDB;
-  if (isOBB)
-  {
-    Bnd_OBB anOBB;
-    BRepBndLib::AddOBB(aShape, anOBB, isTriangulationReq, isOptimal, isTolerUsed);
-
-    if (anOBB.IsVoid())
-    {
-      theDI << "Void box.\n";
-    }
-    else if (doPrint)
-    {
-      const gp_Pnt &aBaryCenter= anOBB.Center();
-      const gp_XYZ &aXDir = anOBB.XDirection(),
-                   &aYDir = anOBB.YDirection(),
-                   &aZDir = anOBB.ZDirection();
-      theDI << "Oriented bounding box\n";
-      theDI << "Center: " << aBaryCenter.X() << " " << 
-                             aBaryCenter.Y() << " " <<
-                             aBaryCenter.Z() << "\n";
-      theDI << "X-axis: " << aXDir.X() << " " << aXDir.Y() << " " << aXDir.Z() << "\n";
-      theDI << "Y-axis: " << aYDir.X() << " " << aYDir.Y() << " " << aYDir.Z() << "\n";
-      theDI << "Z-axis: " << aZDir.X() << " " << aZDir.Y() << " " << aZDir.Z() << "\n";
-      theDI << "Half X: " << anOBB.XHSize() << "\n"
-            << "Half Y: " << anOBB.YHSize() << "\n"
-            << "Half Z: " << anOBB.ZHSize() << "\n";
-    }
-
-    if (doDumpJson)
-    {
-      Standard_SStream aStream;
-      anOBB.DumpJson (aStream);
-
-      theDI << "Oriented bounding box\n";
-      theDI << Standard_Dump::FormatJson (aStream);
-    }
-
-    if (hasToDraw
-    && !anOBB.IsVoid())
-    {
-      aDB = new Draw_Box (anOBB, Draw_orange);
-    }
-
-    if (!aResShapeName.IsEmpty())
-    {
-      ConvertBndToShape (anOBB, aResShapeName.ToCString());
-    }
-  }
-  else // if(!isOBB)
-  {
-    if (!aShape.IsNull())
-    {
-      anAABB.SetVoid ();
-      if(isOptimal)
-      {
-        BRepBndLib::AddOptimal (aShape, anAABB, isTriangulationReq, isTolerUsed);
-      }
-      else
-      {
-        BRepBndLib::Add (aShape, anAABB, isTriangulationReq);
-      }
-    }
-
-    if (anAABB.IsVoid())
-    {
-      theDI << "Void box.\n";
-    }
-    else
-    {
-      if (isFinitePart && anAABB.IsOpen())
-      {
-        anAABB = anAABB.FinitePart();
-      }
-      const gp_Pnt aMin = anAABB.CornerMin();
-      const gp_Pnt aMax = anAABB.CornerMax();
-
-      // print to DRAW
-      if (doPrint)
-      {
-        if (useOldSyntax)
-        {
-          theDI << aMin.X() << " " << aMin.Y() << " " << aMin.Z() << " "
-                << aMax.X() << " " << aMax.Y() << " " << aMax.Z() << "\n";
-        }
-        else
-        {
-          theDI << "Axes-aligned bounding box\n";
-          theDI << "X-range: " << aMin.X() << " " << aMax.X() << "\n"
-                << "Y-range: " << aMin.Y() << " " << aMax.Y() << "\n"
-                << "Z-range: " << aMin.Z() << " " << aMax.Z() << "\n";
-          if (anAABB.IsOpen()
-           && anAABB.HasFinitePart())
-          {
-            Bnd_Box aFinitAabb = anAABB.FinitePart();
-            const gp_Pnt aFinMin = aFinitAabb.CornerMin();
-            const gp_Pnt aFinMax = aFinitAabb.CornerMax();
-            theDI << "Finite part\n";
-            theDI << "X-range: " << aFinMin.X() << " " << aFinMax.X() << "\n"
-                  << "Y-range: " << aFinMin.Y() << " " << aFinMax.Y() << "\n"
-                  << "Z-range: " << aFinMin.Z() << " " << aFinMax.Z() << "\n";
-          }
-        }
-      }
-
-      if (doDumpJson)
-      {
-        Standard_SStream aStream;
-        anAABB.DumpJson (aStream);
-
-        theDI << "Bounding box\n";
-        theDI << Standard_Dump::FormatJson (aStream);
-      }
-
-      // save DRAW variables
-      if (!anOutVars[0].IsEmpty())
-      {
-        Draw::Set (anOutVars[0].ToCString(), aMin.X());
-        Draw::Set (anOutVars[1].ToCString(), aMin.Y());
-        Draw::Set (anOutVars[2].ToCString(), aMin.Z());
-        Draw::Set (anOutVars[3].ToCString(), aMax.X());
-        Draw::Set (anOutVars[4].ToCString(), aMax.Y());
-        Draw::Set (anOutVars[5].ToCString(), aMax.Z());
-      }
-
-      // add presentation to DRAW viewer
-      if (hasToDraw)
-      {
-        aDB = new Draw_Box (anAABB, Draw_orange);
-      }
-    }
-
-    // save as shape
-    if (!aResShapeName.IsEmpty())
-    {
-      ConvertBndToShape (anAABB, aResShapeName.ToCString());
-    }
-  }
-
-  if (!aDB.IsNull())
-  {
-    dout << aDB;
-  }
+  theDI << "interactive commands are not suuported" << "\n";
   return 0;
 }
 
@@ -922,8 +652,8 @@ static Standard_Integer gbounding(Draw_Interpretor& di,Standard_Integer n,const 
     if (Is3d)
     {
       B.Get(axmin,aymin,azmin,axmax,aymax,azmax);
-      DB = new Draw_Box(B, Draw_vert);
-      dout<<DB;
+      // DB = new Draw_Box(B, Draw_vert);
+      // dout<<DB;
       di << axmin<<" "<< aymin<<" "<< azmin<<" "<< axmax<<" "<< aymax<<" "<< azmax;
     }
     else
@@ -933,11 +663,11 @@ static Standard_Integer gbounding(Draw_Interpretor& di,Standard_Integer n,const 
       gp_Pnt2d p2(axmax, aymin);
       gp_Pnt2d p3(axmax, aymax);
       gp_Pnt2d p4(axmin, aymax);
-      Draw_Segment2D* S1 = new Draw_Segment2D(p1, p2, Draw_vert);
-      Draw_Segment2D* S2 = new Draw_Segment2D(p2, p3, Draw_vert);
-      Draw_Segment2D* S3 = new Draw_Segment2D(p3, p4, Draw_vert);
-      Draw_Segment2D* S4 = new Draw_Segment2D(p4, p1, Draw_vert);
-      dout << S1 << S2 << S3 << S4;
+      // Draw_Segment2D* S1 = new Draw_Segment2D(p1, p2, Draw_vert);
+      // Draw_Segment2D* S2 = new Draw_Segment2D(p2, p3, Draw_vert);
+      // Draw_Segment2D* S3 = new Draw_Segment2D(p3, p4, Draw_vert);
+      // Draw_Segment2D* S4 = new Draw_Segment2D(p4, p1, Draw_vert);
+      // dout << S1 << S2 << S3 << S4;
       di << axmin<<" "<< aymin<<" "<< axmax<<" "<< aymax;
     }
   }
@@ -993,82 +723,7 @@ static Standard_Integer precision(Draw_Interpretor& di,Standard_Integer n,const 
 
 static Standard_Integer reperageshape(Draw_Interpretor& di, Standard_Integer narg , const char** a) 
 {
-  Standard_Integer details=0;
-  if(narg<2) return 1;
-  if(narg==3) details=1;
-  const char *id1 = a[1];
-  TopoDS_Shape TheShape1 = DBRep::Get(id1);
-  
-  //std::cout << "Pick positions with button "<<std::endl;
-  di << "Pick positions with button \n";
-  Standard_Integer id,X,Y,b;
-  gp_Trsf T;
-  gp_Pnt P1,P2;
-  dout.Select(id,X,Y,b);
-  
-  dout.GetTrsf(id,T);
-  T.Invert();
-  Standard_Real z = dout.Zoom(id);
-  P2.SetCoord((Standard_Real)X /z,(Standard_Real)Y /z, 0.0);
-  P2.Transform(T);
-  P1.SetCoord((Standard_Real)X /z,(Standard_Real)Y /z,-1.0);
-  P1.Transform(T);
-  
-  
-  gp_Ax1 Axe(P1,gp_Vec(P1,P2));
-  IntCurvesFace_ShapeIntersector Inter;
-  Inter.Load(TheShape1,1e-7);
-  
-  Inter.Perform(Axe,-RealLast(),RealLast());
-  
-  //std::cout<<"\n --> ";
-  di <<"\n --> ";
-  if(Inter.NbPnt()) { 
-    for(Standard_Integer i=1; i<=Inter.NbPnt(); i++) { 
-      Standard_Integer numface=1;
-      TopExp_Explorer ExF;
-      for(ExF.Init(TheShape1,TopAbs_FACE);
-	  ExF.More();
-	  ExF.Next(),numface++) { 
-	TopoDS_Face Face=TopoDS::Face(ExF.Current());
-	if(Face.IsEqual(Inter.Face(i))) { 
-	  //std::cout<<" "<<a[1]<<"_"<<numface;
-	  di<<" "<<a[1]<<"_"<<numface;
-	  continue;	  
-	}
-      }
-      const gp_Pnt& P = Inter.Pnt(i);
-      Standard_Real PMin = Inter.WParameter(i);
-      if(details) { 
-	//std::cout<<" w:"<<PMin<<std::endl;
-	di<<" w:"<<PMin<< "\n";
-      }
-      if(Inter.Transition(i) == IntCurveSurface_In) { 
-	if(Inter.State(i) == TopAbs_IN) { 
-	  Handle(Draw_Marker3D) p = new Draw_Marker3D(P, Draw_Square, Draw_rouge,2); 
-	  dout << p;   dout.Flush();
-	}
-	else if(Inter.State(i) == TopAbs_ON) { 
-	  Handle(Draw_Marker3D) p = new Draw_Marker3D(P, Draw_Square, Draw_vert,2); 
-	  dout << p;   dout.Flush();
-	}
-      }
-      else { 
-	if(Inter.Transition(i) == IntCurveSurface_Out) { 
-	  if(Inter.State(i) == TopAbs_IN) { 
-	    Handle(Draw_Marker3D) p = new Draw_Marker3D(P, Draw_X, Draw_rouge,2); 
-	    dout << p;   dout.Flush();
-	  }
-	  else if(Inter.State(i) == TopAbs_ON) { 
-	    Handle(Draw_Marker3D) p = new Draw_Marker3D(P, Draw_X, Draw_vert,2); 
-	    dout << p;   dout.Flush();
-	  }
-	} 
-      }
-    }
-  }
-  //std::cout<<std::endl;
-  di << "\n";
+  di << "interactive commands are not suuported" << "\n";
   return(0);
 }
 
@@ -1140,74 +795,7 @@ static Standard_Integer maxtolerance(Draw_Interpretor& theCommands,
 
 
 static Standard_Integer vecdc(Draw_Interpretor& di,Standard_Integer ,const char** ) {
-  //std::cout << "Pick positions with button "<<std::endl;
-  di << "Pick positions with button \n";
-
-  Standard_Integer id,X,Y,b;
-  gp_Trsf T;
-  gp_Pnt P1,P2,PP1,PP2;
-  
-  //-----------------------------------------------------------
-  dout.Select(id,X,Y,b);    dout.GetTrsf(id,T);
-  T.Invert();
-  Standard_Real z = dout.Zoom(id);
-  P1.SetCoord((Standard_Real)X /z,(Standard_Real)Y /z,0.0);
-  P1.Transform(T);
-  
-  dout.Select(id,X,Y,b);  dout.GetTrsf(id,T);
-  T.Invert();  z = dout.Zoom(id);
-  
-  P2.SetCoord((Standard_Real)X /z,(Standard_Real)Y /z,0.0);
-  P2.Transform(T);
-  Standard_Real xa,ya,za;
-  if(Abs(P1.X())>Abs(P2.X())) xa = P1.X(); else xa = P2.X();
-  if(Abs(P1.Y())>Abs(P2.Y())) ya = P1.Y(); else ya = P2.Y();
-  if(Abs(P1.Z())>Abs(P2.Z())) za = P1.Z(); else za = P2.Z();
-  P1.SetCoord(xa,ya,za);
-  Handle(Draw_Marker3D) D0 = new Draw_Marker3D(gp_Pnt(P1.X(),
-						      P1.Y(),
-						      P1.Z()),
-					       Draw_Square,Draw_blanc,1);
-  
-  dout << D0;
-  dout.Flush();
-  //-----------------------------------------------------------
-  dout.Select(id,X,Y,b);  
-  dout.GetTrsf(id,T);
-  T.Invert();
-  z = dout.Zoom(id);
-  PP1.SetCoord((Standard_Real)X /z,(Standard_Real)Y /z,0.0);
-  PP1.Transform(T);
-  dout.Select(id,X,Y,b);
-  dout.GetTrsf(id,T);
-  T.Invert();
-  z = dout.Zoom(id);
-  PP2.SetCoord((Standard_Real)X /z,(Standard_Real)Y /z,0.0);
-  PP2.Transform(T);
-  if(Abs(PP1.X())>Abs(PP2.X())) xa = PP1.X(); else xa = PP2.X();
-  if(Abs(PP1.Y())>Abs(PP2.Y())) ya = PP1.Y(); else ya = PP2.Y();
-  if(Abs(PP1.Z())>Abs(PP2.Z())) za = PP1.Z(); else za = PP2.Z();
-  PP1.SetCoord(xa,ya,za);
-  Handle(Draw_Segment3D) d = new Draw_Segment3D(P1,PP1,Draw_blanc);
-  dout << d;
-  dout.Flush();
-  //std::cout<<"\nttran   "<<PP1.X()-P1.X()<<" "<<PP1.Y()-P1.Y()<<" "<<PP1.Z()-P1.Z()<<std::endl;
-  di <<"\nttran   "<<PP1.X()-P1.X()<<" "<<PP1.Y()-P1.Y()<<" "<<PP1.Z()-P1.Z()<< "\n";
-
-  static Standard_Integer nboxvecdp=0;
-  //std::cout<<"\nbox  b"<<++nboxvecdp<<" "<<Min(P1.X(),PP1.X())<<" "<<Min(P1.Y(),PP1.Y())<<" "<<Min(PP1.Z(),P1.Z());
-  //std::cout<<"  "<<Abs(PP1.X()-P1.X())<<" "<<Abs(PP1.Y()-P1.Y())<<" "<<Abs(PP1.Z()-P1.Z())<<std::endl;
-
-  //std::cout<<"\nDistance :"<<sqrt( (PP1.X()-P1.X())*(PP1.X()-P1.X())
-	//		     +(PP1.Y()-P1.Y())*(PP1.Y()-P1.Y())
-	//		     +(PP1.Z()-P1.Z())*(PP1.Z()-P1.Z()))<<std::endl;
-
-  di <<"\nbox  b"<<++nboxvecdp<<" "<<Min(P1.X(),PP1.X())<<" "<<Min(P1.Y(),PP1.Y())<<" "<<Min(PP1.Z(),P1.Z());
-  di <<"  "<<Abs(PP1.X()-P1.X())<<" "<<Abs(PP1.Y()-P1.Y())<<" "<<Abs(PP1.Z()-P1.Z())<< "\n";
-
-  di <<"\nDistance :"<<sqrt( (PP1.X()-P1.X())*(PP1.X()-P1.X())
-			     +(PP1.Y()-P1.Y())*(PP1.Y()-P1.Y())
-			     +(PP1.Z()-P1.Z())*(PP1.Z()-P1.Z()))<< "\n";
+  di << "interactive commands are not suuported" << "\n";
   return(0);
 }
 //=======================================================================

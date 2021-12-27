@@ -40,7 +40,7 @@ void  BRepTest::AllCommands(Draw_Interpretor& theCommands)
   BRepTest::FilletCommands(theCommands);
   BRepTest::ChamferCommands(theCommands);
   BRepTest::GPropCommands(theCommands);
-  BRepTest::MatCommands(theCommands);
+  // BRepTest::MatCommands(theCommands);
   BRepTest::DraftAngleCommands(theCommands);
   BRepTest::FeatureCommands(theCommands);
   BRepTest::OtherCommands(theCommands);
@@ -51,8 +51,8 @@ void  BRepTest::AllCommands(Draw_Interpretor& theCommands)
   BRepTest::HistoryCommands(theCommands);
 
   // define the TCL variable Draw_TOPOLOGY
-  const char* com = "set Draw_TOPOLOGY 1";
-  theCommands.Eval(com);
+  // const char* com = "set Draw_TOPOLOGY 1";
+  // theCommands.Eval(com);
 }
 
 

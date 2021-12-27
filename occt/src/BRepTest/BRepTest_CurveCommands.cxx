@@ -52,12 +52,7 @@
 #include <TopoDS_Wire.hxx>
 
 #include <DBRep.hxx>
-#include <DBRep_DrawableShape.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_Appli.hxx>
-#include <DrawTrSurf.hxx>
-#include <DrawTrSurf_BSplineCurve2d.hxx>
-#include <DrawTrSurf_Point.hxx>
 
 #include <gp.hxx>
 #include <Precision.hxx>
@@ -69,9 +64,7 @@
 #include <TopOpeBRepDS_Transition.hxx>
 
 #include <stdio.h>
-#ifdef _WIN32
-Standard_IMPORT Draw_Viewer dout;
-#endif
+
 
 //=======================================================================
 // vertex
@@ -96,9 +89,10 @@ static Standard_Integer vertex(Draw_Interpretor& , Standard_Integer n, const cha
   }
   else
   {
-    Handle(DrawTrSurf_Point) aP =
-      Handle(DrawTrSurf_Point)::DownCast(Draw::Get(a[2]));
-    DBRep::Set(a[1], BRepBuilderAPI_MakeVertex(aP->Point()));
+    throw "unsupported";
+    // Handle(DrawTrSurf_Point) aP =
+    //   Handle(DrawTrSurf_Point)::DownCast(Draw::Get(a[2]));
+    // DBRep::Set(a[1], BRepBuilderAPI_MakeVertex(aP->Point()));
   }
   return 0;
 }
@@ -970,231 +964,7 @@ static Standard_Integer bsplineprof(Draw_Interpretor& di,
 {
   // this command build a profile
   // from a moving point
-
-  if (n == 1) {
-    // print help
-
-    //std::cout << " bsplineprof name [S face] [W WW]  "              << std::endl;
-    //std::cout << " for an edge : <digitizes> ... <mouse button 2> " << std::endl ;
-    //std::cout << " to end profile : <mouse button 3> "              << std::endl ;
-    //std::cout << "  Build a profile in the XY plane from digitizes" << std::endl ;
-    //std::cout << "  By default the profile is closed and a face is built\n";
-    //std::cout << "\n";
-    //std::cout << "  W                              Make a closed wire\n";
-    //std::cout << "  WW                             Make an open wire\n";
-    //std::cout << std::endl;
-    di << " bsplineprof name [S face] [W WW]  "              << "\n";
-    di << " for an edge : <digitizes> ... <mouse button 2> " <<  "\n";
-    di << " to end profile : <mouse button 3> "              <<  "\n";
-    di << "  Build a profile in the XY plane from digitizes" <<  "\n";
-    di << "  By default the profile is closed and a face is built\n";
-    di << "\n";
-    di << "  W                              Make a closed wire\n";
-    di << "  WW                             Make an open wire\n";
-    di << "\n";
-    return 0;
-  }
-
-  gp_Pnt2d last_point(0.0e0,
-    0.0e0) ;
-  gp_Pnt2d first_point(0.0e0,
-    0.0e0) ;
-  Standard_Integer i = 2;
-  Standard_Boolean wait = Standard_True;
-//  Standard_Real x0 = 0, y0 = 0, x = 0, y = 0, dx = 1, dy = 0;
-  Standard_Real x = 0, y = 0, dx = 1, dy = 0;
-  BRepBuilderAPI_MakeWire MW;
-  gp_Ax3 DummyHP(gp::XOY());
-  gp_Pln P(DummyHP);
-  Standard_Boolean face  = Standard_True;
-  Standard_Boolean close = Standard_True;
-//  Standard_Boolean first = Standard_True;
-  Standard_Boolean isplanar  = Standard_True;
-  Standard_Real  length ; 
-  TopoDS_Shape S;
-  TopLoc_Location TheLocation;
-  Handle(Geom_Surface) Surface;
-  if (n > 2) {
-    while (i < n) {
-
-      switch (a[i][0]) {
-
-      case 'S':
-      case 's':
-        i += 1;
-        {
-          TopoDS_Shape aLocalShape(DBRep::Get(a[i],TopAbs_FACE));
-          TopoDS_Face Face = TopoDS::Face(aLocalShape);
-//    TopoDS_Face Face = TopoDS::Face(DBRep::Get(a[i],TopAbs_FACE));
-          if (Face.IsNull()) {
-            di << "profile : no face found";
-            return 1;
-          }
-          Surface = BRep_Tool::Surface(Face,TheLocation);
-          Handle(Geom_Plane) Plane = Handle(Geom_Plane)::DownCast(Surface);
-          if ( Plane.IsNull()) {
-            isplanar = Standard_False;
-          }
-          else 
-            P = Plane->Pln();
-        }
-        i += 1 ;
-        break;
-
-      case 'W':
-      case 'w':
-        face = Standard_False;
-        if ((a[i][1] == 'W') || (a[i][1] == 'w')) {
-          close = Standard_False;
-        }
-        i = n-1;
-        break;
-
-      default:
-        di <<"profile : unknown code " << a[i];
-        return 1;
-      }
-    }
-  }
-//
-//  to be done : close the profile using the first point of the contour
-//               and the point taken with mouse button 3 
-//
-  Handle(Geom2d_BSplineCurve) C ;
-  Handle(Geom_Curve) curve3d_ptr ;
-  Standard_Integer id, ii;
-  Standard_Integer X,Y,b, not_done;
-  Standard_Integer num_points = 0  ;
-  gp_Pnt2d a_point(  0.0e0,
-    0.0e0) ;
-  Handle(TColgp_HArray1OfPnt2d) points_array_ptr = 
-    new TColgp_HArray1OfPnt2d(1, 1);               
-  Handle(TColgp_HArray1OfPnt2d) new_points_array_ptr ;
-
-  not_done = 1 ;
-  while (not_done) {
-
-    dout.Select(id,X,Y,b,wait);
-    Standard_Real z = dout.Zoom(id);
-    a_point.SetCoord(1,(Standard_Real)X /z) ;
-    a_point.SetCoord(2,(Standard_Real)Y /z) ;
-    if (num_points == 0) {
-      points_array_ptr = 
-        new TColgp_HArray1OfPnt2d(1, 1); 
-      points_array_ptr->ChangeArray1()(1) = a_point ;
-      first_point = a_point ;
-
-    }
-    num_points += 1 ;
-    if (num_points >= 2) {
-      new_points_array_ptr = 
-        new TColgp_HArray1OfPnt2d(1, num_points);
-      for (ii = 1 ; ii <= num_points -1 ; ii++) {
-        new_points_array_ptr->ChangeArray1()(ii) =
-          points_array_ptr->Array1()(ii) ;
-      }
-      new_points_array_ptr->ChangeArray1()(num_points) = a_point ;
-      Geom2dAPI_Interpolate    a2dInterpolator(new_points_array_ptr,
-        Standard_False,
-        1.0e-5) ;
-      a2dInterpolator.Perform() ;
-      if (a2dInterpolator.IsDone()) { 
-        C = a2dInterpolator.Curve() ;
-        curve3d_ptr =
-          GeomAPI::To3d(C,P) ;
-        DrawTrSurf::Set(a[1], curve3d_ptr);
-        dout.RepaintView(id);
-      }
-      points_array_ptr = new_points_array_ptr ;
-
-    }
-
-    if (b == 2 || b == 3) {
-      if (num_points == 2)  {
-        x = last_point.Coord(1) ;
-        y = last_point.Coord(2) ;
-        dx = a_point.Coord(1) - x ;
-        dy = a_point.Coord(2) - y ;
-        gp_Vec2d a_vector(dx,
-          dy) ;
-        length = a_vector.Magnitude() ;
-        Handle(Geom2d_Line) l = 
-          new Geom2d_Line(gp_Pnt2d(x,y),gp_Dir2d(dx,dy));
-        if (isplanar) {
-          MW.Add(BRepBuilderAPI_MakeEdge(GeomAPI::To3d(l,P),0,length));
-        }
-        else { 
-          MW.Add(BRepBuilderAPI_MakeEdge(l,Surface,0,length));
-        }
-
-      }
-      else if (num_points > 2) {
-        if (isplanar) {
-          MW.Add(BRepBuilderAPI_MakeEdge(curve3d_ptr,
-            curve3d_ptr->FirstParameter(),
-            curve3d_ptr->LastParameter()));
-        }
-        else { 
-          MW.Add(BRepBuilderAPI_MakeEdge(C,
-            Surface,
-            C->FirstParameter(),
-            C->LastParameter()));
-        }
-      }
-      if (num_points >= 2) {
-        last_point = a_point ;
-        points_array_ptr->ChangeArray1()(1) = a_point ;
-        num_points = 1 ;
-        DBRep::Set(a[1], MW.Wire()) ;
-      }      
-
-
-    }
-    if (b == 3) {
-      not_done = 0 ; 
-    }
-  }
-  a_point = first_point ;
-  if (close) {
-
-    x = last_point.Coord(1) ;
-    y = last_point.Coord(2) ;
-    dx = a_point.Coord(1) - x ;
-    dy = a_point.Coord(2) - y ;
-    gp_Vec2d a_vector(dx,
-      dy) ;
-    length = a_vector.Magnitude() ;
-    Handle(Geom2d_Line) l = 
-      new Geom2d_Line(gp_Pnt2d(x,y),gp_Dir2d(dx,dy));
-    if (isplanar)
-      MW.Add(BRepBuilderAPI_MakeEdge(GeomAPI::To3d(l,P),0,length));
-    else 
-      MW.Add(BRepBuilderAPI_MakeEdge(l,Surface,0,length));
-  }
-  if (face) {
-    if ( isplanar)
-      S = BRepBuilderAPI_MakeFace(P,MW.Wire());
-    else {
-      BRepBuilderAPI_MakeFace MFace;
-      MFace.Init(Surface,Standard_False,Precision::Confusion());
-      MFace.Add(MW.Wire());
-      S = MFace.Face();
-    }
-  }
-  else {
-    S = MW;
-  }
-
-  if (!TheLocation.IsIdentity())
-    S.Move(TheLocation);
-
-  if ( !isplanar) {
-    Standard_Real Tol = 1.e-5;
-    BRepLib::BuildCurves3d(S,Tol);
-  }
-
-  DBRep::Set(a[1],S);
-
+  di << "interactive commands are not suuported" << "\n";
   return 0;
 }
 

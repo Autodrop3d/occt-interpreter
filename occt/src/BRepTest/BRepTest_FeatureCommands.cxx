@@ -15,9 +15,6 @@
 // commercial license or contractual agreement.
 
 #include <Draw_Interpretor.hxx>
-#include <Draw_Appli.hxx>
-#include <DrawTrSurf.hxx>
-#include <Draw_ProgressIndicator.hxx>
 
 #include <TopTools_ListOfShape.hxx>
 #include <TopTools_ListIteratorOfListOfShape.hxx>
@@ -60,7 +57,6 @@
 #include <BRep_Tool.hxx>
 #include <BRep_Builder.hxx>
 #include <DBRep.hxx>
-#include <DBRep_DrawableShape.hxx>
 #include <BRepTest.hxx>
 #include <BRepTest_Objects.hxx>
 
@@ -69,11 +65,6 @@
 #include <Message.hxx>
 
 #include <Precision.hxx>
-
-#ifdef _WIN32
-//#define strcasecmp _stricmp Already defined
-Standard_IMPORT Draw_Viewer dout;
-#endif
 
 static BRepFeat_MakeCylindricalHole& getHole()
 {
@@ -240,7 +231,7 @@ static Standard_Integer Loc(Draw_Interpretor& theCommands,
   if (!BLoc.HasErrors()) {
     //    dout.Clear();
     DBRep::Set(a[1], BLoc.Shape());
-    dout.Flush();
+    // dout.Flush();
     return 0;
   }
   theCommands << "Local operation not done";
@@ -276,7 +267,7 @@ static Standard_Integer HOLE1(Draw_Interpretor& theCommands,
   {
     //    dout.Clear();
     DBRep::Set(a[1], getHole().Shape());
-    dout.Flush();
+    // dout.Flush();
     return 0;
   }
   theCommands << "Echec de MakeCylindricalHole";
@@ -303,7 +294,7 @@ static Standard_Integer HOLE2(Draw_Interpretor& theCommands,
   {
     //    dout.Clear();
     DBRep::Set(a[1], getHole().Shape());
-    dout.Flush();
+    // dout.Flush();
     return 0;
   }
   theCommands << "Echec de MakeCylindricalHole";
@@ -328,7 +319,7 @@ static Standard_Integer HOLE3(Draw_Interpretor& theCommands,
   if (!getHole().HasErrors()) {
     //    dout.Clear();
     DBRep::Set(a[1], getHole().Shape());
-    dout.Flush();
+    // dout.Flush();
     return 0;
   }
   theCommands << "Echec de MakeCylindricalHole";
@@ -356,7 +347,7 @@ static Standard_Integer HOLE4(Draw_Interpretor& theCommands,
   {
     //    dout.Clear();
     DBRep::Set(a[1], getHole().Shape());
-    dout.Flush();
+    // dout.Flush();
     return 0;
   }
   theCommands << "Echec de MakeCylindricalHole";
@@ -606,7 +597,7 @@ static Standard_Integer PRW(Draw_Interpretor& theCommands,
   }
 
   DBRep::Set(a[2], thePFace);
-  dout.Flush();
+  // dout.Flush();
   return 0;
 }
 
@@ -771,7 +762,7 @@ static Standard_Integer PRF(Draw_Interpretor& theCommands,
   }
 
   DBRep::Set(a[2], thePFace);
-  dout.Flush();
+  // dout.Flush();
   return 0;
 }
 
@@ -1358,7 +1349,7 @@ static Standard_Integer ROW(Draw_Interpretor& theCommands,
   }
 
   DBRep::Set(a[2], theRFace);
-  dout.Flush();
+  // dout.Flush();
   return 0;
 }
 
@@ -1509,7 +1500,7 @@ static Standard_Integer ROF(Draw_Interpretor& theCommands,
   }
 
   DBRep::Set(a[2], theRFace);
-  dout.Flush();
+  // dout.Flush();
   return 0;
 }
 
@@ -1579,7 +1570,7 @@ static Standard_Integer GLU(Draw_Interpretor&,
   }
 
   DBRep::Set(a[1], theGl);
-  dout.Flush();
+  // dout.Flush();
   return 0;
 }
 
@@ -2101,7 +2092,7 @@ static Standard_Integer PERF(Draw_Interpretor& theCommands,
       return 1;
     }
     DBRep::Set(a[2], getPrism());
-    dout.Flush();
+    // dout.Flush();
     //History 
     if (BRepTest_Objects::IsHistoryNeeded())
     {
@@ -2132,7 +2123,7 @@ static Standard_Integer PERF(Draw_Interpretor& theCommands,
       BRepTest_Objects::SetHistory(anArgs, getRevol());
     }
     DBRep::Set(a[2], getRevol());
-    dout.Flush();
+    // dout.Flush();
     return 0;
   case 3:
     if (!getPipe().IsDone())
@@ -2154,7 +2145,7 @@ static Standard_Integer PERF(Draw_Interpretor& theCommands,
       BRepTest_Objects::SetHistory(anArgs, getPipe());
     }
     DBRep::Set(a[2], getPipe());
-    dout.Flush();
+    // dout.Flush();
     return 0;
   case 4:
     if (!getDPrism().IsDone())
@@ -2176,7 +2167,7 @@ static Standard_Integer PERF(Draw_Interpretor& theCommands,
       BRepTest_Objects::SetHistory(anArgs, getDPrism());
     }
     DBRep::Set(a[2], getDPrism());
-    dout.Flush();
+    // dout.Flush();
     return 0;
   case 5:
     if (!getLienarForm().IsDone())
@@ -2189,7 +2180,7 @@ static Standard_Integer PERF(Draw_Interpretor& theCommands,
       return 1;
     }
     DBRep::Set(a[2], getLienarForm());
-    dout.Flush();
+    // dout.Flush();
     return 0;
   case 6:
     if (!getRevolutionForm().IsDone())
@@ -2202,7 +2193,7 @@ static Standard_Integer PERF(Draw_Interpretor& theCommands,
       return 1;
     }
     DBRep::Set(a[2], getRevolutionForm());
-    dout.Flush();
+    // dout.Flush();
     return 0;
   default:
     return 1;
@@ -2272,7 +2263,7 @@ static Standard_Integer BOSS(Draw_Interpretor& theCommands,
       }
     }
     DBRep::Set(a[2], theShapeTop);
-    dout.Flush();
+    // dout.Flush();
 
     B.MakeCompound(TopoDS::Compound(theShapeBottom));
     it.Initialize(theLatEdges);
@@ -2280,7 +2271,7 @@ static Standard_Integer BOSS(Draw_Interpretor& theCommands,
       B.Add(theShapeBottom, it.Value());
     }
     DBRep::Set(a[3], theShapeBottom);
-    dout.Flush();
+    // dout.Flush();
     if (Kas == 1) return 0;
   }
 
@@ -2360,7 +2351,7 @@ static Standard_Integer BOSS(Draw_Interpretor& theCommands,
     else if (Kas == 3) {
       DBRep::Set(a[2], res);
     }
-    dout.Flush();
+    // dout.Flush();
 
     // Save history for fillet
     if (BRepTest_Objects::IsHistoryNeeded())

@@ -23,7 +23,7 @@
 #include <GeometryTest.hxx>
 #include <DrawTrSurf.hxx>
 #include <Draw.hxx>
-#include <Draw_Appli.hxx>
+
 #include <Draw_Interpretor.hxx>
 #include <Geom2dGcc_Circ2d2TanRad.hxx>
 #include <Geom2dGcc_Circ2d3Tan.hxx>
@@ -65,9 +65,6 @@
 #include <GC_MakeArcOfCircle.hxx>
 
 #include <stdio.h>
-#ifdef _WIN32
-Standard_IMPORT Draw_Viewer dout;
-#endif
 Standard_IMPORT Draw_Color DrawTrSurf_CurveColor(const Draw_Color);
 
 
@@ -397,187 +394,6 @@ static Standard_Integer lintang (Draw_Interpretor& di,Standard_Integer n, const 
 static Standard_Integer interpol (Draw_Interpretor& di,Standard_Integer n, const char** a)
 //==================================================================================
 {
-  if (n == 1) {
-    di <<"give a name to your curve !\n";
-    return 0;
-  }
-  if (n == 2) {
-    Standard_Integer id,XX,YY,b, i, j;
-    di << "Pick points \n";
-    dout.Select(id, XX, YY, b);
-    Standard_Real zoom = dout.Zoom(id);
-    if (b != 1) return 0;
-    if (id < 0) return 0;
-    gp_Pnt P;
-    gp_Pnt2d P2d;
-    Standard_Boolean newcurve;
-
-    if (dout.Is3D(id)) {
-      Handle(Draw_Marker3D) mark;
-      Handle(TColgp_HArray1OfPnt) Points = new TColgp_HArray1OfPnt(1, 1);
-      P.SetCoord((Standard_Real)XX/zoom,(Standard_Real)YY/zoom, 0.0);
-      Points->SetValue(1 , P);
-      Handle(TColgp_HArray1OfPnt) ThePoints = new TColgp_HArray1OfPnt(1, 2);
-      ThePoints->SetValue(1 , P);
-      mark = new Draw_Marker3D(Points->Value(1), Draw_X, Draw_vert);
-      dout << mark;
-      dout.Flush();
-      Handle(Geom_BSplineCurve) C;
-      i = 1;
-
-      while (b != 3) {
-        dout.Select(id,XX,YY,b, Standard_False);
-        P.SetCoord((Standard_Real)XX/zoom,(Standard_Real)YY/zoom, 0.0);
-        ThePoints->SetValue(i+1, P);
-        newcurve = Standard_False;
-        if (!(ThePoints->Value(i)).IsEqual(ThePoints->Value(i+1), 1.e-06)) {
-          if (b == 1) { 
-            i++;
-            mark = new Draw_Marker3D(ThePoints->Value(i), Draw_X, Draw_vert);
-            dout << mark;
-            dout.Flush();
-            Points = 
-              new TColgp_HArray1OfPnt(ThePoints->Lower(),ThePoints->Upper());
-            Points->ChangeArray1() = ThePoints->Array1();
-            newcurve = Standard_True;
-          }
-          GeomAPI_Interpolate anInterpolator(ThePoints,
-            Standard_False,
-            1.0e-5);
-          anInterpolator.Perform() ;
-          if (anInterpolator.IsDone()) {
-            C = anInterpolator.Curve() ;
-            Handle(DrawTrSurf_BSplineCurve) 
-              DC = new DrawTrSurf_BSplineCurve(C);
-            DC->ClearPoles();
-            DC->ClearKnots();
-            Draw::Set(a[1], DC);
-            dout.RepaintView(id);
-          }
-          if (newcurve) {
-            ThePoints = new TColgp_HArray1OfPnt(1, i+1);
-            for (j = 1; j <= i; j++) ThePoints->SetValue(j, Points->Value(j));
-          }
-        }
-      }
-      GeomAPI_Interpolate anInterpolator(ThePoints,
-        Standard_False,
-        1.0e-5);
-      anInterpolator.Perform() ;
-      if (anInterpolator.IsDone()) {
-        C = anInterpolator.Curve() ;
-        DrawTrSurf::Set(a[1], C);
-        dout.RepaintView(id);
-      }      
-    }
-    else {
-      Handle(Draw_Marker2D) mark;
-      Handle(TColgp_HArray1OfPnt2d) Points = new TColgp_HArray1OfPnt2d(1, 1);
-      P2d.SetCoord((Standard_Real)XX/zoom,(Standard_Real)YY/zoom);
-      Points->SetValue(1 , P2d);
-      Handle(TColgp_HArray1OfPnt2d) ThePoints = new TColgp_HArray1OfPnt2d(1, 2);
-      ThePoints->SetValue(1, P2d);
-      mark = new Draw_Marker2D(P2d, Draw_X, Draw_vert);
-      dout << mark;
-      dout.Flush();
-      Handle(Geom2d_BSplineCurve) C;
-      i = 1;
-
-      while (b != 3) {
-        dout.Select(id,XX,YY,b, Standard_False);
-        P2d.SetCoord((Standard_Real)XX/zoom,(Standard_Real)YY/zoom);
-        ThePoints->SetValue(i+1, P2d);
-        newcurve = Standard_False;
-        if (!(ThePoints->Value(i)).IsEqual(ThePoints->Value(i+1), 1.e-06)) {
-          if (b == 1) { 
-            i++;
-            mark = new Draw_Marker2D(P2d, Draw_X, Draw_vert);
-            dout << mark;
-            dout.Flush();
-            Points = 
-              new TColgp_HArray1OfPnt2d(ThePoints->Lower(),ThePoints->Upper());
-            Points->ChangeArray1() = ThePoints->Array1();
-            newcurve = Standard_True;
-          }
-          Geom2dAPI_Interpolate    a2dInterpolator(ThePoints,
-            Standard_False,
-            1.0e-5) ;
-          a2dInterpolator.Perform() ;
-          if (a2dInterpolator.IsDone()) { 
-            C = a2dInterpolator.Curve() ;
-
-            Handle(DrawTrSurf_BSplineCurve2d) 
-              DC = new DrawTrSurf_BSplineCurve2d(C);
-            DC->ClearPoles();
-            DC->ClearKnots();
-            Draw::Set(a[1], DC);
-            dout.RepaintView(id);
-          }
-
-          if (newcurve) {
-            ThePoints = new TColgp_HArray1OfPnt2d(1, i+1);
-            for (j = 1; j <= i; j++) ThePoints->SetValue(j, Points->Value(j));
-          }
-        }
-      }
-      Geom2dAPI_Interpolate    a2dInterpolator(Points,
-        Standard_False,
-        1.0e-5) ;
-      a2dInterpolator.Perform() ;
-      if (a2dInterpolator.IsDone()) { 
-        C = a2dInterpolator.Curve() ;
-
-        DrawTrSurf::Set(a[1], C);
-        dout.RepaintView(id); 
-      }
-
-    }
-  }
-  else if (n == 3) {
-    // lecture du fichier.
-    // nbpoints, 2d ou 3d, puis valeurs.
-    const char* nomfic = a[2];
-    std::ifstream iFile(nomfic, std::ios::in);
-    if (!iFile) return 1;
-    Standard_Integer nbp, i;
-    Standard_Real x, y, z;
-    iFile >> nbp;
-    char dimen[3];
-    iFile >> dimen;
-    if (!strcmp(dimen,"3d")) {
-      Handle(TColgp_HArray1OfPnt) Point =
-        new TColgp_HArray1OfPnt(1, nbp);
-      for (i = 1; i <= nbp; i++) {
-        iFile >> x >> y >> z;
-        Point->SetValue(i, gp_Pnt(x, y, z));
-      }
-      GeomAPI_Interpolate  anInterpolator(Point,
-        Standard_False,
-        1.0e-5) ;
-      anInterpolator.Perform() ;
-      if (anInterpolator.IsDone()) { 
-        Handle(Geom_BSplineCurve) C = 
-          anInterpolator.Curve();
-        DrawTrSurf::Set(a[1], C);
-      }
-    }
-    else if (!strcmp(dimen,"2d")) {
-      Handle(TColgp_HArray1OfPnt2d)  PointPtr = 
-        new TColgp_HArray1OfPnt2d(1, nbp);
-      for (i = 1; i <= nbp; i++) {
-        iFile >> x >> y;
-        PointPtr->SetValue(i, gp_Pnt2d(x, y));
-      }
-      Geom2dAPI_Interpolate   a2dInterpolator(PointPtr,
-        Standard_False,
-        1.0e-5);
-      a2dInterpolator.Perform() ;
-      if (a2dInterpolator.IsDone()) {
-        Handle(Geom2d_BSplineCurve) C = a2dInterpolator.Curve() ;
-        DrawTrSurf::Set(a[1], C);
-      }
-    }
-  }
   return 0;
 }
 

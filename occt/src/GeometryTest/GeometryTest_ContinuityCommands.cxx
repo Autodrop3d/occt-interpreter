@@ -24,7 +24,6 @@
 #include <DrawTrSurf.hxx>
 #include <GeometryTest.hxx>
 #include <GeomAbs_Shape.hxx>
-#include <Draw_Appli.hxx>
 #include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
 #include <Message.hxx>

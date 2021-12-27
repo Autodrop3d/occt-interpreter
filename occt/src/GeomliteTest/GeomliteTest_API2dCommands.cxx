@@ -22,8 +22,6 @@
 #include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
 #include <DrawTrSurf.hxx>
-#include <Draw_Appli.hxx>
-#include <DrawTrSurf_Curve2d.hxx>
 #include <Geom2dAPI_ProjectPointOnCurve.hxx>
 #include <Geom2dAPI_ExtremaCurveCurve.hxx>
 #include <Geom2dAPI_Interpolate.hxx>
@@ -33,9 +31,6 @@
 #include <Geom2d_TrimmedCurve.hxx>
 #include <TColgp_Array1OfPnt2d.hxx>
 #include <gp_Pnt.hxx>
-#include <Draw_Marker2D.hxx>
-#include <Draw_Color.hxx>
-#include <Draw_MarkerShape.hxx>
 #include <TColStd_Array1OfReal.hxx>
 #include <GeomAbs_Shape.hxx>
 #include <Precision.hxx>
@@ -50,9 +45,6 @@
 
 #include <memory>
 #include <stdio.h>
-#ifdef _WIN32
-Standard_IMPORT Draw_Viewer dout;
-#endif
 
 //=======================================================================
 //function : proj
@@ -423,25 +415,25 @@ static Standard_Integer intersect(Draw_Interpretor& di, Standard_Integer n, cons
       di << "Intersection type: " <<
         (aPInt.TransitionOfFirst().IsTangent() ? "TOUCH" : "INTERSECTION") << "\n";
     }
-    Handle(Draw_Marker2D) mark = new Draw_Marker2D(P, Draw_X, Draw_vert);
-    dout << mark;
+    // Handle(Draw_Marker2D) mark = new Draw_Marker2D(P, Draw_X, Draw_vert);
+    // dout << mark;
   }
-  dout.Flush();
+  // dout.Flush();
 
   Handle(Geom2d_Curve) S1, S2;
-  Handle(DrawTrSurf_Curve2d) CD;
+  // Handle(DrawTrSurf_Curve2d) CD;
   Standard_Integer aNbSegments = Intersector.NbSegments();
   for (Standard_Integer i = 1; i <= aNbSegments; i++)
   {
     di << "Segment #" << i << " found.\n";
     Intersector.Segment(i,S1,S2);
-    CD = new DrawTrSurf_Curve2d(S1, Draw_bleu, 30);
-    dout << CD;
-    CD = new DrawTrSurf_Curve2d(S2, Draw_violet, 30);
-    dout << CD;
+    // CD = new DrawTrSurf_Curve2d(S1, Draw_bleu, 30);
+    // dout << CD;
+    // CD = new DrawTrSurf_Curve2d(S2, Draw_violet, 30);
+    // dout << CD;
   }
 
-  dout.Flush();
+  // dout.Flush();
   return 0;
 }
 
@@ -475,10 +467,10 @@ static Standard_Integer intersect_ana(Draw_Interpretor& di, Standard_Integer n, 
     di << "Intersection point " << i << " : " << P.X() << " " << P.Y() << "\n";
     di << "parameter on the fist: " << Intersector.Point(i).ParamOnFirst();
     di << " parameter on the second: " << Intersector.Point(i).ParamOnSecond() << "\n";
-    Handle(Draw_Marker2D) mark = new Draw_Marker2D(P, Draw_X, Draw_vert);
-    dout << mark;
+    // Handle(Draw_Marker2D) mark = new Draw_Marker2D(P, Draw_X, Draw_vert);
+    // dout << mark;
   }
-  dout.Flush();
+  // dout.Flush();
   return 0;
 }
 
@@ -582,8 +574,8 @@ static Standard_Integer intconcon(Draw_Interpretor& di, Standard_Integer n, cons
     {
       di << "\n";
     }
-    Handle(Draw_Marker2D) mark = new Draw_Marker2D( P, Draw_X, Draw_vert); 
-    dout << mark;
+    // Handle(Draw_Marker2D) mark = new Draw_Marker2D( P, Draw_X, Draw_vert); 
+    // dout << mark;
   }
   dout.Flush();
   return 0;

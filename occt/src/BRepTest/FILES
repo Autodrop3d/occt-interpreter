@@ -14,7 +14,6 @@ BRepTest_FilletCommands.cxx
 BRepTest_FillingCommands.cxx
 BRepTest_GPropCommands.cxx
 BRepTest_HistoryCommands.cxx
-BRepTest_MatCommands.cxx
 BRepTest_Objects.cxx
 BRepTest_Objects.hxx
 BRepTest_OtherCommands.cxx

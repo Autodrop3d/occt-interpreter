@@ -17,20 +17,9 @@
 // 09/06/97 : JPI : suppression des commandes redondantes suite a la creation de GeomliteTest
 
 #include <GeometryTest.hxx>
-#include <Draw_Appli.hxx>
 #include <DrawTrSurf.hxx>
-#include <DrawTrSurf_Curve.hxx>
-#include <DrawTrSurf_Curve2d.hxx>
-#include <DrawTrSurf_BezierCurve.hxx>
-#include <DrawTrSurf_BSplineCurve.hxx>
-#include <DrawTrSurf_BezierCurve2d.hxx>
-#include <DrawTrSurf_BSplineCurve2d.hxx>
-#include <Draw_Marker3D.hxx>
-#include <Draw_Marker2D.hxx>
-#include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_Color.hxx>
-#include <Draw_Display.hxx>
+#include <Draw.hxx>
 
 #include <GeomAPI.hxx>
 #include <GeomAPI_IntCS.hxx>
@@ -134,9 +123,6 @@
 #include <GCPnts_UniformAbscissa.hxx>
 #include <DBRep.hxx>
 
-#ifdef _WIN32
-Standard_IMPORT Draw_Viewer dout;
-#endif
 
 //=======================================================================
 //function : polecurve2d
@@ -979,14 +965,14 @@ static Standard_Integer crvpoints (Draw_Interpretor& di, Standard_Integer /*n*/,
   aMults(nbp) = 2;
 
   Handle(Geom_BSplineCurve) aPnts = new Geom_BSplineCurve(aPoles, aKnots, aMults, 1);
-  Handle(DrawTrSurf_BSplineCurve) aDrCrv = new DrawTrSurf_BSplineCurve(aPnts);
+  // Handle(DrawTrSurf_BSplineCurve) aDrCrv = new DrawTrSurf_BSplineCurve(aPnts);
 
-  aDrCrv->ClearPoles();
-  Draw_Color aKnColor(Draw_or);
-  aDrCrv->SetKnotsColor(aKnColor);
-  aDrCrv->SetKnotsShape(Draw_Plus);
+  // aDrCrv->ClearPoles();
+  // Draw_Color aKnColor(Draw_or);
+  // aDrCrv->SetKnotsColor(aKnColor);
+  // aDrCrv->SetKnotsShape(Draw_Plus);
 
-  Draw::Set(a[1], aDrCrv);
+  // Draw::Set(a[1], aDrCrv);
 
   Standard_Real dmax = 0., ufmax = 0., ulmax = 0.;
   Standard_Integer imax = 0;
@@ -1053,14 +1039,14 @@ static Standard_Integer crvtpoints (Draw_Interpretor& di, Standard_Integer n, co
   aMults(nbp) = 2;
 
   Handle(Geom_BSplineCurve) aPnts = new Geom_BSplineCurve(aPoles, aKnots, aMults, 1);
-  Handle(DrawTrSurf_BSplineCurve) aDrCrv = new DrawTrSurf_BSplineCurve(aPnts);
+  // Handle(DrawTrSurf_BSplineCurve) aDrCrv = new DrawTrSurf_BSplineCurve(aPnts);
 
-  aDrCrv->ClearPoles();
-  Draw_Color aKnColor(Draw_or);
-  aDrCrv->SetKnotsColor(aKnColor);
-  aDrCrv->SetKnotsShape(Draw_Plus);
+  // aDrCrv->ClearPoles();
+  // Draw_Color aKnColor(Draw_or);
+  // aDrCrv->SetKnotsColor(aKnColor);
+  // aDrCrv->SetKnotsShape(Draw_Plus);
 
-  Draw::Set(a[1], aDrCrv);
+  // Draw::Set(a[1], aDrCrv);
 
   Standard_Real dmax = 0., ufmax = 0., ulmax = 0.;
   Standard_Integer imax = 0;
@@ -1422,14 +1408,14 @@ static Standard_Integer mypoints (Draw_Interpretor& di, Standard_Integer /*n*/, 
   aMults(nbp) = 2;
 
   Handle(Geom_BSplineCurve) aPnts = new Geom_BSplineCurve(aPoles, aKnots, aMults, 1);
-  Handle(DrawTrSurf_BSplineCurve) aDrCrv = new DrawTrSurf_BSplineCurve(aPnts);
+  // Handle(DrawTrSurf_BSplineCurve) aDrCrv = new DrawTrSurf_BSplineCurve(aPnts);
 
-  aDrCrv->ClearPoles();
-  Draw_Color aKnColor(Draw_or);
-  aDrCrv->SetKnotsColor(aKnColor);
-  aDrCrv->SetKnotsShape(Draw_Plus);
+  // aDrCrv->ClearPoles();
+  // Draw_Color aKnColor(Draw_or);
+  // aDrCrv->SetKnotsColor(aKnColor);
+  // aDrCrv->SetKnotsShape(Draw_Plus);
 
-  Draw::Set(a[1], aDrCrv);
+  // Draw::Set(a[1], aDrCrv);
 
   Standard_Real dmax = 0., ufmax = 0., ulmax = 0.;
   Standard_Integer imax = 0;
@@ -1491,14 +1477,14 @@ static Standard_Integer surfpoints (Draw_Interpretor& /*di*/, Standard_Integer /
 
   Handle(Geom_BSplineSurface) aPnts = new Geom_BSplineSurface(aPoles, anUKnots,  aVKnots, 
 							      anUMults, aVMults, 1, 1);
-  Handle(DrawTrSurf_BSplineSurface) aDrSurf = new DrawTrSurf_BSplineSurface(aPnts);
+  // Handle(DrawTrSurf_BSplineSurface) aDrSurf = new DrawTrSurf_BSplineSurface(aPnts);
 
-  aDrSurf->ClearPoles();
-  Draw_Color aKnColor(Draw_or);
-  aDrSurf->SetKnotsColor(aKnColor);
-  aDrSurf->SetKnotsShape(Draw_Plus);
+  // aDrSurf->ClearPoles();
+  // Draw_Color aKnColor(Draw_or);
+  // aDrSurf->SetKnotsColor(aKnColor);
+  // aDrSurf->SetKnotsShape(Draw_Plus);
 
-  Draw::Set(a[1], aDrSurf);
+  // Draw::Set(a[1], aDrSurf);
 
 
   return 0;
@@ -1722,7 +1708,7 @@ static Standard_Integer intersection (Draw_Interpretor& di,
     }
   }
 
-  dout.Flush();
+  // dout.Flush();
   return 0;
 }
 

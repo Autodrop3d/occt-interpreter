@@ -76,7 +76,7 @@ protected:
 private:
 
 friend class BOPTest_Objects;
-friend class BOPTest_DrawableShape;
+// friend class BOPTest_DrawableShape;
 
 };
 

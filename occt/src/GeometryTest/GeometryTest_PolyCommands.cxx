@@ -15,11 +15,7 @@
 // commercial license or contractual agreement.
 
 
-#include <Draw_Appli.hxx>
 #include <DrawTrSurf.hxx>
-#include <DrawTrSurf_Polygon2D.hxx>
-#include <DrawTrSurf_Polygon3D.hxx>
-#include <DrawTrSurf_Triangulation.hxx>
 #include <GeometryTest.hxx>
 #include <Poly.hxx>
 #include <Poly_Array1OfTriangle.hxx>
@@ -30,9 +26,7 @@
 #include <TColgp_Array1OfPnt.hxx>
 #include <TColgp_Array1OfPnt2d.hxx>
 
-#ifdef _WIN32
-Standard_IMPORT Draw_Viewer dout;
-#endif
+
 //=======================================================================
 //function : polytr
 //purpose  : 
@@ -151,18 +145,18 @@ static Standard_Integer polygon2d(Draw_Interpretor& di, Standard_Integer n, cons
 
 static Standard_Integer shnodes(Draw_Interpretor& , Standard_Integer n, const char** a)
 {
-  if (n != 2) return 1;
-  Handle(DrawTrSurf_Triangulation) T 
-    = Handle(DrawTrSurf_Triangulation)::DownCast(Draw::Get(a[1]));
+  // if (n != 2) return 1;
+  // Handle(DrawTrSurf_Triangulation) T 
+  //   = Handle(DrawTrSurf_Triangulation)::DownCast(Draw::Get(a[1]));
 
-  if (!T.IsNull()) {
-    Standard_Boolean SHOWNODES = T->ShowNodes();
-    T->ShowNodes(!SHOWNODES);
-  }
+  // if (!T.IsNull()) {
+  //   Standard_Boolean SHOWNODES = T->ShowNodes();
+  //   T->ShowNodes(!SHOWNODES);
+  // }
 
   
 
-  dout.RepaintAll();
+  // dout.RepaintAll();
 
   return 0;//wnt
 }
@@ -174,13 +168,13 @@ static Standard_Integer shnodes(Draw_Interpretor& , Standard_Integer n, const ch
 
 static Standard_Integer shtriangles(Draw_Interpretor& , Standard_Integer n, const char** a)
 {
-  if (n != 2) return 1;
+  // if (n != 2) return 1;
   
-  Handle(DrawTrSurf_Triangulation) T 
-    = Handle(DrawTrSurf_Triangulation)::DownCast(Draw::Get(a[1]));
-  Standard_Boolean SHOWTRIANGLES = T->ShowTriangles();
-  T->ShowTriangles(!SHOWTRIANGLES);
-  dout.RepaintAll();
+  // Handle(DrawTrSurf_Triangulation) T 
+  //   = Handle(DrawTrSurf_Triangulation)::DownCast(Draw::Get(a[1]));
+  // Standard_Boolean SHOWTRIANGLES = T->ShowTriangles();
+  // T->ShowTriangles(!SHOWTRIANGLES);
+  // dout.RepaintAll();
   return 0;//wnt
 }
 

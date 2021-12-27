@@ -20,7 +20,6 @@
 
 #include <DBRep.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_Appli.hxx>
 
 #include <BRepFill.hxx>
 #include <BRepBuilderAPI_PipeError.hxx>

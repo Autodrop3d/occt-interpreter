@@ -21,7 +21,6 @@
 #include <DrawTrSurf.hxx>
 #include <DBRep.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_Appli.hxx>
 
 #include <BRep_Builder.hxx>
 #include <BRep_Tool.hxx>

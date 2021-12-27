@@ -16,7 +16,6 @@
 
 #include <GeometryTest.hxx>
 #include <DrawTrSurf.hxx>
-#include <Draw_Appli.hxx>
 #include <TopoDS_Shape.hxx>
 #include <DBRep.hxx>
 #include <Draw_Interpretor.hxx>

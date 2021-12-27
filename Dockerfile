@@ -22,7 +22,6 @@ RUN \
     python3-setuptools \
     zlib1g-dev
 
-COPY occt /occt
 COPY scripts /scripts
 
 RUN chmod -R 777 /scripts/

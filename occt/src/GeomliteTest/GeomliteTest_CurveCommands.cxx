@@ -19,20 +19,8 @@
 // Modified by JPI 01/08/97 : ajout de la commande approxcurve
 
 #include <GeomliteTest.hxx>
-#include <Draw_Appli.hxx>
-#include <DrawTrSurf.hxx>
-#include <DrawTrSurf_Curve.hxx>
-#include <DrawTrSurf_Curve2d.hxx>
-#include <DrawTrSurf_BezierCurve.hxx>
-#include <DrawTrSurf_BSplineCurve.hxx>
-#include <DrawTrSurf_BezierCurve2d.hxx>
-#include <DrawTrSurf_BSplineCurve2d.hxx>
-#include <Draw_Marker3D.hxx>
-#include <Draw_Marker2D.hxx>
 #include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_Color.hxx>
-#include <Draw_Display.hxx>
 
 #include <BSplCLib.hxx>
 
@@ -111,9 +99,6 @@
 #include <Approx_FitAndDivide.hxx>
 #include <Convert_CompBezierCurvesToBSplineCurve.hxx>
 
-#ifdef _WIN32
-Standard_IMPORT Draw_Viewer dout;
-#endif
 
 //Class is used in fitcurve
 class CurveEvaluator : public AppCont_Function
@@ -947,44 +932,7 @@ static Standard_Integer insertpole (Draw_Interpretor& di, Standard_Integer n, co
 
 static Standard_Integer cfindp (Draw_Interpretor& , Standard_Integer n, const char** a)
 {
-  if (n < 6) return 1;
 
-  Standard_Integer Index = 0;
-  Standard_Integer view = Draw::Atoi(a[2]);
-  Standard_Real x = Draw::Atof(a[3]);
-  Standard_Real y = Draw::Atof(a[4]);
-
-  Draw_Display d = dout.MakeDisplay(view);
-
-  Handle(Draw_Drawable3D) D = Draw::Get(a[1]);
-
-  Handle(DrawTrSurf_BezierCurve) DBz = 
-    Handle(DrawTrSurf_BezierCurve)::DownCast(D);
-  if( !DBz.IsNull())
-    DBz->FindPole( x, y, d, 5, Index);
-  else {
-    Handle(DrawTrSurf_BSplineCurve) DBs = 
-      Handle(DrawTrSurf_BSplineCurve)::DownCast(D);
-    if (!DBs.IsNull())
-      DBs->FindPole( x, y, d, 5, Index);
-    else {
-      Handle(DrawTrSurf_BezierCurve2d) DBz2d = 
-	Handle(DrawTrSurf_BezierCurve2d)::DownCast(D);
-      if( !DBz2d.IsNull())
-	DBz2d->FindPole( x, y, d, 5, Index);
-      else {
-	Handle(DrawTrSurf_BSplineCurve2d) DBs2d = 
-	  Handle(DrawTrSurf_BSplineCurve2d)::DownCast(D);
-	if (!DBs2d.IsNull())
-	  DBs2d->FindPole( x, y, d, 5, Index);
-	else 
-	  return 1;
-      }
-    }
-  }
-  
-  Draw::Set(a[5],Index);
-  
   return 0;
 }
 
@@ -1254,10 +1202,10 @@ static Standard_Integer minmaxcurandinf(Draw_Interpretor& di,
 	di << "  Minimum of curvature at U ="<<Sommets.Parameter(i)<<"\n";
       }
       gp_Pnt2d P = C1->Value(Sommets.Parameter(i));
-      Handle(Draw_Marker2D) dr = new Draw_Marker2D(P,Draw_Plus,Couleur); 
-      dout << dr;
+      // Handle(Draw_Marker2D) dr = new Draw_Marker2D(P,Draw_Plus,Couleur); 
+      // dout << dr;
     }
-    dout.Flush();
+    // dout.Flush();
   }
    
   Geom2dLProp_CurAndInf2d Sommets2;
@@ -1266,11 +1214,11 @@ static Standard_Integer minmaxcurandinf(Draw_Interpretor& di,
   if (Sommets2.IsDone() && !Sommets2.IsEmpty()) {
     for (Standard_Integer i = 1; i <= Sommets2.NbPoints(); i++){
       gp_Pnt2d P = C1->Value(Sommets2.Parameter(i));
-      Handle(Draw_Marker2D) dr = new Draw_Marker2D(P,Draw_Plus,Draw_bleu); 
-      dout << dr;
+      // Handle(Draw_Marker2D) dr = new Draw_Marker2D(P,Draw_Plus,Draw_bleu); 
+      // dout << dr;
       di << "  Inflexion at U ="<<Sommets2.Parameter(i)<<"\n";
     }
-    dout.Flush();
+    // dout.Flush();
   }
   return 0;
 }

@@ -18,8 +18,6 @@
 #include <DrawTrSurf.hxx>
 #include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_Appli.hxx>
-#include <Draw_Display.hxx>
 
 #include <GeomAbs_SurfaceType.hxx>
 #include <GeomAbs_IsoType.hxx>
@@ -72,9 +70,6 @@
 #include <Geom2dConvert_BSplineCurveToBezierCurve.hxx>
 #include <GeomLProp_SLProps.hxx>
 
-
-#include <DrawTrSurf_BezierSurface.hxx>
-#include <DrawTrSurf_BSplineSurface.hxx>
 #include <GeomConvert_ApproxSurface.hxx>
 #include <GeomLib_Tool.hxx>
 #include <TopoDS_Shape.hxx>
@@ -83,9 +78,6 @@
 #include <Message.hxx>
 
 #include <stdio.h>
-#ifdef _WIN32
-Standard_IMPORT Draw_Viewer dout;
-#endif
 
 
 
@@ -1241,41 +1233,41 @@ static Standard_Integer rempole (Draw_Interpretor& di, Standard_Integer n, const
 
 static Standard_Integer sfindp (Draw_Interpretor& , Standard_Integer n, const char** a)
 {
-  if (n < 7) return 1;
-  Standard_Boolean BSpline = Standard_False;
+  // if (n < 7) return 1;
+  // Standard_Boolean BSpline = Standard_False;
 
-  Handle(Geom_BezierSurface) GBz = DrawTrSurf::GetBezierSurface(a[1]);
-  Handle(Geom_BSplineSurface) GBs;
-  if (GBz.IsNull()) {
-    GBs = DrawTrSurf::GetBSplineSurface(a[1]);
-    if (GBs.IsNull())
-    {
-      return 1;
-    }
-    BSpline = Standard_True;
-  }
+  // Handle(Geom_BezierSurface) GBz = DrawTrSurf::GetBezierSurface(a[1]);
+  // Handle(Geom_BSplineSurface) GBs;
+  // if (GBz.IsNull()) {
+  //   GBs = DrawTrSurf::GetBSplineSurface(a[1]);
+  //   if (GBs.IsNull())
+  //   {
+  //     return 1;
+  //   }
+  //   BSpline = Standard_True;
+  // }
 
-  Standard_Integer UIndex = 0;
-  Standard_Integer VIndex = 0;
-  Standard_Integer view = Draw::Atoi(a[2]);
-  Standard_Real x = Draw::Atof(a[3]);
-  Standard_Real y = Draw::Atof(a[4]);
+  // Standard_Integer UIndex = 0;
+  // Standard_Integer VIndex = 0;
+  // Standard_Integer view = Draw::Atoi(a[2]);
+  // Standard_Real x = Draw::Atof(a[3]);
+  // Standard_Real y = Draw::Atof(a[4]);
 
-  Draw_Display d = dout.MakeDisplay(view);
+  // Draw_Display d = dout.MakeDisplay(view);
   
-  if( !BSpline) {
-    Handle(DrawTrSurf_BezierSurface) DBz = 
-      new DrawTrSurf_BezierSurface(GBz);
-    DBz->FindPole( x, y, d, 5, UIndex,VIndex);
-  }
-  else {
-    Handle(DrawTrSurf_BSplineSurface) DBs = 
-      new DrawTrSurf_BSplineSurface(GBs);
-    DBs->FindPole( x, y, d, 5, UIndex,VIndex);
-  }
+  // if( !BSpline) {
+  //   Handle(DrawTrSurf_BezierSurface) DBz = 
+  //     new DrawTrSurf_BezierSurface(GBz);
+  //   DBz->FindPole( x, y, d, 5, UIndex,VIndex);
+  // }
+  // else {
+  //   Handle(DrawTrSurf_BSplineSurface) DBs = 
+  //     new DrawTrSurf_BSplineSurface(GBs);
+  //   DBs->FindPole( x, y, d, 5, UIndex,VIndex);
+  // }
 
-  Draw::Set(a[5],UIndex);
-  Draw::Set(a[6],VIndex);
+  // Draw::Set(a[5],UIndex);
+  // Draw::Set(a[6],VIndex);
   
   return 0;
 }

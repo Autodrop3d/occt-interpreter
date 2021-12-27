@@ -20,16 +20,10 @@
 #include <GeomAPI_ProjectPointOnSurf.hxx>
 
 #include <DBRep.hxx>
-#include <DBRep_DrawableShape.hxx>
 #include <Draw_Interpretor.hxx>
 #include <Draw_Appli.hxx>
 #include <DrawTrSurf.hxx>
 #include <Draw_Marker3D.hxx>
-
-#include <stdio.h>
-#ifdef _WIN32
-Standard_IMPORT Draw_Viewer dout;
-#endif
 
 //=======================================================================
 //function : xdistcc

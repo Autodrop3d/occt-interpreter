@@ -17,9 +17,8 @@
 #include <GeomliteTest.hxx>
 #include <DrawTrSurf.hxx>
 #include <Draw.hxx>
+
 #include <Draw_Interpretor.hxx>
-#include <Draw_Appli.hxx>
-#include <Draw_Display.hxx>
 
 #include <Precision.hxx>
 #include <GeomLib.hxx>
@@ -34,10 +33,6 @@
 #include <Geom_BoundedSurface.hxx>
 #include <Message.hxx>
 
-#ifdef _MSC_VER
-#include <stdio.h>
-//#define strcasecmp strcmp Already defined
-#endif
 
 
 //=======================================================================

@@ -17,7 +17,6 @@
 #include <Standard_Stream.hxx>
 #include <BRepTest.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_Appli.hxx>
 #include <DBRep.hxx>
 #include <BRepGProp.hxx>
 #include <TopoDS_Shape.hxx>
@@ -25,18 +24,12 @@
 #include <gp_Ax2.hxx>
 #include <gp_Ax3.hxx>
 
-#include <Draw_Axis3D.hxx>
 #include <Precision.hxx>
 #include <OSD_Chronometer.hxx>
 #include <Geom_Surface.hxx>
 #include <DrawTrSurf.hxx>
 #include <Geom_Plane.hxx>
 #include <gp_Pln.hxx>
-
-#ifdef _WIN32
-Standard_IMPORT Draw_Viewer dout;
-#endif
-
 
 Standard_Integer props(Draw_Interpretor& di, Standard_Integer n, const char** a)
 {
@@ -107,9 +100,9 @@ Standard_Integer props(Draw_Interpretor& di, Standard_Integer n, const char** a)
 
   if (n >= 5) {
     Standard_Integer shift =  n - 5;
-    Draw::Set(a[shift+2],P.X());
-    Draw::Set(a[shift+3],P.Y());
-    Draw::Set(a[shift+4],P.Z());
+    // Draw::Set(a[shift+2],P.X());
+    // Draw::Set(a[shift+3],P.Y());
+    // Draw::Set(a[shift+4],P.Z());
   }
 
   GProp_PrincipalProps Pr = G.PrincipalProperties();
@@ -179,8 +172,8 @@ Standard_Integer props(Draw_Interpretor& di, Standard_Integer n, const char** a)
   //if (n == 2) {  
     gp_Ax2 axes(P,Pr.ThirdAxisOfInertia(),Pr.FirstAxisOfInertia());
     
-    Handle(Draw_Axis3D) Dax = new Draw_Axis3D(axes,Draw_orange,30);
-    dout << Dax;
+    // Handle(Draw_Axis3D) Dax = new Draw_Axis3D(axes,Draw_orange,30);
+    // dout << Dax;
   //}
 
   return 0;
@@ -257,15 +250,15 @@ Standard_Integer vpropsgk(Draw_Interpretor& di, Standard_Integer n, const char**
   if(CGFlag || IFlag) {
     Standard_SStream aSStream1;
     gp_Pnt P = G.CentreOfMass();
-    if (n > 6) {
-      Draw::Set(a[6],P.X());
-    }
-    if (n > 7) {
-      Draw::Set(a[7],P.Y());
-    }
-    if (n > 8) {
-      Draw::Set(a[8],P.Z());
-    }
+    // if (n > 6) {
+    //   Draw::Set(a[6],P.X());
+    // }
+    // if (n > 7) {
+    //   Draw::Set(a[7],P.Y());
+    // }
+    // if (n > 8) {
+    //   Draw::Set(a[8],P.Z());
+    // }
   
     aSStream1.precision(15);
     aSStream1 << "Center of gravity : \n";
@@ -315,8 +308,8 @@ Standard_Integer vpropsgk(Draw_Interpretor& di, Standard_Integer n, const char**
 
     gp_Ax2 axes(P,Pr.ThirdAxisOfInertia(),Pr.FirstAxisOfInertia());
     
-    Handle(Draw_Axis3D) Dax = new Draw_Axis3D(axes,Draw_orange,30);
-    dout << Dax;
+    // Handle(Draw_Axis3D) Dax = new Draw_Axis3D(axes,Draw_orange,30);
+    // dout << Dax;
   }
   return 0;
 }

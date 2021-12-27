@@ -19,7 +19,6 @@
 #include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
 #include <DrawTrSurf.hxx>
-#include <Draw_Appli.hxx>
 #include <GeometryTest.hxx>
 #include <GeomAPI_ProjectPointOnCurve.hxx>
 #include <GeomAPI_ProjectPointOnSurf.hxx>
@@ -41,10 +40,6 @@
 #include <TColStd_Array2OfReal.hxx>
 #include <Precision.hxx>
 #include <stdio.h>
-
-#ifdef _WIN32
-Standard_IMPORT Draw_Viewer dout;
-#endif
 
 //=======================================================================
 //function : proj
@@ -178,68 +173,8 @@ static Standard_Integer proj (Draw_Interpretor& di, Standard_Integer n, const ch
 
 static Standard_Integer appro(Draw_Interpretor& di, Standard_Integer n, const char** a)
 {
-  if ( n<3) return 1;
-
-  Handle(Geom_Curve) GC;
-  Standard_Integer Nb = Draw::Atoi(a[2]);
-
-  TColgp_Array1OfPnt Points(1, Nb);
-
-  Handle(Draw_Marker3D) mark;
-
-  if ( n == 4) {
-    GC = DrawTrSurf::GetCurve(a[3]);
-    if ( GC.IsNull()) 
-      return 1;
-
-    Standard_Real U, U1, U2;
-    U1 = GC->FirstParameter();
-    U2 = GC->LastParameter();
-    Standard_Real Delta = ( U2 - U1) / (Nb-1);
-    for ( Standard_Integer i = 1 ; i <= Nb; i++) {
-      U = U1 + (i-1) * Delta;
-      Points(i) = GC->Value(U);
-      mark = new Draw_Marker3D( Points(i), Draw_X, Draw_vert); 
-      dout << mark;
-    }
-  }
-  else {
-    Standard_Integer id,XX,YY,b;
-    dout.Select(id,XX,YY,b);
-    Standard_Real zoom = dout.Zoom(id);
-
-    Points(1) = gp_Pnt( ((Standard_Real)XX)/zoom, 
-		        ((Standard_Real)YY)/zoom, 
-		        0.);
-    
-    mark = new Draw_Marker3D( Points(1), Draw_X, Draw_vert); 
-    
-    dout << mark;
-    
-    for (Standard_Integer i = 2; i<=Nb; i++) {
-      dout.Select(id,XX,YY,b);
-      Points(i) = gp_Pnt( ((Standard_Real)XX)/zoom, 
-			 ((Standard_Real)YY)/zoom, 
-			 0.);
-      mark = new Draw_Marker3D( Points(i), Draw_X, Draw_vert); 
-      dout << mark;
-    }
-  }    
-  dout.Flush();
-  Standard_Integer Dmin = 3;
-  Standard_Integer Dmax = 8;
-  Standard_Real Tol3d = 1.e-3;
-  
-  Handle(Geom_BSplineCurve) TheCurve;
-  GeomAPI_PointsToBSpline aPointToBSpline(Points,Dmin,Dmax,GeomAbs_C2,Tol3d);
-  TheCurve = aPointToBSpline.Curve();
-
-  
-  DrawTrSurf::Set(a[1], TheCurve);
-  di << a[1];
 
   return 0;
-
 }
 
 

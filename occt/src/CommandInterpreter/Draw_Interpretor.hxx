@@ -21,7 +21,6 @@
 #include <Standard_DefineAlloc.hxx>
 #include <Standard_Macro.hxx>
 #include <Standard_Boolean.hxx>
-#include <Draw_PInterp.hxx>
 #include <Standard_SStream.hxx>
 #include <Standard_CString.hxx>
 #include <Standard_Integer.hxx>
@@ -221,12 +220,6 @@ public:
   //! Destructor
   Standard_EXPORT ~Draw_Interpretor();
 
-  Standard_EXPORT Draw_Interpretor (const Draw_PInterp& theInterp);
-
-  Standard_EXPORT void Set (const Draw_PInterp& theInterp);
-
-  Standard_EXPORT Draw_PInterp Interp() const;
-
   //! Enables or disables logging of all commands and their results
   Standard_EXPORT void SetDoLog (const Standard_Boolean theDoLog);
 
@@ -268,13 +261,13 @@ protected:
 
 private:
 
-  Draw_PInterp     myInterp;
   Standard_Boolean isAllocated;
   Standard_Boolean myDoLog;
   Standard_Boolean myDoEcho;
   Standard_Boolean myToColorize;
   Standard_Integer myFDLog;          //!< file descriptor of log file 
-  std::map 
+  std::map<Standard_CString, CallBackData*> callbacks;
+  std::map<Standard_CString, Standard_CString> help;
 
 public:
 

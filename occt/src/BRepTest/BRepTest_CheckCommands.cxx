@@ -31,7 +31,6 @@
 #include <BRepCheck.hxx>
 #include <BRepCheck_Edge.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_Appli.hxx>
 #include <Draw.hxx>
 #include <DBRep.hxx>
 #include <BRepTest.hxx>
@@ -96,8 +95,8 @@ Standard_EXPORT void BRepTest_CheckCommands_SetFaultyName(const char* name)
 
 
 static TopTools_DataMapOfShapeListOfShape theMap;
-static Standard_Integer nbfaulty = 0;
-static Draw_SequenceOfDrawable3D lfaulty;
+// static Standard_Integer nbfaulty = 0;
+// static Draw_SequenceOfDrawable3D lfaulty;
 
 Standard_IMPORT Standard_Integer BRepCheck_Trace(const Standard_Integer phase);
 
@@ -107,14 +106,14 @@ Standard_IMPORT Standard_Integer BRepCheck_Trace(const Standard_Integer phase);
 static Standard_Boolean FindNamed(const TopoDS_Shape& S,
 				  char*& Name)
 {
-  for (Standard_Integer i = 1 ;i <= lfaulty.Length(); i++) {
-    Handle(DBRep_DrawableShape) DS = 
-      Handle(DBRep_DrawableShape)::DownCast(lfaulty(i));
-    if (DS->Shape().IsSame(S)) {
-      Name = (char*)DS->Name();
-      return Standard_True;
-    }
-  }
+  // for (Standard_Integer i = 1 ;i <= lfaulty.Length(); i++) {
+  //   Handle(DBRep_DrawableShape) DS = 
+  //     Handle(DBRep_DrawableShape)::DownCast(lfaulty(i));
+  //   if (DS->Shape().IsSame(S)) {
+  //     Name = (char*)DS->Name();
+  //     return Standard_True;
+  //   }
+  // }
   return Standard_False;
 }
 
@@ -145,44 +144,6 @@ static void PrintSub(Standard_OStream& OS,
 		     const TopAbs_ShapeEnum Subtype)
      
 {
-  char* Name;
-  BRepCheck_ListIteratorOfListOfStatus itl;
-  TopExp_Explorer exp;
-  for (exp.Init(S,Subtype); exp.More(); exp.Next()) {
-    const Handle(BRepCheck_Result)& res = Ana.Result(exp.Current());
-    const TopoDS_Shape& sub = exp.Current();
-    for (res->InitContextIterator();
-	 res->MoreShapeInContext(); 
-	 res->NextShapeInContext()) {
-      if (res->ContextualShape().IsSame(S) && 
-	  !Contains(theMap(sub),S)) {
-	theMap(sub).Append(S);
-	itl.Initialize(res->StatusOnShape());
-	if (itl.Value() != BRepCheck_NoError) {
-	  if (!FindNamed(sub,Name)) {
-	    nbfaulty++;
-	    Name = (char*)malloc(18*sizeof(char));
-	    Sprintf(Name,"%s%d",checkfaultyname,nbfaulty);
-	    DBRep::Set(Name,sub);
-	    lfaulty.Append(Draw::Get((Standard_CString&)Name));
-	  }
-	  OS << "Shape " << Name << " ";
-	  if (!FindNamed(S,Name)) {
-	    nbfaulty++;
-	    Name = (char*)malloc(18*sizeof(char));
-	    Sprintf(Name,"%s%d",checkfaultyname,nbfaulty);
-	    DBRep::Set(Name,S);
-	    lfaulty.Append(Draw::Get((Standard_CString&)Name));
-	  }
-	  OS << " on shape " << Name << " :\n";
-	  for (;itl.More(); itl.Next()) {
-	    BRepCheck::Print(itl.Value(),OS);
-	  }
-	}
-	break;
-      }
-    }
-  }
 }
 
 
@@ -193,59 +154,6 @@ static void Print(Standard_OStream& OS,
 		  const BRepCheck_Analyzer& Ana,
 		  const TopoDS_Shape& S)
 {
-  for (TopoDS_Iterator iter(S); iter.More(); iter.Next()) {
-    Print(OS,Ana,iter.Value());
-  }
-
-  char* Name;
-  TopAbs_ShapeEnum styp = S.ShapeType();
-  BRepCheck_ListIteratorOfListOfStatus itl;
-  if (!Ana.Result(S).IsNull() && !theMap.IsBound(S)) {
-    itl.Initialize(Ana.Result(S)->Status());
-    if (itl.Value() != BRepCheck_NoError) {
-      if (!FindNamed(S,Name)) {
-	nbfaulty++;
-	Name = (char*)malloc(18*sizeof(char));
-	Sprintf(Name,"%s%d",checkfaultyname,nbfaulty);
-	DBRep::Set(Name,S);
-	lfaulty.Append(Draw::Get((Standard_CString&)Name));
-      }
-      OS << "On Shape " << Name << " :\n";
-	
-      for (;itl.More(); itl.Next()) {
-        if (itl.Value() != BRepCheck_NoError)
-	BRepCheck::Print(itl.Value(),OS);
-      }
-    }
-  }
-  if (!theMap.IsBound(S)) {
-    TopTools_ListOfShape thelist;
-    theMap.Bind(S, thelist);
-  }
-
-  switch (styp) {
-  case TopAbs_EDGE:
-    PrintSub(OS,Ana,S,TopAbs_VERTEX);
-    break;
-  case TopAbs_WIRE:
-    PrintSub(OS,Ana,S,TopAbs_EDGE);
-    PrintSub(OS,Ana,S,TopAbs_VERTEX);
-    break;
-  case TopAbs_FACE:
-    PrintSub(OS,Ana,S,TopAbs_WIRE);
-    PrintSub(OS,Ana,S,TopAbs_EDGE);
-    PrintSub(OS,Ana,S,TopAbs_VERTEX);
-    break;
-  case TopAbs_SHELL:
-//    PrintSub(OS,Ana,S,TopAbs_FACE);
-    break;
-  case TopAbs_SOLID:
-//    PrintSub(OS,Ana,S,TopAbs_EDGE);
-    PrintSub(OS,Ana,S,TopAbs_SHELL);
-    break;
-  default:
-    break;
-  }
 
 }
 
@@ -953,14 +861,14 @@ static Standard_Integer checkshape (Draw_Interpretor& theCommands,
       }
       else
       {
-        if (IsContextDump)
-        {
-          ContextualDump(theCommands, anAna, aShape);
-        }
-        else
-        {
+        // if (IsContextDump)
+        // {
+          // ContextualDump(theCommands, anAna, aShape);
+        // }
+        // else
+        // {
           StructuralDump(theCommands, anAna, aShapeName, aPref, aShape);
-        }
+        // }
       }
     }
   }

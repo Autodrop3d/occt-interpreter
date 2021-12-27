@@ -28,8 +28,8 @@ void GeomliteTest::AllCommands(Draw_Interpretor& theCommands)
 
   GeomliteTest::CurveCommands(theCommands);
   GeomliteTest::SurfaceCommands(theCommands);
-  GeomliteTest::ApproxCommands(theCommands);
-  GeomliteTest::API2dCommands(theCommands);
+  // GeomliteTest::ApproxCommands(theCommands);
+  // GeomliteTest::API2dCommands(theCommands);
   GeomliteTest::ModificationCommands(theCommands);
 
   // define the TCL variable Draw_GEOMETRY

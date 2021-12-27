@@ -23,8 +23,6 @@
 #include <DrawTrSurf.hxx>
 #include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_Appli.hxx>
-#include <Draw_Display.hxx>
 
 #include <GeomAbs_SurfaceType.hxx>
 #include <GeomAbs_IsoType.hxx>
@@ -56,19 +54,6 @@
 #include <GeomFill_SectionGenerator.hxx>
 #include <GeomFill_Line.hxx>
 #include <GeomFill_AppSurf.hxx>
-
-
-#include <DrawTrSurf_BezierSurface.hxx>
-#include <DrawTrSurf_BSplineSurface.hxx>
-
-#ifdef _MSC_VER
-#include <stdio.h>
-//#define strcasecmp strcmp Already defined
-#endif
-
-#ifdef _WIN32
-Standard_IMPORT Draw_Viewer dout;
-#endif
 
 
 
