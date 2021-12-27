@@ -18,6 +18,7 @@
 #define _DrawTrSurf_HeaderFile
 
 #include <Draw_Interpretor.hxx>
+#include <Draw.hxx>
 #include <Geom_Geometry.hxx>
 #include <Geom_Surface.hxx>
 #include <Geom2d_Curve.hxx>

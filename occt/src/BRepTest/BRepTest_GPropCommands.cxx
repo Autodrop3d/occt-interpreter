@@ -18,6 +18,7 @@
 #include <BRepTest.hxx>
 #include <Draw_Interpretor.hxx>
 #include <DBRep.hxx>
+#include <Draw.hxx>
 #include <BRepGProp.hxx>
 #include <TopoDS_Shape.hxx>
 #include <GProp_PrincipalProps.hxx>

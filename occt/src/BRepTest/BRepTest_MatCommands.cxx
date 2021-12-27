@@ -16,7 +16,6 @@
 
 #include <BRepTest.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_Appli.hxx>
 #include <DrawTrSurf.hxx>
 
 #include <Geom2d_Line.hxx>

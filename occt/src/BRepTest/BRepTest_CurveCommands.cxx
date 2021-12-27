@@ -51,8 +51,10 @@
 #include <TopoDS_Shape.hxx>
 #include <TopoDS_Wire.hxx>
 
+#include <Draw.hxx>
 #include <DBRep.hxx>
 #include <Draw_Interpretor.hxx>
+#include <DrawTrSurf.hxx>
 
 #include <gp.hxx>
 #include <Precision.hxx>
@@ -346,9 +348,6 @@ static Standard_Integer mkedge(Draw_Interpretor& di, Standard_Integer n, const c
 //=======================================================================
 // mkcurve
 //=======================================================================
-Standard_IMPORT Draw_Color DrawTrSurf_CurveColor(const Draw_Color col);
-Standard_IMPORT void DBRep_WriteColorOrientation ();
-Standard_IMPORT Draw_Color DBRep_ColorOrientation (const TopAbs_Orientation Or);
 
 static Standard_Integer mkcurve(Draw_Interpretor& di, Standard_Integer n, const char** a)
 {
@@ -369,17 +368,7 @@ static Standard_Integer mkcurve(Draw_Interpretor& di, Standard_Integer n, const 
   }
   C = new Geom_TrimmedCurve(C,f,l);
 
-  Draw_Color col,savecol;
-
-  if ( DispOrientation) {
-    DBRep_WriteColorOrientation ();
-    col = DBRep_ColorOrientation(TopoDS::Edge(S).Orientation());
-    savecol = DrawTrSurf_CurveColor(col);
-  }
   DrawTrSurf::Set(a[1],C->Transformed(L.Transformation()));
-  if ( DispOrientation) {
-    DrawTrSurf_CurveColor(savecol);
-  }
 
   return 0;
 }

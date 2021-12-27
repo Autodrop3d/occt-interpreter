@@ -19,6 +19,7 @@
 #include <BRepTest_Objects.hxx>
 
 #include <DBRep.hxx>
+#include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
 
 #include <BRepFill.hxx>

@@ -26,8 +26,6 @@
 #include <TopTools_DataMapIteratorOfDataMapOfIntegerListOfShape.hxx>
 #include <TopTools_ListOfShape.hxx>
 #include <TopTools_ListIteratorOfListOfShape.hxx>
-#include <DBRep_DrawableShape.hxx>
-#include <Draw_SequenceOfDrawable3D.hxx>
 #include <BRepCheck.hxx>
 #include <BRepCheck_Edge.hxx>
 #include <Draw_Interpretor.hxx>
@@ -342,8 +340,8 @@ void ContextualDump(Draw_Interpretor& theCommands,
 		    const TopoDS_Shape       &theShape)
 {
   theMap.Clear();
-  nbfaulty = 0;
-  lfaulty.Clear();
+  // nbfaulty = 0;
+  // lfaulty.Clear();
 
   Standard_SStream aSStream;
   Print(aSStream, theAna, theShape);
@@ -352,8 +350,8 @@ void ContextualDump(Draw_Interpretor& theCommands,
   theCommands<<"\n";
   theMap.Clear();
 
-  if (nbfaulty !=0)
-    theCommands<<"Faulty shapes in variables "<<checkfaultyname<<"1 to "<<checkfaultyname<<nbfaulty<<" \n";
+  // if (nbfaulty !=0)
+  //   theCommands<<"Faulty shapes in variables "<<checkfaultyname<<"1 to "<<checkfaultyname<<nbfaulty<<" \n";
 
   theCommands<<"\n";
 }

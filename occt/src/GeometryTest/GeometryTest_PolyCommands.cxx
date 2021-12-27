@@ -15,6 +15,7 @@
 // commercial license or contractual agreement.
 
 
+#include <Draw.hxx>
 #include <DrawTrSurf.hxx>
 #include <GeometryTest.hxx>
 #include <Poly.hxx>

@@ -24,7 +24,7 @@
 #include <BRepTest.hxx>
 #include <DBRep.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_Appli.hxx>
+#include <Draw.hxx>
 #include <BRepFilletAPI_MakeFillet2d.hxx>
 #include <TopAbs_ShapeEnum.hxx>
 #include <TopoDS_Shape.hxx>

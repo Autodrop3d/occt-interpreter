@@ -21,6 +21,9 @@
 
 #include <DBRep.hxx>
 #include <Draw_Interpretor.hxx>
+#include <DrawTrSurf.hxx>
+#include <Draw.hxx>
+
 
 #include <BRepBuilderAPI.hxx>
 #include <BRepBuilderAPI_FindPlane.hxx>
@@ -35,6 +38,7 @@
 #include <BRepLib.hxx>
 #include <BRep_Builder.hxx>
 #include <BRepBndLib.hxx>
+#include <Bnd_OBB.hxx>
 #include <Bnd_Box.hxx>
 #include <Bnd_Box2d.hxx>
 #include <Message.hxx>
@@ -584,7 +588,6 @@ static Standard_Integer IsBoxesInterfered(Draw_Interpretor& theDI,
 #include <BndLib_AddSurface.hxx>
 #include <BndLib_Add3dCurve.hxx>
 #include <BndLib_Add2dCurve.hxx>
-#include <Draw_Segment2D.hxx>
 static Standard_Integer gbounding(Draw_Interpretor& di,Standard_Integer n,const char** a)
 {
   if (n != 2 && n != 3) 
@@ -602,7 +605,7 @@ static Standard_Integer gbounding(Draw_Interpretor& di,Standard_Integer n,const 
     Standard_Real axmin,aymin,azmin,axmax,aymax,azmax;
     Bnd_Box B;
     Bnd_Box2d B2d;
-    Handle(Draw_Box) DB;
+    // Handle(Draw_Box) DB;
     Standard_Boolean Is3d = Standard_True;
     Handle(Geom_Curve) C;
     Handle(Geom_Surface) S;

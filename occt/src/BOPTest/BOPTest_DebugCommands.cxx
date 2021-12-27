@@ -15,10 +15,9 @@
 
 #include <BOPTest.hxx>
 #include <BOPTest_Objects.hxx>
-#include <BOPTest_DrawableShape.hxx>
+
 
 #include <Draw.hxx>
-#include <Draw_Color.hxx>
 
 #include <DBRep.hxx>
 
@@ -179,7 +178,6 @@ Standard_Integer bopds (Draw_Interpretor& di,
   Standard_CString aText;
   Standard_Integer i, aNbS;
   TopAbs_ShapeEnum aType, aTypeShape;
-  Draw_Color aTextColor(Draw_cyan);
   //
   BOPDS_DS& aDS = *pDS;
   aNbS = aDS.NbSourceShapes();
@@ -209,9 +207,8 @@ Standard_Integer bopds (Draw_Interpretor& di,
     }
     //
     Sprintf(buf, "z%d", i);
-    aText = buf;
-    Handle(BOPTest_DrawableShape) aDShape = new BOPTest_DrawableShape(aS, aText, aTextColor);
-    Draw::Set(aText, aDShape);
+    aText = buf;    
+    DBRep::Set(aText, aS);
   }
   //
   return 0;
@@ -514,8 +511,6 @@ Standard_Integer bopnews(Draw_Interpretor& di,
   Standard_CString aText;
   Standard_Boolean bFound;
   Standard_Integer i, i1, i2;
-  Draw_Color aTextColor(Draw_cyan);
-  Handle(BOPTest_DrawableShape) aDShape;
   //
   bFound = Standard_False;
   i1 = pDS->NbSourceShapes();
@@ -527,8 +522,7 @@ Standard_Integer bopnews(Draw_Interpretor& di,
       //
       sprintf (buf, "z%d", i);
       aText = buf;
-      aDShape = new BOPTest_DrawableShape(aS, aText, aTextColor);
-      Draw::Set(aText, aDShape);
+      DBRep::Set(aText, aS);
       //
       sprintf (buf, "z%d ", i);
       di << buf;
@@ -650,11 +644,9 @@ Standard_Integer bopsc(Draw_Interpretor& di,
   //
   char buf[32];
   Standard_CString aText;
-  Draw_Color aTextColor(Draw_cyan);
   Standard_Integer nSF1, nSF2, nF1, nF2;
   Standard_Integer aNb, j, iCnt, k, iPriz, aNbC, aNbP, nSp;
   Standard_Integer iX;
-  Handle(BOPTest_DrawableShape) aDShape;
   BOPDS_ListIteratorOfListOfPaveBlock aItLPB;
   //
   nSF1 = nSF2 = -1;
@@ -706,8 +698,7 @@ Standard_Integer bopsc(Draw_Interpretor& di,
         //
         const TopoDS_Shape& aSp = pDS->Shape(nSp);
         aText = buf;
-        aDShape = new BOPTest_DrawableShape(aSp, aText, aTextColor);
-        Draw::Set(aText, aDShape);
+        DBRep::Set(aText, aSp);
         di << " ";
         ++iCnt;
       }
@@ -735,8 +726,7 @@ Standard_Integer bopsc(Draw_Interpretor& di,
       //
       const TopoDS_Shape& aSp = pDS->Shape(nSp);
       aText = buf;
-      aDShape = new BOPTest_DrawableShape(aSp, aText, aTextColor);
-      Draw::Set(aText, aDShape);
+      DBRep::Set(aText, aSp);
       di << " ";
       ++iCnt;
     }
@@ -902,8 +892,6 @@ Standard_Integer bopsp(Draw_Interpretor& di,
   TopAbs_ShapeEnum aType;
   BOPDS_ListIteratorOfListOfPaveBlock aItPB;
   Standard_CString aText;
-  Draw_Color aTextColor(Draw_cyan);
-  Handle(BOPTest_DrawableShape) aDShape;
   //
   i1 = 0;
   i2 = pDS->NbSourceShapes();
@@ -936,8 +924,7 @@ Standard_Integer bopsp(Draw_Interpretor& di,
       //
       Sprintf(buf, "z%d_%d", ind, nSp);
       aText = buf;
-      aDShape = new BOPTest_DrawableShape(aSp, aText, aTextColor);
-      Draw::Set(aText, aDShape);
+      DBRep::Set(aText, aSp);
       di << buf << " ";
     }
     di << "\n";

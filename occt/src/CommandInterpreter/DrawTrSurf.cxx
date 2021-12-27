@@ -115,7 +115,7 @@ static Standard_Integer transform (Draw_Interpretor& di, Standard_Integer n, con
     Handle(Geom_Geometry) G = DrawTrSurf::Get(a[i]);
     if (!G.IsNull()) {
       G->Transform(T);
-      Draw::Repaint();
+      // Draw::Repaint();
     }
     else {
       gp_Pnt P;
@@ -183,7 +183,7 @@ static Standard_Integer d2transform (Draw_Interpretor& di, Standard_Integer n, c
     Handle(Geom2d_Curve) G = DrawTrSurf::GetCurve2d(a[i]);
     if (!G.IsNull()) {
       G->Transform(T);
-      Draw::Repaint();
+      // Draw::Repaint();
     }
     else {
       gp_Pnt2d P;
@@ -236,7 +236,7 @@ void  DrawTrSurf::Set(const Standard_CString theName,
                       const Handle(Geom2d_Curve)& theCurve,
                       const Standard_Boolean isSenseMarker)
 {
-  DrawTrSurf::geom2d[theName] = theGeometry;
+  DrawTrSurf::geom2d[theName] = theCurve;
 }
 
 //=======================================================================

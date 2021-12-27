@@ -19,18 +19,14 @@
 #include <DBRep.hxx>
 #include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_PluginMacro.hxx>
 #include <GeometryTest.hxx>
 #include <GeomliteTest.hxx>
-#include <HLRTest.hxx>
 #include <NCollection_Map.hxx>
-#include <MeshTest.hxx>
 #include <Message.hxx>
 #include <Message_Alert.hxx>
 #include <Message_Msg.hxx>
 #include <Message_Messenger.hxx>
 #include <Message_Report.hxx>
-#include <SWDRAW.hxx>
 #include <TopoDS_AlertWithShape.hxx>
 
 #include <BOPAlgo_Alerts.hxx>
@@ -76,13 +72,13 @@ void  BOPTest::AllCommands(Draw_Interpretor& theCommands)
   GeomliteTest::AllCommands(theCommands);
   GeometryTest::AllCommands(theCommands);
   BRepTest::AllCommands(theCommands);
-  MeshTest::Commands(theCommands);
-  HLRTest::Commands(theCommands);
+  // MeshTest::Commands(theCommands);
+  // HLRTest::Commands(theCommands);
   BOPTest::AllCommands(theCommands);
-  SWDRAW::Init (theCommands);
+  // SWDRAW::Init (theCommands);
 }
-// Declare entry point PLUGINFACTORY
-DPLUGIN(BOPTest)
+// // Declare entry point PLUGINFACTORY
+// DPLUGIN(BOPTest)
 
 //=======================================================================
 //function : ReportAlerts

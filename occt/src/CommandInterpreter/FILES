@@ -4,7 +4,6 @@ Draw.hxx
 Draw.cxx
 DBRep.hxx
 DBRep.cxx
-DBRep_Params.cxx
 Draw_VariableCommands.cxx
 DrawTrSurf.hxx
 DrawTrSurf.cxx

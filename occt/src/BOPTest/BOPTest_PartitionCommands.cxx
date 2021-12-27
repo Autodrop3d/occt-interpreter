@@ -21,12 +21,10 @@
 #include <BOPAlgo_Splitter.hxx>
 #include <BOPDS_DS.hxx>
 #include <BOPTest.hxx>
-#include <BOPTest_DrawableShape.hxx>
 #include <BOPTest_Objects.hxx>
 #include <BRepTest_Objects.hxx>
 #include <DBRep.hxx>
 #include <Draw.hxx>
-#include <Draw_Color.hxx>
 #include <DrawTrSurf.hxx>
 #include <OSD_Timer.hxx>
 #include <TopoDS_Shape.hxx>

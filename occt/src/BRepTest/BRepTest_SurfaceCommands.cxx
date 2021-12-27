@@ -20,6 +20,7 @@
 
 #include <DrawTrSurf.hxx>
 #include <DBRep.hxx>
+#include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
 
 #include <BRep_Builder.hxx>
@@ -225,9 +226,9 @@ static Standard_Integer mkplane(Draw_Interpretor& theDI, Standard_Integer n, con
 //=======================================================================
 // pcurve
 //=======================================================================
-Standard_IMPORT Draw_Color DrawTrSurf_CurveColor(const Draw_Color col);
-Standard_IMPORT void DBRep_WriteColorOrientation ();
-Standard_IMPORT Draw_Color DBRep_ColorOrientation (const TopAbs_Orientation Or);
+// Standard_IMPORT Draw_Color DrawTrSurf_CurveColor(const Draw_Color col);
+// Standard_IMPORT void DBRep_WriteColorOrientation ();
+// Standard_IMPORT Draw_Color DBRep_ColorOrientation (const TopAbs_Orientation Or);
 
 static Standard_Integer pcurve(Draw_Interpretor& , Standard_Integer n, const char** a)
 {
@@ -244,9 +245,6 @@ static Standard_Integer pcurve(Draw_Interpretor& , Standard_Integer n, const cha
     TopoDS_Shape S = DBRep::Get(a[1],TopAbs_FACE);
     if (S.IsNull()) return 1;
 
-    if (!mute) DBRep_WriteColorOrientation();
-    Draw_Color col, savecol = DrawTrSurf_CurveColor(Draw_rouge);
-
     char* name = new char[100];
     Standard_Real f,l;
     S.Orientation(TopAbs_FORWARD);
@@ -258,8 +256,6 @@ static Standard_Integer pcurve(Draw_Interpretor& , Standard_Integer n, const cha
         std::cout << "Error: Edge " << i << " does not have pcurve" << std::endl;
         continue;
       }
-      col = DBRep_ColorOrientation(ex.Current().Orientation());
-      DrawTrSurf_CurveColor(col);
 
       Sprintf(name,"%s_%d",a[1],i);
       Standard_Real fr = c->FirstParameter(), lr = c->LastParameter();
@@ -281,8 +277,6 @@ static Standard_Integer pcurve(Draw_Interpretor& , Standard_Integer n, const cha
         DrawTrSurf::Set(name,new Geom2d_TrimmedCurve(c,f,l));
       }
     }
-    DrawTrSurf_CurveColor(savecol);
-
   }
   else if (n >= 4) {
     TopoDS_Shape SE = DBRep::Get(a[2],TopAbs_EDGE);
@@ -290,7 +284,6 @@ static Standard_Integer pcurve(Draw_Interpretor& , Standard_Integer n, const cha
     TopoDS_Shape SF = DBRep::Get(a[3],TopAbs_FACE);
     if (SF.IsNull()) return 1;
 
-    Draw_Color col, savecol = DrawTrSurf_CurveColor(Draw_rouge);
     Standard_Real f,l;
     const Handle(Geom2d_Curve) c = BRep_Tool::CurveOnSurface
       (TopoDS::Edge(SE),TopoDS::Face(SF),f,l);
@@ -304,8 +297,6 @@ static Standard_Integer pcurve(Draw_Interpretor& , Standard_Integer n, const cha
       lr = aC->LastParameter();
     }
 
-    col = DBRep_ColorOrientation(SE.Orientation());
-    DrawTrSurf_CurveColor(col);
     if(!IsPeriodic && 
       ((fr - f > Precision::PConfusion()) || (l - lr > Precision::PConfusion())))
     {
@@ -315,7 +306,7 @@ static Standard_Integer pcurve(Draw_Interpretor& , Standard_Integer n, const cha
     {
       DrawTrSurf::Set(a[1],new Geom2d_TrimmedCurve(c,f,l));
     }
-    DrawTrSurf_CurveColor(savecol);
+    // DrawTrSurf_CurveColor(savecol);
   }
   else { 
     return 1;

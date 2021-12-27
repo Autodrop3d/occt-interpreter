@@ -5,8 +5,6 @@ BRepTest_ChamferCommands.cxx
 BRepTest_CheckCommands.cxx
 BRepTest_CurveCommands.cxx
 BRepTest_DraftAngleCommands.cxx
-BRepTest_DrawableHistory.cxx
-BRepTest_DrawableHistory.hxx
 BRepTest_ExtremaCommands.cxx
 BRepTest_FeatureCommands.cxx
 BRepTest_Fillet2DCommands.cxx

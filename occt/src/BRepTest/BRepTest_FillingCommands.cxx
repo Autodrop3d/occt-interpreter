@@ -30,6 +30,7 @@
 #include <Draw_Interpretor.hxx>
 #include <Draw_ProgressIndicator.hxx>
 #include <DrawTrSurf.hxx>
+#include <Draw.hxx>
 #include <TopAbs_ShapeEnum.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Edge.hxx>

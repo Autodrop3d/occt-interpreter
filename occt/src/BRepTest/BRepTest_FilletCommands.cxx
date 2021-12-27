@@ -19,7 +19,7 @@
 #include <TColgp_Array1OfPnt2d.hxx>
 #include <DBRep.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_Appli.hxx>
+#include <Draw.hxx>
 #include <BRepFilletAPI_MakeFillet.hxx>
 #include <BiTgte_Blend.hxx>
 #include <TopOpeBRepBuild_HBuilder.hxx>

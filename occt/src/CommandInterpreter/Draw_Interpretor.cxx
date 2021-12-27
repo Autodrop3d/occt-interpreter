@@ -16,7 +16,6 @@
 
 #include <Draw_Interpretor.hxx>
 
-#include <Draw_Appli.hxx>
 #include <Message.hxx>
 #include <Message_PrinterOStream.hxx>
 #include <OSD.hxx>
@@ -50,17 +49,17 @@ namespace {
 
 } // anonymous namespace
 
-static Standard_Integer CommandCmd (ClientData theClientData, Tcl_Interp* interp, Standard_Integer argc, const char* argv[])
-{
+// static Standard_Integer CommandCmd (ClientData theClientData, Tcl_Interp* interp, Standard_Integer argc, const char* argv[])
+// {
 
-  return 0;
-}
+//   return 0;
+// }
 
-static void CommandDelete (ClientData theClientData)
-{
-  Draw_Interpretor::CallBackData* aCallback = (Draw_Interpretor::CallBackData* )theClientData;
-  delete aCallback;
-}
+// static void CommandDelete (ClientData theClientData)
+// {
+//   Draw_Interpretor::CallBackData* aCallback = (Draw_Interpretor::CallBackData* )theClientData;
+//   delete aCallback;
+// }
 
 //=======================================================================
 //function : Draw_Interpretor
@@ -69,7 +68,6 @@ static void CommandDelete (ClientData theClientData)
 Draw_Interpretor::Draw_Interpretor()
 : // the tcl interpreter is not created immediately as it is kept
   // by a global variable and created and deleted before the main()
-  myInterp (NULL),
   isAllocated (Standard_False),
   myDoLog (Standard_False),
   myDoEcho (Standard_False),
@@ -79,20 +77,6 @@ Draw_Interpretor::Draw_Interpretor()
   //
 }
 
-//=======================================================================
-//function : Draw_Interpretor
-//purpose  :
-//=======================================================================
-Draw_Interpretor::Draw_Interpretor (const Draw_PInterp& theInterp)
-: myInterp (theInterp),
-  isAllocated (Standard_False),
-  myDoLog (Standard_False),
-  myDoEcho (Standard_False),
-  myToColorize (Standard_True),
-  myFDLog (-1)
-{
-  //
-}
 
 //=======================================================================
 //function : Init
@@ -131,7 +115,6 @@ void Draw_Interpretor::add (const Standard_CString          theCommandName,
                             Draw_Interpretor::CallBackData* theCallback,
                             const Standard_CString          theGroup)
 {
-  Standard_ASSERT_RAISE (myInterp != NULL, "Attempt to add command to Null interpretor");
 
   Standard_PCharacter aName  = (Standard_PCharacter )theCommandName;
   Standard_PCharacter aHelp  = (Standard_PCharacter )theHelp;
@@ -157,7 +140,7 @@ Standard_Boolean Draw_Interpretor::Remove(Standard_CString const n)
 
 Standard_CString Draw_Interpretor::Result() const
 {
-  return "cool"
+  return "cool";
 }
 
 //=======================================================================
@@ -197,7 +180,7 @@ Draw_Interpretor& Draw_Interpretor::Append(const TCollection_AsciiString& s)
 
 Draw_Interpretor& Draw_Interpretor::Append(const TCollection_ExtendedString& theString)
 {
-  std::cout << s;
+  std::cout << theString;
   return *this;
 }
 
@@ -250,6 +233,7 @@ void Draw_Interpretor::AppendElement(const Standard_CString s)
 
 Standard_Integer Draw_Interpretor::Eval(const Standard_CString line)
 {
+    return 0;
 }
 
 
@@ -261,6 +245,7 @@ Standard_Integer Draw_Interpretor::Eval(const Standard_CString line)
 Standard_Integer Draw_Interpretor::RecordAndEval(const Standard_CString line,
 						 const Standard_Integer flags)
 {
+    return 0;
 }
 
 //=======================================================================

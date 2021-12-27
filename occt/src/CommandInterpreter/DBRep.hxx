@@ -17,7 +17,6 @@
 #ifndef _DBRep_HeaderFile
 #define _DBRep_HeaderFile
 
-#include <DBRep_Params.hxx>
 #include <Draw_Interpretor.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <TopoDS_Shape.hxx>
@@ -95,7 +94,7 @@ protected:
                                                 Standard_Boolean theToComplain);
 
 private:
-  static std::map<Standard_CString, TopoDS_Shape&> shapes;
+  static std::map<Standard_CString, TopoDS_Shape> shapes;
 };
 
 #endif // _DBRep_HeaderFile

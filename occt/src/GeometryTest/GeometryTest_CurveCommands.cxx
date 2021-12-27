@@ -108,12 +108,10 @@
 #include <Adaptor3d_TopolTool.hxx>
 #include <TColgp_Array2OfPnt.hxx>
 #include <Geom_BSplineSurface.hxx>
-#include <DrawTrSurf_BSplineSurface.hxx>
 #include <TColStd_HArray1OfReal.hxx>
 
 //epa test
 #include <BRepBuilderAPI_MakeEdge.hxx>
-#include <AIS_Shape.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Edge.hxx>
 #include <TopoDS_Wire.hxx>
@@ -122,6 +120,7 @@
 #include <GCPnts_AbscissaPoint.hxx>
 #include <GCPnts_UniformAbscissa.hxx>
 #include <DBRep.hxx>
+#include <DrawTrSurf.hxx>
 
 
 //=======================================================================
@@ -803,7 +802,7 @@ static Standard_Integer movelaw (Draw_Interpretor& di, Standard_Integer n, const
 
 
     if (! error_status) {
-      Draw::Repaint();
+      // Draw::Repaint();
     }
     else {
       di << "Not enough degree of freedom increase degree please\n";

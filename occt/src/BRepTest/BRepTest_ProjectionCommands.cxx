@@ -19,6 +19,7 @@
 #include <TopoDS_Shape.hxx>
 #include <DBRep.hxx>
 #include <Draw_Interpretor.hxx>
+#include <Draw.hxx>
 #include <BRepProj_Projection.hxx>
 #include <TopExp_Explorer.hxx>
 #include <BRepTest.hxx>

@@ -100,7 +100,8 @@ Standard_Boolean Draw_Interprete(const char* com)
   if (Draw_BeforeCommand) (*Draw_BeforeCommand) ();
 
   Standard_Integer c;
-
+  
+  Standard_CString command;
   c = theCommands.RecordAndEval(command);
 
   if (Draw_AfterCommand) (*Draw_AfterCommand)(c);

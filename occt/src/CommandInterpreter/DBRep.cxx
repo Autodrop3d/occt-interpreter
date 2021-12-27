@@ -62,16 +62,6 @@ Standard_EXPORT void DBRep_WriteColorOrientation ()
 }
 
 
-//=======================================================================
-//function : Parameters
-//purpose  :
-//=======================================================================
-DBRep_Params& DBRep::Parameters()
-{
-  static DBRep_Params aParams;
-  return aParams;
-}
-
 
 //=======================================================================
 // compound
@@ -1104,7 +1094,7 @@ void  DBRep::BasicCommands(Draw_Interpretor& theCommands)
   theCommands.Add("treverse","treverse name1 name2 ...",__FILE__,orientation,g);
   theCommands.Add("complement","complement name1 name2 ...",__FILE__,orientation,g);
   theCommands.Add("invert","invert name, reverse subshapes",__FILE__,invert,g);
-  theCommands.Add("normals","normals shape [Length {10}] [-NbAlongU {1}] [-NbAlongV {1}] [-UseMesh] [-print], display normals",__FILE__,normals,g);
+  // theCommands.Add("normals","normals shape [Length {10}] [-NbAlongU {1}] [-NbAlongV {1}] [-UseMesh] [-print], display normals",__FILE__,normals,g);
   theCommands.Add("nbshapes",
                   "\n nbshapes s - shows the number of sub-shapes in <s>;\n nbshapes s -t - shows the number of sub-shapes in <s> counting the same sub-shapes with different location as different sub-shapes.",
                   __FILE__,nbshapes,g);

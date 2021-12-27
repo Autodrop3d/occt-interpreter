@@ -21,7 +21,7 @@
 #include <NCollection_Map.hxx>
 #include <Standard_Handle.hxx>
 
-class Draw_Drawable3D;
+class BRepTools_History;
 class Draw_ProgressIndicator;
 
 //! MAQUETTE DESSIN MODELISATION
@@ -166,8 +166,11 @@ public: //! @name methods loading standard command sets
   //! Defines Draw unit commands
   Standard_EXPORT static void UnitCommands (Draw_Interpretor& I);
 
+  static std::map<Standard_CString, Handle(BRepTools_History)> History;
+
 protected:
 
+  static std::map<Standard_CString, Standard_Real> reals;
 
 };
 

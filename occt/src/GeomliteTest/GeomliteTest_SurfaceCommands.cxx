@@ -842,7 +842,7 @@ static Standard_Integer sreverse (Draw_Interpretor& , Standard_Integer n, const 
 	GS->UReverse();
       else
 	GS->VReverse();
-      Draw::Repaint();
+      // Draw::Repaint();
     }
   }
 
@@ -1013,7 +1013,7 @@ static Standard_Integer movepole (Draw_Interpretor& , Standard_Integer n, const 
     }
   }
 
-  Draw::Repaint();
+  // Draw::Repaint();
 
   return 0;
 }
@@ -1063,7 +1063,7 @@ static Standard_Integer movepoint (Draw_Interpretor& , Standard_Integer n, const
   GBs->D0(u, v, p);
   p.SetCoord(p.X()+dx, p.Y()+dy, p.Z()+dz);
   GBs->MovePoint(u, v, p, index1u, index2u, index1v, index2v, fmodifu, lmodifu, fmodifv, lmodifv);
-  Draw::Repaint();
+  // Draw::Repaint();
   return 0;
 }
 
@@ -1115,7 +1115,7 @@ static Standard_Integer insertknot (Draw_Interpretor& , Standard_Integer n, cons
       return 1;
   }
 
-  Draw::Repaint();
+  // Draw::Repaint();
   return 0;
 }
 
@@ -1179,7 +1179,7 @@ static Standard_Integer incdegree (Draw_Interpretor& di, Standard_Integer n, con
     GBz->Increase(UDeg, VDeg);
   }
 
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -1222,7 +1222,7 @@ static Standard_Integer rempole (Draw_Interpretor& di, Standard_Integer n, const
     }
   }
 
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -1290,7 +1290,7 @@ static Standard_Integer ssetperiodic (Draw_Interpretor& , Standard_Integer n, co
 	GBs = DrawTrSurf::GetBSplineSurface(a[i]);
       if (!GBs.IsNull()) {
 	GBs->SetUPeriodic();
-	Draw::Repaint();
+	//Draw::Repaint();
       }
     }
   }
@@ -1300,7 +1300,7 @@ static Standard_Integer ssetperiodic (Draw_Interpretor& , Standard_Integer n, co
 	GBs = DrawTrSurf::GetBSplineSurface(a[i]);
       if (!GBs.IsNull()) {
 	GBs->SetVPeriodic();
-	Draw::Repaint();
+	//Draw::Repaint();
       }
     }
   }
@@ -1310,7 +1310,7 @@ static Standard_Integer ssetperiodic (Draw_Interpretor& , Standard_Integer n, co
 	GBs = DrawTrSurf::GetBSplineSurface(a[i]);
       if (!GBs.IsNull()) {
 	GBs->SetUNotPeriodic();
-	Draw::Repaint();
+	//Draw::Repaint();
       }
     }
   }
@@ -1320,7 +1320,7 @@ static Standard_Integer ssetperiodic (Draw_Interpretor& , Standard_Integer n, co
 	GBs = DrawTrSurf::GetBSplineSurface(a[i]);
       if (!GBs.IsNull()) {
 	GBs->SetVNotPeriodic();
-	Draw::Repaint();
+	//Draw::Repaint();
       }
     }
   }
@@ -1342,13 +1342,13 @@ static Standard_Integer exchuv (Draw_Interpretor& , Standard_Integer n, const ch
     Handle(Geom_BSplineSurface) GBs = DrawTrSurf::GetBSplineSurface(a[i]);
     if (!GBs.IsNull()) {
       GBs->ExchangeUV();
-      Draw::Repaint();
+      //Draw::Repaint();
     }
     else {
       Handle(Geom_BezierSurface) GBz = DrawTrSurf::GetBezierSurface(a[i]);
       if (!GBz.IsNull()) {
 	GBz->ExchangeUV();
-	Draw::Repaint();
+	//Draw::Repaint();
       }
     }
   }
@@ -1385,7 +1385,7 @@ static Standard_Integer segsur (Draw_Interpretor& , Standard_Integer n, const ch
     GBz->Segment(Draw::Atof(a[2]),Draw::Atof(a[3]),Draw::Atof(a[4]),Draw::Atof(a[5]));
   }
 
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -1441,7 +1441,7 @@ static Standard_Integer compBsplSur (Draw_Interpretor& , Standard_Integer n, con
   }
   
   
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -1466,7 +1466,7 @@ static Standard_Integer setuvorigin (Draw_Interpretor& , Standard_Integer n, con
   else 
     return 1;
 
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 

@@ -16,6 +16,7 @@
 
 #include <BRepTest.hxx>
 #include <DBRep.hxx>
+#include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
 #include <DrawTrSurf.hxx>
 #include <TopoDS_Solid.hxx>

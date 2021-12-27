@@ -14,7 +14,6 @@
 
 #include <BOPTest.hxx>
 
-#include <BOPTest_DrawableShape.hxx>
 #include <BOPTest_Objects.hxx>
 
 #include <BRep_Builder.hxx>

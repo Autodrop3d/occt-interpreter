@@ -15,7 +15,8 @@
 // commercial license or contractual agreement.
 
 #include <Draw_Interpretor.hxx>
-
+#include <Draw.hxx>
+#include <DrawTrSurf.hxx>
 #include <TopTools_ListOfShape.hxx>
 #include <TopTools_ListIteratorOfListOfShape.hxx>
 #include <TopTools_MapOfShape.hxx>
@@ -65,6 +66,8 @@
 #include <Message.hxx>
 
 #include <Precision.hxx>
+
+#include <Draw_ProgressIndicator.hxx>
 
 static BRepFeat_MakeCylindricalHole& getHole()
 {
@@ -838,9 +841,9 @@ static Standard_Integer SPLS(Draw_Interpretor&,
   }
   i++;
   while (i < newnarg) {
-    if (pick) {
-      DBRep_DrawableShape::LastPick(EF, u, v);
-    }
+    // if (pick) {
+    //   DBRep_DrawableShape::LastPick(EF, u, v);
+    // }
     if (!isSplittingEdges && !EF.IsNull() && EF.ShapeType() == TopAbs_FACE) {
       // face wire/edge ...
 
@@ -863,10 +866,10 @@ static Standard_Integer SPLS(Draw_Interpretor&,
           return 1; // on n`a rien recupere
         }
         TopAbs_ShapeEnum wtyp = W.ShapeType();
-        if (wtyp != TopAbs_WIRE && wtyp != TopAbs_EDGE && wtyp != TopAbs_COMPOUND && pick) {
-          DBRep_DrawableShape::LastPick(W, u, v);
-          wtyp = W.ShapeType();
-        }
+        // if (wtyp != TopAbs_WIRE && wtyp != TopAbs_EDGE && wtyp != TopAbs_COMPOUND && pick) {
+        //   DBRep_DrawableShape::LastPick(W, u, v);
+        //   wtyp = W.ShapeType();
+        // }
         if (wtyp != TopAbs_WIRE && wtyp != TopAbs_EDGE && wtyp != TopAbs_COMPOUND) {
           EF = DBRep::Get(a[i]);
           break;
@@ -1533,11 +1536,11 @@ static Standard_Integer GLU(Draw_Interpretor&,
       return 1;
     }
     TopAbs_ShapeEnum sht = Fne.ShapeType();
-    if (pick && sht != TopAbs_FACE && sht != TopAbs_EDGE) {
-      Standard_Real u, v;
-      DBRep_DrawableShape::LastPick(Fne, u, v);
-      sht = Fne.ShapeType();
-    }
+    // if (pick && sht != TopAbs_FACE && sht != TopAbs_EDGE) {
+    //   Standard_Real u, v;
+    //   DBRep_DrawableShape::LastPick(Fne, u, v);
+    //   sht = Fne.ShapeType();
+    // }
     if (first && sht != TopAbs_FACE) {
       return 1;
     }
@@ -1547,10 +1550,10 @@ static Standard_Integer GLU(Draw_Interpretor&,
     if (Fba.IsNull()) {
       return 1;
     }
-    if (pick && Fba.ShapeType() != sht) {
-      Standard_Real u, v;
-      DBRep_DrawableShape::LastPick(Fba, u, v);
-    }
+    // if (pick && Fba.ShapeType() != sht) {
+    //   Standard_Real u, v;
+    //   DBRep_DrawableShape::LastPick(Fba, u, v);
+    // }
     if (Fba.ShapeType() != sht) {
       return 1;
     }

@@ -20,6 +20,7 @@
 
 #include <GeomliteTest.hxx>
 #include <Draw.hxx>
+#include <DrawTrSurf.hxx>
 #include <Draw_Interpretor.hxx>
 
 #include <BSplCLib.hxx>
@@ -484,12 +485,12 @@ static Standard_Integer reverse (Draw_Interpretor& , Standard_Integer n, const c
     Handle(Geom_Curve) GC = DrawTrSurf::GetCurve(a[i]);
     if (!GC.IsNull()) {
       GC->Reverse();
-      Draw::Repaint();
+      //Draw::Repaint();
     }
     Handle(Geom2d_Curve) GC2d = DrawTrSurf::GetCurve2d(a[i]);
     if (!GC2d.IsNull()) {
       GC2d->Reverse();
-      Draw::Repaint();
+      //Draw::Repaint();
     }
   }
   return 0;
@@ -515,7 +516,7 @@ static Standard_Integer cmovepole (Draw_Interpretor& , Standard_Integer n, const
     gp_Pnt P = G1->Pole(Index);
     P.SetCoord(P.X()+dx, P.Y()+dy, P.Z()+dz);
     G1->SetPole(Index,P);
-    Draw::Repaint();
+    //Draw::Repaint();
     return 0;
   }
 
@@ -525,7 +526,7 @@ static Standard_Integer cmovepole (Draw_Interpretor& , Standard_Integer n, const
     gp_Pnt P = G2->Pole(Index);
     P.SetCoord(P.X()+dx, P.Y()+dy, P.Z()+dz);
     G2->SetPole(Index,P);
-    Draw::Repaint();
+    //Draw::Repaint();
     return 0;
   }
 
@@ -534,7 +535,7 @@ static Standard_Integer cmovepole (Draw_Interpretor& , Standard_Integer n, const
     gp_Pnt2d P = G3->Pole(Index);
     P.SetCoord(P.X()+dx, P.Y()+dy);
     G3->SetPole(Index,P);
-    Draw::Repaint();
+    //Draw::Repaint();
     return 0;
   }
 
@@ -544,7 +545,7 @@ static Standard_Integer cmovepole (Draw_Interpretor& , Standard_Integer n, const
     gp_Pnt2d P = G4->Pole(Index);
     P.SetCoord(P.X()+dx, P.Y()+dy);
     G4->SetPole(Index,P);
-    Draw::Repaint();
+    //Draw::Repaint();
     return 0;
   }
 
@@ -615,7 +616,7 @@ static Standard_Integer cmovetangent (Draw_Interpretor& di, Standard_Integer n, 
 			      condition,
 			      error_status) ;
       if (! error_status) {
-	Draw::Repaint();
+	//Draw::Repaint();
 	}
       else {
 	di << "Not enough degree of freedom increase degree please\n";
@@ -646,7 +647,7 @@ static Standard_Integer cmovetangent (Draw_Interpretor& di, Standard_Integer n, 
 			      condition,
 			      error_status) ;
       if (! error_status) {
-	Draw::Repaint();
+	//Draw::Repaint();
 	}
       else {
 	di << "Not enough degree of freedom increase degree please\n";
@@ -695,7 +696,7 @@ static Standard_Integer cmovepoint (Draw_Interpretor& , Standard_Integer n, cons
     G2->D0(u, p);
     p.SetCoord(p.X()+dx, p.Y()+dy, p.Z()+dz);
     G2->MovePoint(u, p, index1, index2, fmodif, lmodif);
-    Draw::Repaint();
+    //Draw::Repaint();
     return 0;
   }
 
@@ -709,7 +710,7 @@ static Standard_Integer cmovepoint (Draw_Interpretor& , Standard_Integer n, cons
     G4->D0(u, p);
     p.SetCoord(p.X()+dx, p.Y()+dy);
     G4->MovePoint(u, p, index1, index2, fmodif, lmodif);
-    Draw::Repaint();
+    //Draw::Repaint();
     return 0;
   }
   return 0;
@@ -757,7 +758,7 @@ static Standard_Integer cinsertknot (Draw_Interpretor& , Standard_Integer n, con
 
   }
 
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -792,7 +793,7 @@ static Standard_Integer csetknot (Draw_Interpretor& , Standard_Integer n, const 
       GBs2d->SetKnot(index,knot,mult);
   }
 
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -826,7 +827,7 @@ static Standard_Integer cremknot (Draw_Interpretor& di, Standard_Integer n, cons
       di << "Remove knots failed\n";
   }
 
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -857,7 +858,7 @@ static Standard_Integer increasedegree (Draw_Interpretor& , Standard_Integer n, 
   else
     return 1;
 
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -885,7 +886,7 @@ static Standard_Integer removepole (Draw_Interpretor& di, Standard_Integer n, co
     return 1;
   }
 
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -921,7 +922,7 @@ static Standard_Integer insertpole (Draw_Interpretor& di, Standard_Integer n, co
     return 1;
   }
 
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -964,7 +965,7 @@ static Standard_Integer csetperiodic (Draw_Interpretor& , Standard_Integer n, co
       GBs2d->SetNotPeriodic();
   }
 
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -1099,7 +1100,7 @@ static Standard_Integer segment (Draw_Interpretor& , Standard_Integer n, const c
   else
     return 1;
 
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -1123,7 +1124,7 @@ static Standard_Integer setorigin (Draw_Interpretor& , Standard_Integer n, const
   else
     return 1;
 
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -1187,15 +1188,12 @@ static Standard_Integer minmaxcurandinf(Draw_Interpretor& di,
   Handle(Geom2d_Curve)  C1 = DrawTrSurf::GetCurve2d(argv[1]);
   if (C1.IsNull()) return 1;
 
-  Draw_Color              Couleur;
   Geom2dLProp_CurAndInf2d Sommets;  
 
   Sommets.PerformCurExt (C1);
   if (Sommets.IsDone() && !Sommets.IsEmpty()) {
-    for (Standard_Integer i = 1; i <= Sommets.NbPoints(); i++){      
-      Couleur = Draw_vert;
-      if (Sommets.Type(i) == LProp_MinCur) {
-	Couleur = Draw_orange;
+    for (Standard_Integer i = 1; i <= Sommets.NbPoints(); i++){            
+      if (Sommets.Type(i) == LProp_MinCur) {	
 	di << "  Maximum of curvature at U ="<<Sommets.Parameter(i)<<"\n";
       }
       else {
@@ -1231,19 +1229,7 @@ static Standard_Integer shcurvature(Draw_Interpretor&,
 {
   if (argc < 2) return 1;
 
-   Handle(DrawTrSurf_Curve2d) C2d =  Handle(DrawTrSurf_Curve2d)
-                                  ::DownCast(Draw::Get(argv[1]));
-   Handle(DrawTrSurf_Curve) C3d =  Handle(DrawTrSurf_Curve)
-                                  ::DownCast(Draw::Get(argv[1]));
-   
-  if (C2d.IsNull()) {
-    if (C3d.IsNull()) return 1;
-    C3d->ShowCurvature();
-  }
-  else {
-    C2d->ShowCurvature();
-  }
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -1255,19 +1241,8 @@ static Standard_Integer clcurvature(Draw_Interpretor&,
 				   Standard_Integer argc, const char** argv)
 {
   if (argc < 2) return 1; 
-   Handle(DrawTrSurf_Curve2d) C2d =  Handle(DrawTrSurf_Curve2d)
-                                  ::DownCast(Draw::Get(argv[1]));
-   Handle(DrawTrSurf_Curve) C3d =  Handle(DrawTrSurf_Curve)
-                                  ::DownCast(Draw::Get(argv[1]));
 
-  if (C2d.IsNull()) {
-    if (C3d.IsNull()) return 1;
-    C3d->ClearCurvature();
-  }
-  else {
-    C2d->ClearCurvature();
-  }
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -1280,19 +1255,19 @@ static Standard_Integer radiusmax(Draw_Interpretor&,
 {
   if (argc < 3) return 1; 
   Standard_Real Radius = Draw::Atof(argv[2]);
-   Handle(DrawTrSurf_Curve2d) C2d =  Handle(DrawTrSurf_Curve2d)
-                                  ::DownCast(Draw::Get(argv[1]));
-   Handle(DrawTrSurf_Curve) C3d =  Handle(DrawTrSurf_Curve)
-                                  ::DownCast(Draw::Get(argv[1]));
+  //  Handle(DrawTrSurf_Curve2d) C2d =  Handle(DrawTrSurf_Curve2d)
+  //                                 ::DownCast(Draw::Get(argv[1]));
+  //  Handle(DrawTrSurf_Curve) C3d =  Handle(DrawTrSurf_Curve)
+  //                                 ::DownCast(Draw::Get(argv[1]));
 
-  if (C2d.IsNull()) {
-    if (C3d.IsNull()) return 1;
-    C3d->SetRadiusMax(Radius);
-  }
-  else {
-    C2d->SetRadiusMax(Radius);
-  }
-  Draw::Repaint();
+  // if (C2d.IsNull()) {
+  //   if (C3d.IsNull()) return 1;
+  //   C3d->SetRadiusMax(Radius);
+  // }
+  // else {
+  //   C2d->SetRadiusMax(Radius);
+  // }
+  //Draw::Repaint();
   return 0;
 }
 
@@ -1305,19 +1280,7 @@ static Standard_Integer radiusratio(Draw_Interpretor&,
 {
   if (argc < 3) return 1;
   Standard_Real Ratio = Draw::Atof(argv[2]);
-  Handle(DrawTrSurf_Curve2d) C2d =  Handle(DrawTrSurf_Curve2d)
-                                  ::DownCast(Draw::Get(argv[1]));
-  Handle(DrawTrSurf_Curve) C3d =  Handle(DrawTrSurf_Curve)
-                                  ::DownCast(Draw::Get(argv[1]));
-
-  if (C2d.IsNull()) { 
-    if (C3d.IsNull()) return 1;
-    C3d->SetRadiusRatio(Ratio);
-  }
-  else {
-    C2d->SetRadiusRatio(Ratio);
-  }
-  Draw::Repaint();
+  //Draw::Repaint();
   return 0;
 }
 
@@ -1341,10 +1304,7 @@ static Standard_Integer localprop(Draw_Interpretor& di,
     if (C3d.IsNull()) return 1;
     GeomLProp_CLProps Prop (C3d,2,Precision::Confusion());
     Prop.SetParameter(U);
-    Handle(Draw_Marker3D)drp = new Draw_Marker3D(Prop.Value(),
-						 Draw_Plus,
-						 Draw_vert );
-    dout << drp;
+
     if (Prop.IsTangentDefined()) {
       Standard_Real K = Prop.Curvature();
       di <<" Curvature : "<<K<<"\n";
@@ -1360,10 +1320,7 @@ static Standard_Integer localprop(Draw_Interpretor& di,
 	gp_Dir AxC = Nor^Tang;
 	gp_Ax2 Axe(Center,AxC,Nor);
 	Handle(Geom_Circle) Cir3d = new Geom_Circle(Axe,R);
-	Handle(DrawTrSurf_Curve) dr;
-	dr = new DrawTrSurf_Curve(Cir3d);
-	dout << dr;
-	dout.Flush();
+
       }
     }
     else 
@@ -1372,10 +1329,10 @@ static Standard_Integer localprop(Draw_Interpretor& di,
   else {
     Geom2dLProp_CLProps2d Prop (C2d,2,Precision::Confusion());
     Prop.SetParameter(U);
-    Handle(Draw_Marker2D) drp = new Draw_Marker2D(Prop.Value(),
-						  Draw_Plus,
-						  Draw_vert);
-    dout << drp;
+    // Handle(Draw_Marker2D) drp = new Draw_Marker2D(Prop.Value(),
+		// 				  Draw_Plus,
+		// 				  Draw_vert);
+    // dout << drp;
     if (Prop.IsTangentDefined()) {
       Standard_Real K = Prop.Curvature();
       gp_Pnt2d      Center;
@@ -1387,10 +1344,7 @@ static Standard_Integer localprop(Draw_Interpretor& di,
 	Prop.CentreOfCurvature(Center);
 	gp_Ax2d Axe(Center,gp::DX2d());
 	Handle(Geom2d_Circle) Cir2d = new Geom2d_Circle(Axe,R);
-	Handle(DrawTrSurf_Curve2d) dr;
-	dr = new DrawTrSurf_Curve2d(Cir2d,Draw_rouge,30,Standard_False);
-	dout << dr;
-	dout.Flush();
+
       }
     }
     else 

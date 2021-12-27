@@ -17,7 +17,6 @@
 
 #include <BRep_Builder.hxx>
 
-#include <BRepTest_DrawableHistory.hxx>
 #include <BRepTest_Objects.hxx>
 
 #include <Draw.hxx>
@@ -118,9 +117,7 @@ Standard_Integer SaveHistory(Draw_Interpretor& theDI,
     return 1;
   }
 
-  Handle(BRepTest_DrawableHistory) aDrawHist = new BRepTest_DrawableHistory(aHistory);
-
-  Draw::Set(theArgv[1], aDrawHist);
+  Draw::History[theArgv[1]] = aHistory;
 
   return 0;
 }
@@ -132,16 +129,7 @@ Standard_Integer SaveHistory(Draw_Interpretor& theDI,
 static Handle(BRepTools_History) GetHistory(Draw_Interpretor& theDI,
                                             Standard_CString theName)
 {
-  Handle(BRepTest_DrawableHistory) aHistory =
-    Handle(BRepTest_DrawableHistory)::DownCast(Draw::Get(theName));
-
-  if (aHistory.IsNull() || aHistory->History().IsNull())
-  {
-    theDI << "History with the name " << theName << " does not exist.";
-    return NULL;
-  }
-
-  return aHistory->History();
+  return Draw::History[theName];
 }
 
 //=======================================================================

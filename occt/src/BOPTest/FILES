@@ -3,8 +3,6 @@ BOPTest.hxx
 BOPTest_APICommands.cxx
 BOPTest_BOPCommands.cxx
 BOPTest_CheckCommands.cxx
-BOPTest_DrawableShape.cxx
-BOPTest_DrawableShape.hxx
 BOPTest_LowCommands.cxx
 BOPTest_MkConnectedCommands.cxx
 BOPTest_ObjCommands.cxx
