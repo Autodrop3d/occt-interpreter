@@ -351,3 +351,23 @@ TCollection_AsciiString Draw_Interpretor::GetLog ()
 
   return aLog;
 }
+
+void Draw_Interpretor::GenerateTypescriptInterface () 
+{
+    
+    std::cout << "interface OCCCommands { ";
+    for (CStringMap<Standard_CString>::const_iterator i = this->help.begin(); i != this->help.end(); ++i)
+    {
+        Standard_CString cmdName = i->first;
+        std::cout << std::endl;
+        std::cout << "  /*" << std::endl;
+        std::cout << "     " <<  i->second << std::endl;
+        std::cout << "   */" << std::endl;
+        std::cout << "  ";
+        if (cmdName[0] >= '0' && cmdName[0] <= '9') {
+          std::cout << "_";
+        }
+        std::cout << i->first << "(...args: string[]);" << std::endl;
+    }
+    std::cout << "}" << std::endl;
+}

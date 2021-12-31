@@ -209,4 +209,10 @@ extern "C" {
     std::cout << "CALLING: " << commandName << std::endl;
     return theCommands.CallCommand(commandName, n, a);  
   }
+  
+  EMSCRIPTEN_KEEPALIVE
+  void GenerateTypescriptInterface() {
+    theCommands.GenerateTypescriptInterface();  
+  }
+
 }

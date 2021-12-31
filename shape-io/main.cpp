@@ -12,7 +12,7 @@ extern "C" {
 
   void SPI_publish_result(io::DATA res) {
     EM_ASM_({
-      __E0_ENGINE_EXCHANGE(UTF8ToString($0));
+      __OCI_EXCHANGE(UTF8ToString($0));
     }, res.dumpJSON().c_str());
   }
 

@@ -39,9 +39,9 @@ function Interogate(shapeName, args) {
 }
 
 
-window.__E0_ENGINE_EXCHANGE_VAL = null;
-window.__E0_ENGINE_EXCHANGE = function(objStr) {
-  __E0_ENGINE_EXCHANGE_VAL = JSON.parse(objStr);
+window.__OCI_EXCHANGE_VAL = null;
+window.__OCI_EXCHANGE = function(objStr) {
+  __OCI_EXCHANGE_VAL = JSON.parse(objStr);
   console.log("EXCHANGE VALUE:");
-  console.log(__E0_ENGINE_EXCHANGE_VAL);
+  console.log(__OCI_EXCHANGE_VAL);
 };

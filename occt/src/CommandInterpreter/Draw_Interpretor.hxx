@@ -255,6 +255,8 @@ public:
   //! Set if console output should be colorized.
   Standard_EXPORT void SetToColorize (Standard_Boolean theToColorize);
 
+  Standard_EXPORT void GenerateTypescriptInterface ();
+
 protected:
 
   Standard_EXPORT void add (Standard_CString theCommandName,
