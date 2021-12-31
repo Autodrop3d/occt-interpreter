@@ -28,6 +28,8 @@
 
 #include <OSD_Environment.hxx>
 
+CStringMap<Standard_Real> Draw::reals;
+
 Standard_Boolean Draw_ParseFailed = Standard_True;
 
 //=======================================================================

@@ -27,12 +27,12 @@ void GeometryTest::AllCommands(Draw_Interpretor& theCommands)
 
   GeomliteTest::AllCommands(theCommands);
   GeometryTest::CurveCommands(theCommands);
-  GeometryTest::CurveTanCommands(theCommands);
+  // GeometryTest::CurveTanCommands(theCommands);
   // GeometryTest::FairCurveCommands(theCommands);
   GeometryTest::SurfaceCommands(theCommands);
-  GeometryTest::ConstraintCommands(theCommands);
-  GeometryTest::APICommands(theCommands);
-  GeometryTest::ContinuityCommands(theCommands);
+  // GeometryTest::ConstraintCommands(theCommands);
+  // GeometryTest::APICommands(theCommands);
+  // GeometryTest::ContinuityCommands(theCommands);
   // GeometryTest::TestProjCommands(theCommands);
   GeometryTest::PolyCommands(theCommands);
 

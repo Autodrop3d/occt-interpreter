@@ -20,6 +20,7 @@
 #include <Draw_Interpretor.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <TopoDS_Shape.hxx>
+#include <Map.hxx>
 
 //! Used to display BRep objects  using the DrawTrSurf
 //! package.
@@ -94,7 +95,7 @@ protected:
                                                 Standard_Boolean theToComplain);
 
 private:
-  static std::map<Standard_CString, TopoDS_Shape> shapes;
+  Standard_EXPORT static CStringMap<TopoDS_Shape> shapes;
 };
 
 #endif // _DBRep_HeaderFile

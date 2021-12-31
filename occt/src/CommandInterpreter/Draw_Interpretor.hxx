@@ -25,10 +25,12 @@
 #include <Standard_CString.hxx>
 #include <Standard_Integer.hxx>
 #include <Standard_Real.hxx>
-#include <map>
+#include <Map.hxx>
+
 
 class TCollection_AsciiString;
 class TCollection_ExtendedString;
+
 
 //! Provides an encapsulation of the TCL interpretor to define Draw commands.
 class Draw_Interpretor
@@ -206,6 +208,8 @@ public:
   Standard_EXPORT Standard_Integer RecordAndEval (const Standard_CString theScript,
                                                   const Standard_Integer theFlags = 0);
 
+  Standard_EXPORT Standard_Integer CallCommand (const Standard_CString commandName, Standard_Integer n, const char** a);
+
   //! Eval the content on the file and returns status
   Standard_EXPORT Standard_Integer EvalFile (const Standard_CString theFileName);
 
@@ -266,8 +270,8 @@ private:
   Standard_Boolean myDoEcho;
   Standard_Boolean myToColorize;
   Standard_Integer myFDLog;          //!< file descriptor of log file 
-  std::map<Standard_CString, CallBackData*> callbacks;
-  std::map<Standard_CString, Standard_CString> help;
+  CStringMap<CallBackData*> callbacks;
+  CStringMap<Standard_CString> help;
 
 public:
 

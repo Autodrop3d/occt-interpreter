@@ -22,10 +22,6 @@ RUN \
     python3-setuptools \
     zlib1g-dev
 
-COPY scripts /scripts
-
-RUN chmod -R 777 /scripts/
-
 WORKDIR /build
 
 ENTRYPOINT [ "/bin/bash" ]

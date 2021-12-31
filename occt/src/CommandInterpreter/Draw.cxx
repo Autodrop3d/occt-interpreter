@@ -36,6 +36,10 @@
 
 #include <Standard_WarningDisableFunctionCast.hxx>
 
+#include <BOPTest.hxx>
+#include <emscripten.h>
+
+
 extern Standard_Boolean Draw_ParseFailed;
 
 
@@ -191,4 +195,18 @@ Standard_Boolean Draw::ParseOnOffNoIterator (Standard_Integer  theArgsNb,
                             || strncasecmp (theArgVec[theArgIter], "-no", 3) == 0;
   Standard_Boolean isOn = Draw::ParseOnOffIterator (theArgsNb, theArgVec, theArgIter);
   return toReverse ? !isOn : isOn;
+}
+
+int main() {
+  BOPTest::Factory(theCommands);
+  printf("LOADED. \n");
+  return 0;
+}
+
+extern "C" {
+  EMSCRIPTEN_KEEPALIVE
+  int CallCommand(const Standard_CString commandName, Standard_Integer n, const char** a) {
+    std::cout << "CALLING: " << commandName << std::endl;
+    return theCommands.CallCommand(commandName, n, a);  
+  }
 }

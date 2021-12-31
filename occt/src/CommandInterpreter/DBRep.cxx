@@ -43,11 +43,12 @@
 #include <TopTools_Array1OfShape.hxx>
 #include <TopTools_ListOfShape.hxx>
 #include <TopTools_MapOfShape.hxx>
-
+#include <Map.hxx>
 
 #define Characters(IArg) (strspn (Arg[IArg], "0123456789.+-eE") != strlen (Arg[IArg]))
 #define Float(IArg)      (strspn (Arg[IArg], "0123456789+-")    != strlen (Arg[IArg]))
 
+CStringMap<TopoDS_Shape> DBRep::shapes;
 
 //==========================================
 // useful methods
@@ -765,6 +766,17 @@ static Standard_Integer check(Draw_Interpretor& ,
   return 0;
 }
 
+std::ostream& operator<<(std::ostream& os, const CStringMap<TopoDS_Shape>& m)
+{
+    os << "{ ";
+    for (CStringMap<TopoDS_Shape>::const_iterator i = m.begin(); i != m.end(); ++i)
+    {
+        if (i != m.begin()) os << ", ";
+        os << i->first;
+    }
+    return os << " }";
+}
+
 //=======================================================================
 //function : Set
 //purpose  : 
@@ -772,6 +784,7 @@ static Standard_Integer check(Draw_Interpretor& ,
 void DBRep::Set (const Standard_CString theName, const TopoDS_Shape& theShape)
 {
   DBRep::shapes[theName] = theShape;
+  std::cout << DBRep::shapes << std::endl;
 }
 //=======================================================================
 //function : getShape
@@ -781,21 +794,10 @@ TopoDS_Shape DBRep::getShape (Standard_CString& theName,
                               TopAbs_ShapeEnum theType,
                               Standard_Boolean theToComplain)
 {
+  std::cout << DBRep::shapes << std::endl;
+
   TopoDS_Shape& aShape = DBRep::shapes[theName];
 
-  if (theType != TopAbs_SHAPE
-   && theType != aShape.ShapeType())
-  {
-    if (theToComplain)
-    {
-      std::cout << theName << " is not a ";
-      TopAbs::Print (theType, std::cout);
-      std::cout << " but a ";
-      TopAbs::Print (aShape.ShapeType(), std::cout);
-      std::cout << std::endl;
-    }
-    return TopoDS_Shape();
-  }
   return aShape;
 }
 
@@ -1075,7 +1077,7 @@ void  DBRep::BasicCommands(Draw_Interpretor& theCommands)
 {
   if (done) return;
   done = Standard_True;
-  Draw::Commands(theCommands);
+  // Draw::Commands(theCommands);
 
   const char* g = "Basic shape commands";
 

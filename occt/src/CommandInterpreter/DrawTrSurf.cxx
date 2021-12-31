@@ -42,6 +42,7 @@
 #include <Poly_Triangulation.hxx>
 #include <Standard_Stream.hxx>
 #include <TCollection_AsciiString.hxx>
+#include <Map.hxx>
 
 static TCollection_AsciiString ColorsHint(
 "The possible colors are: \n\
@@ -52,6 +53,15 @@ static TCollection_AsciiString ColorsHint(
 static TCollection_AsciiString MarkersHint(
 "The possible markers are: \n\
   square, diamond, x, plus, circle, circle_zoom");
+
+
+CStringMap<gp_Pnt> DrawTrSurf::points;
+CStringMap<gp_Pnt2d> DrawTrSurf::points2d;
+CStringMap<Handle(Geom_Geometry)> DrawTrSurf::geom;
+CStringMap<Handle(Geom2d_Geometry)> DrawTrSurf::geom2d;
+CStringMap<Handle(Poly_Triangulation)> DrawTrSurf::triangulation;
+CStringMap<Handle(Poly_Polygon3D)> DrawTrSurf::polygons;
+CStringMap<Handle(Poly_Polygon2D)> DrawTrSurf::polygons2d;
 
 
 //=======================================================================

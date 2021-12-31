@@ -248,6 +248,15 @@ Standard_Integer Draw_Interpretor::RecordAndEval(const Standard_CString line,
     return 0;
 }
 
+Standard_EXPORT Standard_Integer Draw_Interpretor::CallCommand (const Standard_CString commandName, Standard_Integer n, const char** a)
+{
+  std::cout << "Invoking Command: " << commandName << std::endl;
+  dumpArgs (std::cout, n, a);
+  Draw_Interpretor::CallBackData* aCallback = this->callbacks[commandName];
+  return aCallback->Invoke ( *this, n, a );
+}
+
+
 //=======================================================================
 //function : EvalFile
 //purpose  : 

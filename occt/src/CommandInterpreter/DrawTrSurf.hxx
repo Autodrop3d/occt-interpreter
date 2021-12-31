@@ -21,6 +21,7 @@
 #include <Geom_Geometry.hxx>
 #include <Geom_Surface.hxx>
 #include <Geom2d_Curve.hxx>
+#include <Map.hxx>
 
 class Geom_BezierCurve;
 class Geom_BezierSurface;
@@ -150,13 +151,13 @@ template <class T> static void Set (const Standard_CString Name, const Handle(T)
 
 private:
 
-  static std::map<Standard_CString, gp_Pnt> points;
-  static std::map<Standard_CString, gp_Pnt2d> points2d;
-  static std::map<Standard_CString, Handle(Geom_Geometry)> geom;
-  static std::map<Standard_CString, Handle(Geom2d_Geometry)> geom2d;
-  static std::map<Standard_CString, Handle(Poly_Triangulation)> triangulation;
-  static std::map<Standard_CString, Handle(Poly_Polygon3D)> polygons;
-  static std::map<Standard_CString, Handle(Poly_Polygon2D)> polygons2d;
+  static CStringMap<gp_Pnt> points;
+  static CStringMap<gp_Pnt2d> points2d;
+  static CStringMap<Handle(Geom_Geometry)> geom;
+  static CStringMap<Handle(Geom2d_Geometry)> geom2d;
+  static CStringMap<Handle(Poly_Triangulation)> triangulation;
+  static CStringMap<Handle(Poly_Polygon3D)> polygons;
+  static CStringMap<Handle(Poly_Polygon2D)> polygons2d;
 
 };
 

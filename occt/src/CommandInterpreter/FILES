@@ -9,3 +9,4 @@ DrawTrSurf.hxx
 DrawTrSurf.cxx
 Draw_ProgressIndicator.hxx
 Draw_ProgressIndicator.cxx
+Map.hxx

@@ -166,11 +166,11 @@ public: //! @name methods loading standard command sets
   //! Defines Draw unit commands
   Standard_EXPORT static void UnitCommands (Draw_Interpretor& I);
 
-  static std::map<Standard_CString, Handle(BRepTools_History)> History;
+  Standard_EXPORT static CStringMap<Handle(BRepTools_History)> History;
 
 protected:
 
-  static std::map<Standard_CString, Standard_Real> reals;
+  Standard_EXPORT static CStringMap<Standard_Real> reals;
 
 };
 

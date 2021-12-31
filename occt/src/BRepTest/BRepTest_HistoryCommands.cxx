@@ -24,6 +24,9 @@
 
 #include <TopoDS.hxx>
 #include <TopoDS_Compound.hxx>
+#include <Map.hxx>
+
+CStringMap<Handle(BRepTools_History)> Draw::History;
 
 static Standard_Integer SetFillHistory(Draw_Interpretor&, Standard_Integer, const char**);
 static Standard_Integer SaveHistory   (Draw_Interpretor&, Standard_Integer, const char**);
