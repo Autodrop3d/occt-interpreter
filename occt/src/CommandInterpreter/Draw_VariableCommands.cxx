@@ -23,6 +23,9 @@
 #include <Standard_Stream.hxx>
 #include <Standard_NotImplemented.hxx>
 #include <TCollection_AsciiString.hxx>
+#include <BRepTools.hxx>
+#include <TopoDS_Shape.hxx>
+#include <DBRep.hxx>
 
 #include <errno.h>
 
@@ -359,3 +362,64 @@ static void before()
 extern void (*Draw_BeforeCommand)();
 extern void (*Draw_AfterCommand)(Standard_Integer);
 
+
+//=======================================================================
+// value
+//=======================================================================
+
+static Standard_Integer value(Draw_Interpretor& di, Standard_Integer n, const char** a)
+{
+  if (n != 2) return 1;
+  di << Draw::Atof(a[1]);
+
+  return 0;
+}
+
+
+//=======================================================================
+// dump
+//=======================================================================
+static Standard_Integer dump(Draw_Interpretor& DI, Standard_Integer n, const char** a)
+{
+  if(n < 2) return 1;
+  Standard_Integer i;
+  for (i = 1; i < n; i++) {
+    TopoDS_Shape shape = DBRep::Get(a[i]);  
+    if (!shape.IsNull()) {
+      Standard_SStream sss;
+      sss.precision(15);
+      sss << "\n\n*********** Dump of " << a[i] << " *************\n";      
+      BRepTools::Dump(shape, sss);
+      DI << sss;
+    }
+  }
+  return 0;
+}
+
+static Standard_Integer copy(Draw_Interpretor& , Standard_Integer n, const char** a)
+{
+  if (n < 3) return 1;
+  Standard_Boolean cop = !strcasecmp(a[0],"copy");
+
+  TopoDS_Shape D;
+  for (Standard_Integer i = 1; i < n; i += 2) {
+    if (i+1 >= n) return 0;
+    D = DBRep::Get(a[i]);
+    if (!D.IsNull()) {
+      // if (!cop) 
+	      // todo: remove it from the map
+      
+
+      DBRep::Set(a[i+1],D);
+    }
+  }
+  return 0;
+}
+
+void  Draw::VariableCommands(Draw_Interpretor& theCommandsArg)
+{
+  const char* g;
+  g = "DRAW Numeric functions";
+  theCommandsArg.Add("dump", "dump name1 name2 ...",__FILE__,dump,g);
+  theCommandsArg.Add("copy",  "copy name1 toname1 name2 toname2 ...",__FILE__,copy,g);
+}

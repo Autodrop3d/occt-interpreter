@@ -39,16 +39,12 @@
 #include <Geom2d_Line.hxx>
 #include <Precision.hxx>
 #include <GeomAPI_Interpolate.hxx>
-#include <Draw_Marker3D.hxx>
 #include <Geom2dAPI_Interpolate.hxx>
-#include <Draw_Marker2D.hxx>
 #include <TColgp_HArray1OfPnt.hxx>
 #include <Geom_BSplineCurve.hxx>
 #include <TColgp_HArray1OfPnt2d.hxx>
 #include <Geom2d_BSplineCurve.hxx>
 #include <Geom_TrimmedCurve.hxx>
-#include <DrawTrSurf_BSplineCurve.hxx>
-#include <DrawTrSurf_BSplineCurve2d.hxx>
 #include <TColgp_HArray1OfPnt.hxx>
 #include <TColgp_Array1OfPnt.hxx>
 #include <TColgp_Array1OfPnt2d.hxx>
@@ -65,7 +61,7 @@
 #include <GC_MakeArcOfCircle.hxx>
 
 #include <stdio.h>
-Standard_IMPORT Draw_Color DrawTrSurf_CurveColor(const Draw_Color);
+// Standard_IMPORT Draw_Color DrawTrSurf_CurveColor(const Draw_Color);
 
 
 static Standard_Integer solutions(Draw_Interpretor& di,
@@ -73,8 +69,8 @@ static Standard_Integer solutions(Draw_Interpretor& di,
 {
   char solname[200];
 
-  Draw_Color col = DrawTrSurf_CurveColor(Draw_Color(Draw_vert));
-  DrawTrSurf_CurveColor(col);
+  // Draw_Color col = DrawTrSurf_CurveColor(Draw_Color(Draw_vert));
+  // DrawTrSurf_CurveColor(col);
 
   if (ct3.IsDone()) {
     for (Standard_Integer i = 1 ; i <= ct3.NbSolutions() ; i++) {
@@ -96,8 +92,8 @@ static Standard_Integer solutions(Draw_Interpretor& di,
 {
   char solname[200];
 
-  Draw_Color col = DrawTrSurf_CurveColor(Draw_Color(Draw_vert));
-  DrawTrSurf_CurveColor(col);
+  // Draw_Color col = DrawTrSurf_CurveColor(Draw_Color(Draw_vert));
+  // DrawTrSurf_CurveColor(col);
 
   if (ct3.IsDone()) {
     for (Standard_Integer i = 1 ; i <= ct3.NbSolutions() ; i++) {
@@ -124,8 +120,8 @@ static Standard_Integer solutions(Draw_Interpretor& theDI,
 {
   char solname[200];
 
-  Draw_Color col = DrawTrSurf_CurveColor(Draw_Color(Draw_vert));
-  DrawTrSurf_CurveColor(col);
+  // Draw_Color col = DrawTrSurf_CurveColor(Draw_Color(Draw_vert));
+  // DrawTrSurf_CurveColor(col);
 
   if (theCt2.IsDone())
   {
@@ -340,7 +336,7 @@ static Standard_Integer lintang (Draw_Interpretor& di,Standard_Integer n, const 
   if (C1.IsNull() || C2.IsNull())
     return 1;
 
-  Draw_Color col = DrawTrSurf_CurveColor(Draw_Color(Draw_vert));
+  // Draw_Color col = DrawTrSurf_CurveColor(Draw_Color(Draw_vert));
 
   if (n >= 5) {
     Handle(Geom2d_Line) L = Handle(Geom2d_Line)::DownCast(C2);
@@ -385,7 +381,7 @@ static Standard_Integer lintang (Draw_Interpretor& di,Standard_Integer n, const 
       di << "Lin2d2Tan Not done\n";
   }
 
-  DrawTrSurf_CurveColor(col);
+  // DrawTrSurf_CurveColor(col);
 
   return 0;
 }

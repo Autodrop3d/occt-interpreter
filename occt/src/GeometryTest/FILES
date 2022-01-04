@@ -3,3 +3,4 @@ GeometryTest.hxx
 GeometryTest_CurveCommands.cxx
 GeometryTest_PolyCommands.cxx
 GeometryTest_SurfaceCommands.cxx
+GeometryTest_ConstraintCommands.cxx

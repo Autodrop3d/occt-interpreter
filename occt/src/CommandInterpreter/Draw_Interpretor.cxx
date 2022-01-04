@@ -223,7 +223,7 @@ Draw_Interpretor& Draw_Interpretor::Append(const Standard_SStream& s)
 
 void Draw_Interpretor::AppendElement(const Standard_CString s)
 {
-
+  std::cout << s << std::endl;
 }
 
 //=======================================================================
@@ -367,7 +367,7 @@ void Draw_Interpretor::GenerateTypescriptInterface ()
         if (cmdName[0] >= '0' && cmdName[0] <= '9') {
           std::cout << "_";
         }
-        std::cout << i->first << "(...args: string[]);" << std::endl;
+        std::cout << i->first << "(...args: any[]);" << std::endl;
     }
     std::cout << "}" << std::endl;
 }

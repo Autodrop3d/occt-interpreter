@@ -783,7 +783,8 @@ std::ostream& operator<<(std::ostream& os, const CStringMap<TopoDS_Shape>& m)
 //=======================================================================
 void DBRep::Set (const Standard_CString theName, const TopoDS_Shape& theShape)
 {
-  DBRep::shapes[theName] = theShape;
+  char* nameCopy = strdup(theName);
+  DBRep::shapes[nameCopy] = theShape;
   std::cout << DBRep::shapes << std::endl;
 }
 //=======================================================================
@@ -1078,7 +1079,8 @@ void  DBRep::BasicCommands(Draw_Interpretor& theCommands)
   if (done) return;
   done = Standard_True;
   // Draw::Commands(theCommands);
-
+  Draw::VariableCommands(theCommands);
+  
   const char* g = "Basic shape commands";
 
   theCommands.Add("compound","compound [name1 name2 ..] compound",__FILE__,compound,g);
