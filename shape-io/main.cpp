@@ -21,6 +21,8 @@ extern "C" {
     TopoDS_Shape shape = DBRep::Get(shapeName);
     try {
       io::DATA out = io::interrogate(shape, 2);  
+      TopoDS_Shape* shapePtr = new TopoDS_Shape(shape);
+      out["ptr"] = (std::uintptr_t) shapePtr;
       SPI_publish_result(out);
     } catch (Standard_Failure const& anException) {
       std::cout << anException.GetMessageString() << std::endl;

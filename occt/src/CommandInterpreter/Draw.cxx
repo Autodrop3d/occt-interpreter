@@ -37,6 +37,7 @@
 #include <Standard_WarningDisableFunctionCast.hxx>
 
 #include <BOPTest.hxx>
+#include <EngineCommands.hxx>
 #include <emscripten.h>
 
 
@@ -198,12 +199,19 @@ Standard_Boolean Draw::ParseOnOffNoIterator (Standard_Integer  theArgsNb,
 }
 
 int main() {
-  BOPTest::Factory(theCommands);
-  printf("LOADED. \n");
   return 0;
 }
 
 extern "C" {
+
+  EMSCRIPTEN_KEEPALIVE
+  void InitCommands() {
+    BOPTest::Factory(theCommands);
+    EngineInterface::Init(theCommands);
+    printf("LOADED. \n");
+  }
+
+
   EMSCRIPTEN_KEEPALIVE
   int CallCommand(const Standard_CString commandName, Standard_Integer n, const char** a) {
     std::cout << "CALLING: " << commandName << std::endl;

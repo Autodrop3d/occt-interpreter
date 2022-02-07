@@ -3,3 +3,4 @@ BRepTest
 GeometryTest
 GeomliteTest
 BOPTest
+EngineInterface
