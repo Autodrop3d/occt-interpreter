@@ -16,7 +16,7 @@ namespace EngineInterface {
 
     static int EngineCommand(Draw_Interpretor& di, Standard_Integer n, const char** a) {
 
-        if (n != 3) {
+        if (n != 2) {
             di << "Invalid number of arguments" << "\n";
             return 0;
         }
