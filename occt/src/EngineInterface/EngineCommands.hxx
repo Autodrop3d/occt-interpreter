@@ -16,14 +16,14 @@ namespace EngineInterface {
 
     static int EngineCommand(Draw_Interpretor& di, Standard_Integer n, const char** a) {
 
-        if (n != 2) {
+        if (n != 3) {
             di << "Invalid number of arguments" << "\n";
             return 0;
         }
 
-        std::string method(a[0]);
+        std::string method(a[1]);
         
-        DATA data = DATA::Load( a[1] ) ;
+        DATA data = DATA::Load( a[2] ) ;
 
         auto func = functions[method];
 
