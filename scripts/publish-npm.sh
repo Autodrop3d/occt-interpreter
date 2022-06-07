@@ -16,5 +16,5 @@ sed -i -e "s/<SNAPSHOT_SHA>/"$GIT_SHA"/g" $PCKG"/package/package.json"
 ls $PCKG"/package/"
 
 cd $PCKG"/package/"
-# npm publish --access public
+npm publish --access public
 cd -
