@@ -51,6 +51,13 @@ extern "C" {
   }
 
   EMSCRIPTEN_KEEPALIVE
+  int ClassifyFaceToFace(int face1Ptr, int face2Ptr, double tol) {
+    TopoDS_Face* f1 = reinterpret_cast<TopoDS_Face*>(face1Ptr);
+    TopoDS_Face* f2 = reinterpret_cast<TopoDS_Face*>(face2Ptr);
+    return e0::classifyFaceToFace(*f1, *f2, tol);
+  }
+
+  EMSCRIPTEN_KEEPALIVE
   bool IsEdgesOverlap(int e1Ptr, int e2Ptr, double tol) {
     TopoDS_Edge* e1 = reinterpret_cast<TopoDS_Edge*>(e1Ptr);
     TopoDS_Edge* e2 = reinterpret_cast<TopoDS_Edge*>(e2Ptr);
