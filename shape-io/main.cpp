@@ -65,6 +65,7 @@ extern "C" {
     return e0::isEdgesOverlap(*e1, *e2, tol);
   }
 
+  EMSCRIPTEN_KEEPALIVE
   void UpdateTessellation(int shapePtr, double deflection) {
     TopoDS_Shape* shape = reinterpret_cast<TopoDS_Shape*>(shapePtr);
     e0::io::UpdateTessellation(*shape, deflection);
