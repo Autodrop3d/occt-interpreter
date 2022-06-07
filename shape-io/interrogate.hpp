@@ -47,8 +47,6 @@
 #include <BRep_ListIteratorOfListOfCurveRepresentation.hxx>
 #include <BRep_TEdge.hxx>
 
-#define INTERROGATE_STRUCT_ONLY false
-
 namespace e0 {
 namespace io {
 
@@ -130,6 +128,30 @@ void writeFaceTessellation(const Handle(Poly_Triangulation)& aTr, const TopLoc_L
   }   
 }
 
+void writeFaceEvalationPoints(const Handle(Poly_Triangulation)& aTr, const TColgp_Array1OfPnt& fPoints, 
+  DATA& out) {
+  
+  const Poly_Array1OfTriangle& triangles = aTr->Triangles();  
+  Standard_Integer nnn = aTr->NbTriangles(); 
+  Standard_Integer nt,n1,n2,n3; 
+
+  for( nt = 1 ; nt < nnn+1 ; nt++) { 
+    // takes the node indices of each triangle in n1,n2,n3: 
+    triangles(nt).Get(n1,n2,n3); 
+
+    gp_Pnt p1 = fPoints(n1); 
+    gp_Pnt p2 = fPoints(n2); 
+    gp_Pnt p3 = fPoints(n3); 
+
+    
+    out.append(xyzWrite(
+      (p1.X() + p2.X() + p3.X())/3,   
+      (p1.Y() + p2.Y() + p3.Y())/3,   
+      (p1.Z() + p2.Z() + p3.Z())/3
+    ));
+  }   
+}
+
 void checkShape(const TopoDS_Shape& aShape)
 {
 
@@ -186,11 +208,16 @@ void checkShape(const TopoDS_Shape& aShape)
           Standard_CString aTypeName;
           switch (aType)
           {
-          case TopAbs_SHELL: aTypeName = "SHELL"; break;
           case TopAbs_FACE: aTypeName = "FACE"; break;
           case TopAbs_WIRE: aTypeName = "WIRE"; break;
           case TopAbs_EDGE: aTypeName = "EDGE"; break;
           case TopAbs_VERTEX: aTypeName = "VERTEX"; break;
+          case TopAbs_SHELL: 
+          case TopAbs_COMPOUND:
+          case TopAbs_COMPSOLID:
+          case TopAbs_SOLID:
+          case TopAbs_SHAPE: 
+            aTypeName = "SHELL"; break;
           }
 
           Standard_CString aError;
@@ -251,7 +278,7 @@ void checkShape(const TopoDS_Shape& aShape)
 
 
 DATA 
-interrogate(const TopoDS_Shape& aShape, Standard_Real aDeflection = 3)
+interrogate(const TopoDS_Shape& aShape, Standard_Real aDeflection = 3, Standard_Boolean INTERROGATE_STRUCT_ONLY = false)
 {
 
   DATA out = Object();
@@ -367,6 +394,7 @@ interrogate(const TopoDS_Shape& aShape, Standard_Real aDeflection = 3)
 
           edgeOut["ptr"] = ((std::uintptr_t)persistEdge);
           edgeOut["edgeRef"] = edgeFaceMap.FindIndex(aEdge);
+          edgeOut["ref"] = e0::io::getStableRefernce(aEdge);
           edgesOut.append(edgeOut);  
         }
         loopsOut.append(edgesOut);
@@ -376,9 +404,12 @@ interrogate(const TopoDS_Shape& aShape, Standard_Real aDeflection = 3)
       faceOut["inverted"] = aFace.Orientation() == TopAbs_REVERSED;
       if (!INTERROGATE_STRUCT_ONLY) {
         faceOut["tess"] = tessOut;
+        // DATA evalPts = Array();
+        // writeFaceEvalationPoints(aTr, fPoints, evalPts);
+        // faceOut["evaluationPoints"] = evalPts;                     
       }
       TopoDS_Face* persistFace = new TopoDS_Face(aFace);
-      faceOut["ref"] = ((std::uintptr_t)aFace.TShape().get());
+      faceOut["ref"] = e0::io::getStableRefernce(aFace);                     
       faceOut["ptr"] = ((std::uintptr_t)persistFace);
       facesOut.append(faceOut);
     } 
@@ -432,6 +463,11 @@ void dispose(io::DATA request) {
   TopoDS_Shape* body = reinterpret_cast<TopoDS_Shape*>(bptr);
 
   delete body;
+}
+
+void UpdateTessellation(TopoDS_Shape& shape, double deflection) {
+  BRepTools::Clean(shape);  
+  BRepMesh_IncrementalMesh(shape, deflection);  
 }
 
 } //io

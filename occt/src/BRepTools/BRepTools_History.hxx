@@ -255,7 +255,7 @@ private:
   Standard_Boolean prepareModified(
     const TopoDS_Shape& theInitial, const TopoDS_Shape& theModified);
 
-private: //! Data to keep the history.
+public: //! Data to keep the history.
 
   //! Maps each input shape to all shapes modified from it.
   //! If an input shape is not bound to the map then

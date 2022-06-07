@@ -97,6 +97,9 @@ TColStd_Array1OfReal realVectorRead(std::vector<double> reals) {
   return out;
 }
 
+std::uintptr_t getStableRefernce(const TopoDS_Shape& shape) {
+  return ((std::uintptr_t)shape.TShape().get());
+}
 
 }
 }
