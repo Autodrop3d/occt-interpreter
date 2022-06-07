@@ -1,6 +1,6 @@
 {
   "name": "jsketcher-occ-engine",
-  "version": "1.0.x",
+  "version": "1.0.1-<SNAPSHOT_SHA>",
   "description": "prebuilt occ wasm",
   "public": "true",
   "scripts": {
