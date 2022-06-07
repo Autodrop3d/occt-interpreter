@@ -71,8 +71,8 @@ namespace e0 {
       triangles(nt).Get(n1,n2,n3); 
 
       gp_Pnt2d uv1 = aTr->UVNode(n1);
-      gp_Pnt2d uv2 = aTr->UVNode(n1);
-      gp_Pnt2d uv3 = aTr->UVNode(n1);
+      gp_Pnt2d uv2 = aTr->UVNode(n2);
+      gp_Pnt2d uv3 = aTr->UVNode(n3);
 
       gp_Pnt2d centroidUV = gp_Pnt2d((uv1.X()+uv2.X()+uv3.X())/3, (uv1.Y()+uv2.Y()+uv3.Y())/3);
 
