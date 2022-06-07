@@ -76,7 +76,7 @@ namespace e0 {
 
       gp_Pnt2d centroidUV = gp_Pnt2d((uv1.X()+uv2.X()+uv3.X())/3, (uv1.Y()+uv2.Y()+uv3.Y())/3);
 
-      gp_Pnt evalPoint = surface->Value(centroidUV.X(), centroidUV.Y());
+      gp_Pnt evalPoint = surface->Value(centroidUV.X(), centroidUV.Y()).Transformed(aLocation);
 
       auto pfClassification = classifyPointToFace(face1, evalPoint, tol);
 
