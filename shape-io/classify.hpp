@@ -5,6 +5,8 @@
 #include <BRepClass_FaceClassifier.hxx>
 #include <TopoDS_Shape.hxx>
 #include <ShapeAnalysis_Edge.hxx>
+#include <BOPTools_AlgoTools2D.hxx>
+
 
 namespace e0 {
 
@@ -13,7 +15,7 @@ namespace e0 {
   static const int GEOM_CLASSIFICATION_BOUNDS = 2;
 
   static const int LOGICAL_CLASSIFICATION_UNRELATED = 0;
-  static const int LOGICAL_CLASSIFICATION_SAME = 1;
+  static const int LOGICAL_CLASSIFICATION_ALL = 1;
   static const int LOGICAL_CLASSIFICATION_PARTIAL = 2;
 
   int classifyPointToFace(const TopoDS_Face& face, const gp_Pnt& p3d, float tol = -1) {
@@ -76,7 +78,7 @@ namespace e0 {
 
       gp_Pnt2d centroidUV = gp_Pnt2d((uv1.X()+uv2.X()+uv3.X())/3, (uv1.Y()+uv2.Y()+uv3.Y())/3);
 
-      gp_Pnt evalPoint = surface->Value(centroidUV.X(), centroidUV.Y()).Transformed(aLocation);
+      gp_Pnt evalPoint = surface->Value(centroidUV.X(), centroidUV.Y());
 
       auto pfClassification = classifyPointToFace(face1, evalPoint, tol);
 
@@ -92,7 +94,54 @@ namespace e0 {
     }   
 
     if (wasMatch && !wasMissMatch) {
-      return LOGICAL_CLASSIFICATION_SAME;
+      return LOGICAL_CLASSIFICATION_ALL;
+    } else if (wasMatch && wasMissMatch) {
+      return LOGICAL_CLASSIFICATION_PARTIAL;
+    } else {
+      return LOGICAL_CLASSIFICATION_UNRELATED;
+    }
+  }
+
+  int classifyEdgeToFace(const TopoDS_Edge& edge, const TopoDS_Face& face, float tol = -1) {
+
+    if (tol < 0) {
+        tol = BRep_Tool::Tolerance(face);        
+    }
+
+    Standard_Real first, intr, last;
+
+    Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, first, last);
+
+    intr = BOPTools_AlgoTools2D::IntermediatePoint(first, last);
+
+    Standard_Real params[3] = {first, intr, last};
+
+    bool wasMatch = false;
+    bool wasMissMatch = false;
+
+    for(int i  = 0 ; i < 3 ; i++) { 
+      
+      Standard_Real u = params[i];
+      
+      gp_Pnt evalPoint;
+  
+      curve->D0(u, evalPoint);
+
+      auto pfClassification = classifyPointToFace(face, evalPoint, tol);
+
+      switch (pfClassification) {
+        case GEOM_CLASSIFICATION_BOUNDS:
+        case GEOM_CLASSIFICATION_INSIDE:
+          wasMatch = true;
+          break;
+        case GEOM_CLASSIFICATION_UNRELATED:
+        default:
+          wasMissMatch = true;
+      }
+    }   
+
+    if (wasMatch && !wasMissMatch) {
+      return LOGICAL_CLASSIFICATION_ALL;
     } else if (wasMatch && wasMissMatch) {
       return LOGICAL_CLASSIFICATION_PARTIAL;
     } else {
