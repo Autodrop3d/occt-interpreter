@@ -1,3 +1,4 @@
+cd /build/
 
 emcmake cmake \
   -DCMAKE_SUPPRESS_REGENERATION:BOOL=ON  \
