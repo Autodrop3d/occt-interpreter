@@ -122,4 +122,38 @@ extern "C" {
     }
   }
 
+  EMSCRIPTEN_KEEPALIVE
+  void AddLocation(const char* shapeName, float mx0, float mx1, float mx2, float mx3, float mx4, float mx5, float mx6, float mx7, float mx8, float mx9, float mx10, float mx11) {
+    try {
+
+      TopoDS_Shape shape = DBRep::Get(shapeName);
+
+      gp_Trsf trfs;
+
+      trfs.SetValues(
+        mx0,
+        mx1,
+        mx2,
+        mx3,
+        mx4,
+        mx5,
+        mx6,
+        mx7,
+        mx8,
+        mx9,
+        mx10,
+        mx11
+      );
+
+      gp_Trsf resultTrfs = shape.Location().Transformation().Multiplied(trfs);
+      resultTrfs.SetScaleFactor(1);
+      shape.Location(resultTrfs);
+      
+      DBRep::Set(shapeName, shape);
+
+    } catch (Standard_Failure const& anException) {
+      std::cerr << "ERROR: " << anException.GetMessageString() << std::endl;
+    }
+  }
+
 }
