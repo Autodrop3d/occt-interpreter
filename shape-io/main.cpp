@@ -6,6 +6,7 @@
 #include "interrogate.hpp"
 #include "historyIO.hpp"
 #include "classify.hpp"
+#include "step.hpp"
 
 
 using namespace std;
