@@ -282,7 +282,7 @@ interrogate(const TopoDS_Shape& aShape, Standard_Real aDeflection = 3, Standard_
 {
 
   DATA out = Object();
-  checkShape(aShape);
+  // checkShape(aShape);
 
   if (aDeflection <= 0) {
     aDeflection = 3;
