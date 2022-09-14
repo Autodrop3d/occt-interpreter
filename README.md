@@ -8,16 +8,9 @@ See https://github.com/xibyte/jsketcher for how it is used.
 
 NPM package published at https://www.npmjs.com/package/jsketcher-occ-engine
 
-# docker commands
-
-docker build -t xibyte/occt:wasm-builder_1.0 .
-
-docker run -it -v $(pwd)/build-wasm:/build -v $(pwd)/occt:/occt xibyte/occt:wasm-builder_1.0 -i
-
-
 
 # Instructions to set up dev environment
-Clone repo
+Clone repo on to a linux machine that has docker installed. 
 
 First run the docker build script. This only needs to be run the first time you use the sandbox.
 ```
