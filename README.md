@@ -13,3 +13,43 @@ NPM package published at https://www.npmjs.com/package/jsketcher-occ-engine
 docker build -t xibyte/occt:wasm-builder_1.0 .
 
 docker run -it -v $(pwd)/build-wasm:/build -v $(pwd)/occt:/occt xibyte/occt:wasm-builder_1.0 -i
+
+
+
+# Instructions to set up dev environment
+Clone repo
+
+First run the docker build script. This only needs to be run the first time you use the sandbox.
+```
+./scripts/docker-build.sh
+
+```
+
+Next start the docker sandbox environnement
+```
+./scripts/docker-sandbox.sh
+```
+
+The docker sandbox environment will start and present you with a standard linux shell environment. 
+The scripts folder is automatically mounted to `/scripts` with in the docker dev sandbox. 
+
+Within the docker sandbox you will need to run the `init-cmake.sh`. This only needs to be run the first time you use the sandbox.
+```
+/scripts/init-cmake.sh
+```
+
+Compile the project using the `compile.sh` script. 
+
+The first time you run the compile script it will take a while to compile.
+```
+/scripts/compile.sh
+```
+
+
+
+Finally run `wasm-link.sh` to produce the wasm build. 
+```
+/scripts/wasm-link.sh
+```
+
+You should now find the wasm file located in the build-wasm directory.
