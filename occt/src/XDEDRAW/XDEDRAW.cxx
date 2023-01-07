@@ -13,29 +13,41 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <XSDRAW.hxx>
 
 #include <AIS_InteractiveContext.hxx>
 #include <AIS_InteractiveObject.hxx>
 #include <AIS_Trihedron.hxx>
 #include <Aspect_TypeOfLine.hxx>
+#include <BRepBuilderAPI_Transform.hxx>
 #include <DBRep.hxx>
 #include <DDF_Browser.hxx>
 #include <DDocStd.hxx>
 #include <DDocStd_DrawDocument.hxx>
+#include <DE_Wrapper.hxx>
+#include <DEBRepCascade_ConfigurationNode.hxx>
+#include <DEXCAFCascade_ConfigurationNode.hxx>
 #include <Draw.hxx>
 #include <Draw_PluginMacro.hxx>
 #include <Draw_ProgressIndicator.hxx>
 #include <Geom_Axis2Placement.hxx>
+#include <IGESCAFControl_ConfigurationNode.hxx>
 #include <Prs3d_Drawer.hxx>
 #include <Prs3d_LineAspect.hxx>
 #include <Quantity_Color.hxx>
+#include <RWStl_ConfigurationNode.hxx>
+#include <RWGltf_ConfigurationNode.hxx>
+#include <RWObj_ConfigurationNode.hxx>
+#include <RWPly_ConfigurationNode.hxx>
 #include <STEPCAFControl_Controller.hxx>
+#include <STEPCAFControl_ConfigurationNode.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <TCollection_ExtendedString.hxx>
 #include <TCollection_HAsciiString.hxx>
 #include <TColStd_HArray1OfInteger.hxx>
 #include <TColStd_HArray1OfReal.hxx>
 #include <TColStd_HSequenceOfExtendedString.hxx>
+#include <TColStd_MapIteratorOfPackedMapOfInteger.hxx>
 #include <TDataStd_AsciiString.hxx>
 #include <TDataStd_ByteArray.hxx>
 #include <TDataStd_Comment.hxx>
@@ -67,7 +79,11 @@
 #include <V3d_Viewer.hxx>
 #include <ViewerTest.hxx>
 #include <ViewerTest_AutoUpdater.hxx>
+#include <Vrml_ConfigurationNode.hxx>
 #include <XCAFDoc.hxx>
+#include <XCAFDoc_AssemblyIterator.hxx>
+#include <XCAFDoc_AssemblyGraph.hxx>
+#include <XCAFDoc_AssemblyTool.hxx>
 #include <XCAFDoc_Area.hxx>
 #include <XCAFDoc_Centroid.hxx>
 #include <XCAFDoc_Color.hxx>
@@ -75,6 +91,7 @@
 #include <XCAFDoc_DimTol.hxx>
 #include <XCAFDoc_Dimension.hxx>
 #include <XCAFDoc_Datum.hxx>
+#include <XCAFDoc_Editor.hxx>
 #include <XCAFDoc_GeomTolerance.hxx>
 #include <XCAFDoc_DocumentTool.hxx>
 #include <XCAFDoc_GraphNode.hxx>
@@ -94,7 +111,6 @@
 #include <XDEDRAW_GDTs.hxx>
 #include <XDEDRAW_Views.hxx>
 #include <XDEDRAW_Notes.hxx>
-#include <XSDRAW.hxx>
 #include <XSDRAWIGES.hxx>
 #include <XSDRAWSTEP.hxx>
 #include <UnitsMethods.hxx>
@@ -585,7 +601,7 @@ static Standard_Integer show (Draw_Interpretor& di, Standard_Integer argc, const
   TCollection_AsciiString   aViewName = TCollection_AsciiString ("Driver1/Document_") + argv[1] + "/View1";
   if (!TPrsStd_AISViewer::Find (aRoot, aDocViewer))
   {
-    ViewerTest::ViewerInit (0, 0, 0, 0, aViewName.ToCString(), "");
+    ViewerTest::ViewerInit (aViewName);
     aDocViewer = TPrsStd_AISViewer::New (aRoot, ViewerTest::GetAISContext());
   }
 
@@ -1300,6 +1316,360 @@ static Standard_Integer XShowFaceBoundary (Draw_Interpretor& di,
 }
 
 //=======================================================================
+//function : XAssemblyTreeDump
+//purpose  : Prints assembly tree structure up to the specified level
+//=======================================================================
+
+static Standard_Integer XDumpAssemblyTree(Draw_Interpretor& di,
+                                          Standard_Integer argc,
+                                          const char ** argv)
+{
+  if (argc < 2)
+  {
+    di << "Usage :\n " << argv[0] << " Doc [-root label] [-level l] [-names]\n"
+      << "   Doc         - document name. \n"
+      << "   -root label - starting root label. \n"
+      << "   -level l    - depth level (infinite by default). \n"
+      << "   -names      - prints names instead of entries. \n";
+
+    return 1;
+  }
+
+  // get specified document
+  Handle(TDocStd_Document) aDoc;
+  DDocStd::GetDocument(argv[1], aDoc);
+  if (aDoc.IsNull())
+  {
+    di << argv[1] << " is not a document\n";
+    return 1;
+  }
+
+  XCAFDoc_AssemblyItemId aRoot;
+  Standard_Integer aLevel = INT_MAX;
+  Standard_Boolean aPrintNames = Standard_False;
+  for (Standard_Integer iarg = 2; iarg < argc; ++iarg)
+  {
+    if (strcmp(argv[iarg], "-root") == 0)
+    {
+      Standard_ProgramError_Raise_if(iarg + 1 >= argc, "Root is expected!");
+      aRoot.Init(argv[++iarg]);
+    }
+    else if (strcmp(argv[iarg], "-level") == 0)
+    {
+      Standard_ProgramError_Raise_if(iarg + 1 >= argc, "Level is expected!");
+      TCollection_AsciiString anArg = argv[++iarg];
+      Standard_ProgramError_Raise_if(!anArg.IsIntegerValue(), "Integer value is expected!");
+      aLevel = anArg.IntegerValue();
+    }
+    else if (strcmp(argv[iarg], "-names") == 0)
+    {
+      aPrintNames = Standard_True;
+    }
+  }
+
+  Standard_SStream aSS;
+
+  XCAFDoc_AssemblyIterator anIt = aRoot.IsNull() ? XCAFDoc_AssemblyIterator(aDoc, aLevel) 
+                                                 : XCAFDoc_AssemblyIterator(aDoc, aRoot, aLevel);
+  XCAFDoc_AssemblyTool::Traverse(anIt, [&](const XCAFDoc_AssemblyItemId& theItem) -> Standard_Boolean
+  {
+    if (aPrintNames)
+    {
+      Standard_Boolean aFirst = Standard_True;
+      for (TColStd_ListOfAsciiString::Iterator anIt(theItem.GetPath()); anIt.More(); 
+           anIt.Next(), aFirst = Standard_False)
+      {
+        if (!aFirst) aSS << "/";
+        TDF_Label aL;
+        TDF_Tool::Label(aDoc->GetData(), anIt.Value(), aL, Standard_False);
+        if (!aL.IsNull())
+        {
+          TCollection_ExtendedString aName;
+          Handle(TDataStd_Name) aNameAttr;
+          if (aL.FindAttribute(TDataStd_Name::GetID(), aNameAttr))
+          {
+            aName = aNameAttr->Get();
+            aSS << aName;
+            continue;
+          }
+        }
+        aSS << anIt.Value();
+      }
+      aSS << std::endl;
+    }
+    else
+    {
+      aSS << theItem.ToString() << std::endl;
+    }
+    return Standard_True;
+  });
+
+  di << aSS.str().c_str();
+  return 0;
+}
+
+//=======================================================================
+//function : graphNodeTypename
+//purpose  : Returns node type name
+//=======================================================================
+
+static 
+const char* graphNodeTypename(const XCAFDoc_AssemblyGraph::NodeType theNodeType)
+{
+  switch (theNodeType)
+  {
+  case XCAFDoc_AssemblyGraph::NodeType_AssemblyRoot: return "R";
+  case XCAFDoc_AssemblyGraph::NodeType_Subassembly:  return "A";
+  case XCAFDoc_AssemblyGraph::NodeType_Occurrence:   return "O";
+  case XCAFDoc_AssemblyGraph::NodeType_Part:         return "P";
+  case XCAFDoc_AssemblyGraph::NodeType_Subshape:     return "S";
+  default:                                           return "?";
+  }
+}
+
+//=======================================================================
+//function : XAssemblyGraphDump
+//purpose  : Prints assembly graph structure
+//=======================================================================
+
+static Standard_Integer XDumpAssemblyGraph(Draw_Interpretor& di,
+                                           Standard_Integer argc,
+                                           const char ** argv)
+{
+  if (argc < 2)
+  {
+    di << "Usage :\n " << argv[0] << " Doc [-root label] [-verbose] \n"
+      << "   Doc         - is the document name. \n"
+      << "   -root label - is the optional starting label. \n"
+      << "   -names      - prints names instead of entries. \n";
+
+    return 1;
+  }
+
+  // get specified document
+  Handle(TDocStd_Document) aDoc;
+  DDocStd::GetDocument(argv[1], aDoc);
+  if (aDoc.IsNull())
+  {
+    di << argv[1] << " is not a document\n";
+    return 1;
+  }
+
+  Standard_Boolean aPrintNames = Standard_False;
+  TDF_Label aLabel = XCAFDoc_DocumentTool::ShapesLabel(aDoc->Main());
+  for (Standard_Integer iarg = 2; iarg < argc; ++iarg)
+  {
+    if (strcmp(argv[iarg], "-root") == 0)
+    {
+      Standard_ProgramError_Raise_if(iarg + 1 >= argc, "Root is expected!");
+      TDF_Tool::Label(aDoc->GetData(), argv[++iarg], aLabel, Standard_False);
+    }
+    else if (strcmp(argv[iarg], "-names") == 0)
+    {
+      aPrintNames = Standard_True;
+    }
+  }
+
+  Handle(XCAFDoc_AssemblyGraph) aG = new XCAFDoc_AssemblyGraph(aLabel);
+
+  Standard_SStream aSS;
+
+  XCAFDoc_AssemblyTool::Traverse(aG, 
+    [](const Handle(XCAFDoc_AssemblyGraph)& /*theGraph*/,
+       const Standard_Integer               /*theNode*/) -> Standard_Boolean
+    {
+      return Standard_True;
+    },
+    [&](const Handle(XCAFDoc_AssemblyGraph)& theGraph,
+        const Standard_Integer               theNode) -> Standard_Boolean
+    {
+      const TDF_Label& aLabel = theGraph->GetNode(theNode);
+
+      const XCAFDoc_AssemblyGraph::NodeType aNodeType = theGraph->GetNodeType(theNode);
+
+      TCollection_AsciiString aNodeEntry;
+      if (aPrintNames)
+      {
+        Handle(TDataStd_Name) aNameAttr;
+        if (aLabel.FindAttribute(TDataStd_Name::GetID(), aNameAttr))
+        {
+          aNodeEntry.AssignCat("'");
+          aNodeEntry.AssignCat(aNameAttr->Get());
+          aNodeEntry.AssignCat("'");
+        }
+      }
+      if (aNodeEntry.IsEmpty())
+      {
+        TDF_Tool::Entry(aLabel, aNodeEntry);
+      }
+
+      aSS << theNode << " " << graphNodeTypename(aNodeType) << " " << aNodeEntry;
+      const XCAFDoc_AssemblyGraph::AdjacencyMap& anAdjacencyMap = theGraph->GetLinks();
+      const TColStd_PackedMapOfInteger* aLinksPtr = anAdjacencyMap.Seek(theNode);
+      if (aLinksPtr != NULL)
+      {
+        for (TColStd_MapIteratorOfPackedMapOfInteger anIt1(*aLinksPtr); anIt1.More(); anIt1.Next())
+        {
+          aSS << " " << anIt1.Key();
+        }
+      }
+      aSS << std::endl;
+
+      return Standard_True;
+    }
+  );
+
+  di << aSS.str().c_str();
+  return 0;
+}
+
+//=======================================================================
+//function : XDumpNomenclature
+//purpose  : Prints number of assembly instances
+//=======================================================================
+
+static Standard_Integer XDumpNomenclature(Draw_Interpretor& di,
+                                          Standard_Integer argc,
+                                          const char ** argv)
+{
+  if (argc < 2)
+  {
+    di << "Usage :\n " << argv[0] << " Doc [-names] \n"
+      << "   Doc    - is the document name. \n"
+      << "   -names - prints names instead of entries. \n";
+
+    return 1;
+  }
+
+  // get specified document
+  Handle(TDocStd_Document) aDoc;
+  DDocStd::GetDocument(argv[1], aDoc);
+  if (aDoc.IsNull())
+  {
+    di << argv[1] << " is not a document\n";
+    return 1;
+  }
+
+  Standard_Boolean aPrintNames = Standard_False;
+  for (Standard_Integer iarg = 2; iarg < argc; ++iarg)
+  {
+    if (strcmp(argv[iarg], "-names") == 0)
+    {
+      aPrintNames = Standard_True;
+    }
+  }
+
+  Handle(XCAFDoc_AssemblyGraph) aG = new XCAFDoc_AssemblyGraph(aDoc);
+
+  Standard_SStream aSS;
+
+  XCAFDoc_AssemblyTool::Traverse(aG, 
+    [](const Handle(XCAFDoc_AssemblyGraph)& theGraph,
+       const Standard_Integer               theNode) -> Standard_Boolean
+    {
+      const XCAFDoc_AssemblyGraph::NodeType aNodeType = theGraph->GetNodeType(theNode);
+      return (aNodeType == XCAFDoc_AssemblyGraph::NodeType_AssemblyRoot) ||
+             (aNodeType == XCAFDoc_AssemblyGraph::NodeType_Subassembly) ||
+             (aNodeType == XCAFDoc_AssemblyGraph::NodeType_Part);
+    },
+    [&](const Handle(XCAFDoc_AssemblyGraph)& theGraph,
+        const Standard_Integer               theNode) -> Standard_Boolean
+    {
+      const TDF_Label& aLabel = theGraph->GetNode(theNode);
+
+      const XCAFDoc_AssemblyGraph::NodeType aNodeType = theGraph->GetNodeType(theNode);
+
+      TCollection_AsciiString aNodeEntry;
+      if (aPrintNames)
+      {
+        Handle(TDataStd_Name) aNameAttr;
+        if (aLabel.FindAttribute(TDataStd_Name::GetID(), aNameAttr))
+        {
+          aNodeEntry.AssignCat("'");
+          aNodeEntry.AssignCat(aNameAttr->Get());
+          aNodeEntry.AssignCat("'");
+        }
+      }
+      if (aNodeEntry.IsEmpty())
+      {
+        TDF_Tool::Entry(aLabel, aNodeEntry);
+      }
+
+      aSS << theNode << " " << graphNodeTypename(aNodeType) << " " << aNodeEntry << " "
+          << theGraph->NbOccurrences(theNode) << std::endl;
+
+      return Standard_True;
+    }
+  );
+
+  di << aSS.str().c_str();
+
+  return 0;
+}
+
+//=======================================================================
+//function : XRescaleGeometry
+//purpose  : Applies geometrical scale to all assembly components
+//=======================================================================
+
+static Standard_Integer XRescaleGeometry(Draw_Interpretor& di,
+                                         Standard_Integer argc,
+                                         const char ** argv)
+{
+  if (argc < 3)
+  {
+    di << "Usage :\n " << argv[0] << " Doc factor [-root label] [-force]\n"
+      << "   Doc         - is the document name. \n"
+      << "   factor      - is the scale factor. \n"
+      << "   -root label - is the starting label to apply rescaling. \n"
+      << "   -force      - forces rescaling even if the starting label\n"
+      << "                 is not a root. \n";
+
+    return 1;
+  }
+
+  // get specified document
+  Handle(TDocStd_Document) aDoc;
+  DDocStd::GetDocument(argv[1], aDoc);
+  if (aDoc.IsNull())
+  {
+    di << argv[1] << " is not a document\n";
+    return 1;
+  }
+
+  // get scale factor
+  Standard_Real aScaleFactor = Draw::Atof(argv[2]);
+  if (aScaleFactor <= 0)
+  {
+    di << "Scale factor must be positive\n";
+    return 1;
+  }
+
+  Standard_Boolean aForce = Standard_False;
+  TDF_Label aLabel = XCAFDoc_DocumentTool::ShapesLabel(aDoc->Main());
+  for (Standard_Integer iarg = 3; iarg < argc; ++iarg)
+  {
+    if (strcmp(argv[iarg], "-root") == 0)
+    {
+      Standard_ProgramError_Raise_if(iarg + 1 >= argc, "Root is expected!");
+      TDF_Tool::Label(aDoc->GetData(), argv[++iarg], aLabel, Standard_False);
+    }
+    else if (strcmp(argv[iarg], "-force") == 0)
+    {
+      aForce = Standard_True;
+    }
+  }
+
+  if (!XCAFDoc_Editor::RescaleGeometry(aLabel, aScaleFactor, aForce))
+  {
+    di << "Geometry rescale failed\n";
+    return 1;
+  }
+
+  return 0;
+}
+
+//=======================================================================
 //function : testDoc
 //purpose  : Method to test destruction of document
 //=======================================================================
@@ -1322,7 +1692,7 @@ static Standard_Integer testDoc (Draw_Interpretor&,
   aD1->Open(anApp);
   
   TCollection_AsciiString  aViewName ("Driver1/DummyDocument/View1");
-  ViewerTest::ViewerInit (0, 0, 0, 0, aViewName.ToCString(), "");
+  ViewerTest::ViewerInit (aViewName);
   TPrsStd_AISViewer::New (aD1->GetData()->Root(), ViewerTest::GetAISContext());
 
   // get shape tool for shape verification
@@ -1456,6 +1826,19 @@ void XDEDRAW::Init(Draw_Interpretor& di)
           __FILE__, XShowFaceBoundary, g);
    di.Add ("XTestDoc", "XTestDoc shape", __FILE__, testDoc, g);
 
+  di.Add("XDumpAssemblyTree",
+         "Doc [-root label] [-level l] [-names]: Iterates through the assembly tree in depth up to the specified level, if any",
+         __FILE__, XDumpAssemblyTree, g);
+  di.Add("XDumpAssemblyGraph",
+         "Doc [-root label] [-names]: Prints assembly graph structure",
+         __FILE__, XDumpAssemblyGraph, g);
+  di.Add("XDumpNomenclature",
+         "Doc [-names]: Prints number of assembly instances",
+         __FILE__, XDumpNomenclature, g);
+  di.Add("XRescaleGeometry",
+         "Doc factor [-root label] [-force]: Applies geometrical scale to assembly",
+         __FILE__, XRescaleGeometry, g);
+
   // Specialized commands
   XDEDRAW_Shapes::InitCommands ( di );
   XDEDRAW_Colors::InitCommands ( di );
@@ -1466,6 +1849,15 @@ void XDEDRAW::Init(Draw_Interpretor& di)
   XDEDRAW_Notes::InitCommands(di);
   XDEDRAW_Common::InitCommands ( di );//moved from EXE
 
+  DE_Wrapper::GlobalWrapper()->Bind(new RWObj_ConfigurationNode());
+  DE_Wrapper::GlobalWrapper()->Bind(new RWPly_ConfigurationNode());
+  DE_Wrapper::GlobalWrapper()->Bind(new RWGltf_ConfigurationNode());
+  DE_Wrapper::GlobalWrapper()->Bind(new IGESCAFControl_ConfigurationNode());
+  DE_Wrapper::GlobalWrapper()->Bind(new STEPCAFControl_ConfigurationNode());
+  DE_Wrapper::GlobalWrapper()->Bind(new Vrml_ConfigurationNode());
+  DE_Wrapper::GlobalWrapper()->Bind(new DEXCAFCascade_ConfigurationNode());
+  DE_Wrapper::GlobalWrapper()->Bind(new RWStl_ConfigurationNode());
+  DE_Wrapper::GlobalWrapper()->Bind(new DEBRepCascade_ConfigurationNode());
 }
 
 

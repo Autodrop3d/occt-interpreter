@@ -14,9 +14,7 @@
 
 #include <OpenGl_VertexBuffer.hxx>
 
-#include <OpenGl_Context.hxx>
 #include <OpenGl_ShaderManager.hxx>
-#include <Standard_Assert.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(OpenGl_VertexBuffer, OpenGl_Buffer)
 
@@ -136,13 +134,11 @@ void OpenGl_VertexBuffer::bindAttribute (const Handle(OpenGl_Context)&   theCtx,
 {
   if (theCtx->ActiveProgram().IsNull())
   {
-  #if !defined(GL_ES_VERSION_2_0)
     if (theCtx->core11ffp != NULL)
     {
       bindFixed (theCtx, theAttribute, theNbComp, theDataType, theStride, theOffset);
     }
     else
-  #endif
     {
       // OpenGL handles vertex attribute setup independently from active GLSL program,
       // but OCCT historically requires program to be bound beforehand (this check could be removed in future).
@@ -164,19 +160,16 @@ void OpenGl_VertexBuffer::unbindAttribute (const Handle(OpenGl_Context)&   theCt
 {
   if (theCtx->ActiveProgram().IsNull())
   {
-  #if !defined(GL_ES_VERSION_2_0)
     if (theCtx->core11ffp != NULL)
     {
       unbindFixed (theCtx, theAttribute);
     }
-  #endif
     return;
   }
 
   theCtx->core20fwd->glDisableVertexAttribArray (theAttribute);
 }
 
-#if !defined(GL_ES_VERSION_2_0)
 // =======================================================================
 // function : bindFixed
 // purpose  :
@@ -255,4 +248,3 @@ void OpenGl_VertexBuffer::unbindFixedColor (const Handle(OpenGl_Context)& theCtx
   // invalidate FFP material state after GL_COLOR_MATERIAL has modified it (took values from the vertex color)
   theCtx->ShaderManager()->UpdateMaterialState();
 }
-#endif

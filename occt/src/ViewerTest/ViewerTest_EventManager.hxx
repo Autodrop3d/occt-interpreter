@@ -18,7 +18,6 @@
 #define _ViewerTest_EventManager_HeaderFile
 
 #include <AIS_ViewController.hxx>
-#include <TColgp_Array1OfPnt2d.hxx>
 #include <TCollection_AsciiString.hxx>
 
 class AIS_InteractiveContext;
@@ -79,6 +78,9 @@ public:
     myPickPntArgVec[2] = theArgZ;
   }
 
+  //! Update mouse scroll event.
+  Standard_EXPORT virtual bool UpdateMouseScroll (const Aspect_ScrollDelta& theDelta) Standard_OVERRIDE;
+
   //! Handle mouse button click event.
   Standard_EXPORT virtual bool UpdateMouseClick (const Graphic3d_Vec2i& thePoint,
                                                   Aspect_VKeyMouse theButton,
@@ -116,6 +118,12 @@ public:
   //! Handle KeyPress event.
   Standard_EXPORT void ProcessKeyPress (Aspect_VKey theKey);
 
+  //! Callback called on Selection of another (sub)view.
+  //! This method is expected to be called from rendering thread.
+  Standard_EXPORT virtual void OnSubviewChanged (const Handle(AIS_InteractiveContext)& theCtx,
+                                                 const Handle(V3d_View)& theOldView,
+                                                 const Handle(V3d_View)& theNewView) Standard_OVERRIDE;
+
 protected:
 
   //! Register hot-keys for specified Action.
@@ -140,6 +148,13 @@ protected:
 
 private:
 
+#if defined(__EMSCRIPTEN__)
+  //! Callback flushing events and redrawing the WebGL canvas.
+  static void onWasmRedrawView (void* );
+#endif
+
+private:
+
   Handle(AIS_InteractiveContext) myCtx;
   Handle(V3d_View) myView;
   NCollection_DataMap<unsigned int, Aspect_VKey> myNavKeyMap; //!< map of Hot-Key (key+modifiers) to Action
@@ -148,7 +163,7 @@ private:
   Standard_Boolean myToPickPnt;
   Standard_Boolean myIsTmpContRedraw;
 
-  unsigned int     myUpdateRequests; //!< counter for unhandled update requests
+  unsigned int     myNbUpdateRequests; //!< counter for unhandled update requests
 
 };
 

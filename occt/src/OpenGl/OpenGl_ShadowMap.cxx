@@ -13,12 +13,9 @@
 
 #include <OpenGl_ShadowMap.hxx>
 
-#include <OpenGl_ArbFBO.hxx>
 #include <OpenGl_FrameBuffer.hxx>
 #include <OpenGl_ShaderManager.hxx>
-#include <Graphic3d_Camera.hxx>
 #include <Graphic3d_CView.hxx>
-#include <Message.hxx>
 #include <Message_Messenger.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(OpenGl_ShadowMap, OpenGl_NamedResource)
@@ -29,7 +26,7 @@ IMPLEMENT_STANDARD_RTTIEXT(OpenGl_ShadowMap, OpenGl_NamedResource)
 // =======================================================================
 OpenGl_ShadowMap::OpenGl_ShadowMap()
 : OpenGl_NamedResource ("shadow_map"),
-  myShadowMapFbo (new OpenGl_FrameBuffer()),
+  myShadowMapFbo (new OpenGl_FrameBuffer (myResourceId + ":fbo")),
   myShadowCamera (new Graphic3d_Camera()),
   myShadowMapBias (0.0f)
 {
@@ -89,7 +86,7 @@ bool OpenGl_ShadowMap::UpdateCamera (const Graphic3d_CView& theView,
                                      const gp_XYZ* theOrigin)
 {
   const Bnd_Box aMinMaxBox  = theOrigin == NULL ? theView.MinMaxValues (false) : Bnd_Box(); // applicative min max boundaries
-  const Bnd_Box aGraphicBox = theOrigin == NULL ? theView.MinMaxValues (true)  : Bnd_Box(); // real graphical boundaries (not accounting infinite flag)
+  const Bnd_Box aGraphicBox = aMinMaxBox;
 
   switch (myShadowLight->Type())
   {
@@ -141,9 +138,41 @@ bool OpenGl_ShadowMap::UpdateCamera (const Graphic3d_CView& theView,
     }
     case Graphic3d_TypeOfLightSource_Spot:
     {
-      //myShadowCamera->SetProjectionType (Graphic3d_Camera::Projection_Perspective);
-      //myShadowCamera->SetEye (theCastShadowLight->Position());
-      return false; // not implemented
+      if (theOrigin != NULL)
+      {
+        Graphic3d_Mat4d aTrans;
+        aTrans.Translate (Graphic3d_Vec3d (theOrigin->X(), theOrigin->Y(), theOrigin->Z()));
+        Graphic3d_Mat4d anOrientMat = myShadowCamera->OrientationMatrix() * aTrans;
+        myLightMatrix = myShadowCamera->ProjectionMatrixF() * Graphic3d_Mat4 (anOrientMat);
+        return true;
+      }
+
+      Graphic3d_Vec4d aDir (myShadowLight->Direction().X(), myShadowLight->Direction().Y(), myShadowLight->Direction().Z(), 0.0);
+      if (myShadowLight->IsHeadlight())
+      {
+        Graphic3d_Mat4d anOrientInv;
+        theView.Camera()->OrientationMatrix().Inverted (anOrientInv);
+        aDir = anOrientInv * aDir;
+      }
+
+      myShadowCamera->SetZeroToOneDepth (theView.Camera()->IsZeroToOneDepth());
+      myShadowCamera->SetProjectionType (Graphic3d_Camera::Projection_Perspective);
+
+      const gp_Pnt& aLightPos = myShadowLight->Position();
+      Standard_Real aDistance (aMinMaxBox.Distance (Bnd_Box (aLightPos, aLightPos))
+                             + aMinMaxBox.CornerMin().Distance (aMinMaxBox.CornerMax()));
+      myShadowCamera->SetDistance (aDistance);
+      myShadowCamera->MoveEyeTo (aLightPos);
+      myShadowCamera->SetDirectionFromEye (myShadowLight->Direction());
+      myShadowCamera->SetUp (!myShadowCamera->Direction().IsParallel (gp::DY(), Precision::Angular())
+                            ? gp::DY()
+                            : gp::DX());
+      myShadowCamera->OrthogonalizeUp();
+      myShadowCamera->SetZRange (1.0, aDistance);
+
+      myLightMatrix = myShadowCamera->ProjectionMatrixF() * myShadowCamera->OrientationMatrixF();
+
+      return true;
     }
   }
   return false;

@@ -13,7 +13,6 @@
 
 #include <Interface_Static.hxx>
 
-#include <Interface_InterfaceError.hxx>
 #include <OSD_Path.hxx>
 #include <Standard_Transient.hxx>
 #include <Standard_Type.hxx>
@@ -407,4 +406,30 @@ Handle(TColStd_HSequenceOfHAsciiString)  Interface_Static::Items
     if (ok) list->Append (new TCollection_HAsciiString (iter.Key()) );
   }
   return list;
+}
+
+//=======================================================================
+// function : FillMap
+// purpose  : Fills given string-to-string map with all static data
+//=======================================================================
+void Interface_Static::FillMap (NCollection_DataMap<TCollection_AsciiString, TCollection_AsciiString, TCollection_AsciiString>& theMap)
+{
+  theMap.Clear();
+
+  NCollection_DataMap<TCollection_AsciiString, Handle(Standard_Transient)>& aMap = MoniTool_TypedValue::Stats();
+
+  for (NCollection_DataMap<TCollection_AsciiString, Handle(Standard_Transient)>::Iterator anIt(aMap); anIt.More(); anIt.Next())
+  {
+    Handle(Interface_Static) aValue = Handle(Interface_Static)::DownCast(anIt.Value());
+    if (aValue.IsNull())
+    {
+      continue;
+    }
+    if (aValue->HStringValue().IsNull())
+    {
+      continue;
+    }
+
+    theMap.Bind (anIt.Key(), aValue->HStringValue()->String());
+  }
 }

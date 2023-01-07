@@ -23,13 +23,11 @@
 #include <gp_Hypr.hxx>
 #include <gp_Lin.hxx>
 #include <gp_Parab.hxx>
-#include <gp_Sphere.hxx>
 #include <gp_Trsf2d.hxx>
 #include <gp_Vec.hxx>
 #include <gp_Vec2d.hxx>
 #include <Precision.hxx>
 #include <ProjLib_Sphere.hxx>
-#include <Standard_NoSuchObject.hxx>
 #include <Standard_NotImplemented.hxx>
 #include <StdFail_NotDone.hxx>
 
@@ -91,7 +89,8 @@ void  ProjLib_Sphere::Init(const gp_Sphere& Sp)
 //                \ Z = sinV             V = ASin( Z)
 //=======================================================================
 
-static gp_Pnt2d EvalPnt2d( const gp_Vec P, const gp_Sphere& Sp)
+static gp_Pnt2d EvalPnt2d(const gp_Vec&    P,
+                          const gp_Sphere& Sp)
 {
   Standard_Real X = P.Dot(gp_Vec(Sp.Position().XDirection()));
   Standard_Real Y = P.Dot(gp_Vec(Sp.Position().YDirection()));

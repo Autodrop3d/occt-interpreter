@@ -15,19 +15,15 @@
 
 #include <QABugs.hxx>
 
-#include <gp_Ax2.hxx>
 #include <Extrema_GenLocateExtPS.hxx>
 #include <Geom_Circle.hxx>
 #include <Geom_SurfaceOfLinearExtrusion.hxx>
 #include <NCollection_List.hxx>
-#include <TColgp_Array2OfPnt.hxx>
-#include <TColStd_Array2OfReal.hxx>
 #include <TColStd_Array1OfReal.hxx>
-#include <TColStd_Array1OfInteger.hxx>
 #include <Geom_BezierCurve.hxx>
 #include <Geom_BSplineSurface.hxx>
+#include <Geom_TrimmedCurve.hxx>
 #include <GeomConvert.hxx>
-#include <Geom2d_Curve.hxx>
 #include <Geom2d_Line.hxx>
 #include <GeomFill_BSplineCurves.hxx>
 #include <Draw.hxx>
@@ -35,12 +31,12 @@
 #include <ShapeConstruct_ProjectCurveOnSurface.hxx>
 
 #include <TopExp.hxx>
+#include <TopExp_Explorer.hxx>
 #include <TopoDS_Vertex.hxx>
 #include <BRep_Tool.hxx>
-#include <TopoDS_Edge.hxx>
+#include <TopoDS_Compound.hxx>
 #include <BRep_Builder.hxx>
 #include <BRepTools.hxx>
-#include <BRepAdaptor_Surface.hxx>
 #include <TopoDS.hxx>
 #include <DBRep.hxx>
 
@@ -58,7 +54,6 @@
 #include <XCAFDoc_GeomTolerance.hxx>
 #include <XCAFDoc_ShapeTool.hxx>
 
-#include <HLRAppli_ReflectLines.hxx>
 #include <HLRBRep_PolyHLRToShape.hxx>
 #include <HLRBRep_PolyAlgo.hxx>
 
@@ -66,7 +61,11 @@
 
 #include <Bnd_OBB.hxx>
 #include <BRepBndLib.hxx>
+#include <OSD_MemInfo.hxx>
 #include <OSD_Timer.hxx>
+#include <TDataStd_Name.hxx>
+#include <AppCont_Function.hxx>
+#include <math_ComputeKronrodPointsAndWeights.hxx>
 
 #include <limits>
 
@@ -1955,10 +1954,7 @@ static Standard_Integer OCC27357(Draw_Interpretor& theDI,
   return 0;
 }
 #include <Standard_ErrorHandler.hxx>
-#include <TColGeom_SequenceOfCurve.hxx>
 #include <GeomFill_NSections.hxx>
-#include <Geom_TrimmedCurve.hxx>
-#include <TopExp_Explorer.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 //=======================================================================
 //function : OCC26270
@@ -2298,12 +2294,9 @@ static Standard_Integer OCC28389(Draw_Interpretor& di, Standard_Integer argc, co
 }
 
 #include <TColgp_HArray1OfPnt2d.hxx>
-#include <TColgp_Array1OfVec2d.hxx>
-#include <TColStd_HArray1OfBoolean.hxx>
 #include <Geom2d_BSplineCurve.hxx>
 #include <Geom2dAPI_Interpolate.hxx>
 #include <GeomAPI.hxx>
-#include <BRepBuilderAPI_MakeEdge2d.hxx>
 
 static Standard_Integer OCC28594(Draw_Interpretor& di, Standard_Integer argc, const char** argv)
 {
@@ -2388,7 +2381,6 @@ static Standard_Integer OCC28829 (Draw_Interpretor&, Standard_Integer, const cha
 #include <DDocStd_DrawDocument.hxx>
 #include <OSD_FileSystem.hxx>
 #include <Standard_ArrayStreamBuffer.hxx>
-#include <TDataStd_Name.hxx>
 #include <TDocStd_Application.hxx>
 
 #ifdef max
@@ -2408,7 +2400,7 @@ static Standard_Integer OCC28887 (Draw_Interpretor&, Standard_Integer theNbArgs,
   Handle(NCollection_Buffer) aBuffer;
   {
     const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-    opencascade::std::shared_ptr<std::istream> aFile = aFileSystem->OpenIStream (aFilePath, std::ios::binary | std::ios::in);
+    std::shared_ptr<std::istream> aFile = aFileSystem->OpenIStream (aFilePath, std::ios::binary | std::ios::in);
     if (aFile.get() == NULL)
     {
       std::cout << "Error: input file '" << aFilePath << "' cannot be read\n";
@@ -2570,7 +2562,6 @@ static Standard_Integer OCC28131 (Draw_Interpretor&, Standard_Integer theNbArgs,
   return 0;
 }
 #include <math_NewtonFunctionRoot.hxx>
-#include <math_TrigonometricFunctionRoots.hxx>
 #include <math_TrigonometricEquationFunction.hxx>
 #include <gp_Elips2d.hxx>
 #include <Geom2d_Ellipse.hxx>
@@ -2811,7 +2802,6 @@ static Standard_Integer OCC29371 (Draw_Interpretor& di, Standard_Integer n, cons
 #include <NCollection_IndexedMap.hxx>
 #include <NCollection_DataMap.hxx>
 #include <NCollection_IndexedDataMap.hxx>
-#include <OSD_MemInfo.hxx>
 
 // check that copying of empty maps does not allocate extra memory
 template<typename T> void AllocDummyArr (Draw_Interpretor& theDI, int theN1, int theN2)
@@ -3093,6 +3083,80 @@ static Standard_Integer OCC30391(Draw_Interpretor& theDI,
   return 0;
 }
 
+//=======================================================================
+//function : OCC29745
+//purpose  :
+//=======================================================================
+static Standard_Integer OCC29745(Draw_Interpretor& theDI, Standard_Integer theArgc, const char** theArgv)
+{
+  if (theArgc != 5)
+  {
+    theDI << "Usage : OCC29745 curve2d/3d continuity t1 t2";
+    return 1;
+  }
+
+  Handle(Geom_Curve) aC3d;
+  Handle(Geom2d_Curve) aC2d;
+
+  aC3d = DrawTrSurf::GetCurve(theArgv[1]);
+  if (aC3d.IsNull())
+  {
+    aC2d = DrawTrSurf::GetCurve2d(theArgv[1]);
+    if (aC2d.IsNull())
+    {
+      theDI << "Null curve" << "\n";
+      return 1;
+    }
+  }
+
+  Standard_Integer i = Draw::Atoi(theArgv[2]);
+  GeomAbs_Shape aCont = GeomAbs_C0;
+  if (i <= 0)
+    aCont = GeomAbs_C0;
+  else if (i == 1)
+    aCont = GeomAbs_C1;
+  else if (i == 2)
+    aCont = GeomAbs_C2;
+  else if (i == 3)
+    aCont = GeomAbs_C3;
+  else if (i >= 4)
+    aCont = GeomAbs_CN;
+
+  Standard_Real t1 = Draw::Atof(theArgv[3]);
+  Standard_Real t2 = Draw::Atof(theArgv[4]);
+
+  GeomAdaptor_Curve aGAC3d;
+  Geom2dAdaptor_Curve aGAC2d;
+  Standard_Integer aNbInts;
+  if (aC2d.IsNull())
+  {
+    aGAC3d.Load(aC3d, t1, t2);
+    aNbInts = aGAC3d.NbIntervals(aCont);
+  }
+  else
+  {
+    aGAC2d.Load(aC2d, t1, t2);
+    aNbInts = aGAC2d.NbIntervals(aCont);
+  }
+
+  TColStd_HArray1OfReal anInters(1, aNbInts + 1);
+  if (aC2d.IsNull())
+  {
+    aGAC3d.Intervals(anInters, aCont);
+  }
+  else
+  {
+    aGAC2d.Intervals(anInters, aCont);
+  }
+
+  theDI << "NbIntervals: " << aNbInts << "; ";
+  for (i = anInters.Lower(); i <= anInters.Upper(); ++i)
+  {
+    theDI << anInters(i) << " ";
+  }
+  return 0;
+}
+
 #include <Standard_Mutex.hxx>
 #include <NCollection_Sequence.hxx>
 #include <BinLDrivers.hxx>
@@ -3104,6 +3168,7 @@ static Standard_Integer OCC30391(Draw_Interpretor& theDI,
 #include <TDF_ChildIterator.hxx>
 #include <TDocStd_PathParser.hxx>
 #include <OSD.hxx>
+#include <OSD_Parallel.hxx>
 #include <OSD_Thread.hxx>
 #include <OSD_Environment.hxx>
 typedef NCollection_Sequence <TCollection_AsciiString> SequenceOfDocNames;
@@ -3193,31 +3258,6 @@ void* threadFunction(void* theArgs)
   return args->res;
 }
 
-int getNumCores()
-{
-#ifdef WIN32
-  SYSTEM_INFO sysinfo;
-  GetSystemInfo(&sysinfo);
-  return sysinfo.dwNumberOfProcessors;
-#elif MACOS
-  int nm[2];
-  size_t len = 4;
-  uint32_t count;
-
-  nm[0] = CTL_HW; nm[1] = HW_AVAILCPU;
-  sysctl(nm, 2, &count, &len, NULL, 0);
-
-  if (count < 1) {
-    nm[1] = HW_NCPU;
-    sysctl(nm, 2, &count, &len, NULL, 0);
-    if (count < 1) { count = 1; }
-  }
-  return count;
-#else
-  return sysconf(_SC_NPROCESSORS_ONLN);
-#endif
-}
-
 //=======================================================================
 //function : OCC29195
 //purpose  : 
@@ -3231,7 +3271,7 @@ static Standard_Integer OCC29195(Draw_Interpretor&, Standard_Integer theArgC, co
     std::cout << "\ndocN - names (5 in each group) of OCAF documents names (3 input files, 2 output)\n" << std::endl;
     return 1;
   }
-  int iThread(0), nbThreads(0), off(0);
+  int iThread(0), off(0);
   if (TCollection_AsciiString(theArgV[1]).IsIntegerValue())
   {
     nbREP = TCollection_AsciiString(theArgV[1]).IntegerValue();
@@ -3243,7 +3283,7 @@ static Standard_Integer OCC29195(Draw_Interpretor&, Standard_Integer theArgC, co
     return 0;
   }
   Standard_Integer aNbFiles = (theArgC - off - 1) / 5;
-  nbThreads = getNumCores();
+  int nbThreads = OSD_Parallel::NbLogicalProcessors();
   if (aNbFiles < nbThreads)
   {
     nbThreads = aNbFiles;
@@ -3342,7 +3382,6 @@ static Standard_Integer QAEndsWith(Draw_Interpretor& di, Standard_Integer n, con
 }
 
 //Class is used in OCC30435
-#include <AppCont_Function.hxx>
 #include <Adaptor3d_Curve.hxx>
 class CurveEvaluator : public AppCont_Function
 
@@ -3518,7 +3557,6 @@ static Standard_Integer OCC30708_2 (Draw_Interpretor& di, Standard_Integer, cons
 //function : OCC30747
 //purpose  :
 //=======================================================================
-#include <Geom2d_Circle.hxx>
 #include <GCE2d_MakeCircle.hxx>
 #include <Geom2d_TrimmedCurve.hxx>
 #include <Geom2dConvert_CompCurveToBSplineCurve.hxx>
@@ -4049,6 +4087,280 @@ static Standard_Integer QANullifyShape(Draw_Interpretor& di,
   return 0;
 }
 
+static void CheckAx3Dir(gp_Ax3& theAxis, const gp_Dir& theDir)
+{
+  Standard_Boolean bDirect = theAxis.Direct();
+  theAxis.SetDirection (theDir);
+  if (bDirect != theAxis.Direct())
+  {
+    std::cout << "Error: coordinate system is reversed\n";
+  }
+  if (!theDir.IsEqual(theAxis.Direction(), Precision::Angular()))
+  {
+    std::cout << "Error: main dir was not set properly\n";
+  }
+}
+
+static void CheckAx3DirX(gp_Ax3& theAxis, const gp_Dir& theDir)
+{
+  Standard_Boolean bDirect = theAxis.Direct();
+  theAxis.SetXDirection (theDir);
+  if (bDirect != theAxis.Direct())
+  {
+    std::cout << "Error: coordinate system is reversed\n";
+  }
+  gp_Dir aGoodY = theAxis.Direction().Crossed(theDir);
+  if (theAxis.Direct())
+  {
+    if (!aGoodY.IsEqual(theAxis.YDirection(), Precision::Angular()))
+    {
+      std::cout << "Error: X dir was not set properly\n";
+    }
+  }
+  else
+  {
+    if (!aGoodY.IsOpposite(theAxis.YDirection(), Precision::Angular()))
+    {
+      std::cout << "Error: X dir was not set properly\n";
+    }
+  }
+}
+
+static void CheckAx3DirY(gp_Ax3& theAxis, const gp_Dir& theDir)
+{
+  Standard_Boolean bDirect = theAxis.Direct();
+  theAxis.SetYDirection (theDir);
+  if (bDirect != theAxis.Direct())
+  {
+    std::cout << "Error: coordinate system is reversed\n";
+  }
+  gp_Dir aGoodX = theAxis.Direction().Crossed(theDir);
+  if (theAxis.Direct())
+  {
+    if (!aGoodX.IsOpposite(theAxis.XDirection(), Precision::Angular()))
+    {
+      std::cout << "Error: Y dir was not set properly\n";
+    }
+  }
+  else
+  {
+    if (!aGoodX.IsEqual(theAxis.XDirection(), Precision::Angular()))
+    {
+      std::cout << "Error: Y dir was not set properly\n";
+    }
+  }
+}
+
+static void CheckAx3Ax1(gp_Ax3& theAx, const gp_Ax1& theAx0)
+{
+  Standard_Boolean bDirect = theAx.Direct();
+  theAx.SetAxis (theAx0);
+  if (bDirect != theAx.Direct())
+  {
+    std::cout << "Error: coordinate system is reversed\n";
+  }
+  if (!theAx0.Direction().IsEqual(theAx.Direction(), Precision::Angular()))
+  {
+    std::cout << "Error: main dir was not set properly\n";
+  }
+}
+
+
+static Standard_Integer OCC29406 (Draw_Interpretor&, Standard_Integer, const char**)
+{
+  // Main (Z) direction
+  {
+   // gp_Ax3::SetDirection() test
+    gp_Ax3 anAx1, anAx2, anAx3, anAx4, anAx5, anAx6;
+    anAx3.ZReverse();
+    anAx4.ZReverse();    
+    CheckAx3Dir(anAx1,  gp::DX());
+    CheckAx3Dir(anAx2, -gp::DX());
+    CheckAx3Dir(anAx3,  gp::DX());
+    CheckAx3Dir(anAx4, -gp::DX());
+    // gp_Ax3::SetAxis() test
+    gp_Ax1 anAx0_1 (gp::Origin(),  gp::DX());
+    gp_Ax1 anAx0_2 (gp::Origin(), -gp::DX());
+    CheckAx3Ax1(anAx5, anAx0_1);
+    CheckAx3Ax1(anAx6, anAx0_2);
+  }
+  // X direction
+  {
+    // gp_Ax3::SetXDirection() test
+    gp_Ax3 anAx1, anAx2, anAx3, anAx4;
+    anAx3.XReverse();
+    anAx4.XReverse();
+    CheckAx3DirX(anAx1,  gp::DZ());
+    CheckAx3DirX(anAx2, -gp::DZ());
+    CheckAx3DirX(anAx3,  gp::DZ());
+    CheckAx3DirX(anAx4, -gp::DZ());
+  }
+  // Y direction
+  {
+    // gp_Ax3::SetYDirection() test
+    gp_Ax3 anAx1, anAx2, anAx3, anAx4;
+    anAx3.YReverse();
+    anAx4.YReverse();
+    CheckAx3DirY(anAx1,  gp::DZ());
+    CheckAx3DirY(anAx2, -gp::DZ());
+    CheckAx3DirY(anAx3,  gp::DZ());
+    CheckAx3DirY(anAx4, -gp::DZ());
+  }
+
+  return 0;
+}
+
+#include <BRepCheck_Analyzer.hxx>
+#include <GCPnts_UniformDeflection.hxx>
+static Standard_Integer OCC32744(Draw_Interpretor& theDi, Standard_Integer theNbArgs, const char** theArgVec)
+{
+  if (theNbArgs != 2)
+  {
+    theDi << "Syntax error: wrong number of arguments!\n";
+    return 1;
+  }
+
+  const TopoDS_Shape& aShape = DBRep::Get(theArgVec[1]);
+  if (aShape.IsNull())
+  {
+    theDi << " Null Shape is not allowed here\n";
+    return 1;
+  }
+  else if (aShape.ShapeType() != TopAbs_EDGE)
+  {
+    theDi << " Shape type must be EDGE\n";
+    return 1;
+  }
+
+  const TopoDS_Edge& anEdge = TopoDS::Edge(aShape);
+  BRepCheck_Analyzer analyzer(anEdge);
+  if (analyzer.IsValid())
+  {
+    Standard_Real firstParam = 0., lastParam = 0.;
+    Handle(Geom_Curve) pCurve = BRep_Tool::Curve(anEdge, firstParam, lastParam);
+    GeomAdaptor_Curve curveAdaptor(pCurve, firstParam, lastParam);
+    GCPnts_UniformDeflection uniformAbs(curveAdaptor, 0.001, firstParam, lastParam); 
+  }
+
+  return 0;
+}
+
+static Standard_Integer OCC33009(Draw_Interpretor&, Standard_Integer, const char**)
+{
+  Bnd_OBB aBndBox;
+
+  TColgp_Array1OfPnt aPoints(1, 5);
+
+  aPoints.ChangeValue(1) = gp_Pnt(1, 2, 3);
+  aPoints.ChangeValue(2) = gp_Pnt(3, 2, 1);
+  aPoints.ChangeValue(3) = gp_Pnt(2, 3, 1);
+  aPoints.ChangeValue(4) = gp_Pnt(1, 3, 2);
+  aPoints.ChangeValue(5) = gp_Pnt(2, 1, 3);
+
+  aBndBox.ReBuild(aPoints, (const TColStd_Array1OfReal*)0, true);
+
+  return 0;
+}
+
+static Standard_Integer OCC33048(Draw_Interpretor&, Standard_Integer, const char**)
+{
+  Standard_Real isOK = true;
+  try
+  {
+    // This method uses raw pointers for memory manipulations and not used in OCCT.
+    math_ComputeKronrodPointsAndWeights aCalc(125);
+    isOK = aCalc.IsDone();
+  }
+  catch (...)
+  {
+    isOK = false;
+  }
+
+  if (isOK)
+    std::cout << "OK: Kronrod points and weights are calculated successfully." << std::endl;
+  else
+    std::cout << "Error: Problem occurred during calculation of Kronrod points and weights." << std::endl;
+
+  return 0;
+}
+
+//=======================================================================
+//function : QACheckBends
+//purpose :
+//Checks whether the Curve has a loop/bend
+//Use: QACheckBends curve [CosMaxAngle [NbPoints]]
+//NbPoints sets the interval of discretization;
+//CosMaxAngle sets the maximal rotation angle between two adjacent segments.
+//This value must be equal to the cosine of this angle.
+//=======================================================================
+static Standard_Integer QACheckBends(Draw_Interpretor& theDI,
+  Standard_Integer  theNArg,
+  const char ** theArgVal)
+{
+  // Checks whether theCurve has a loop / bend
+
+  if (theNArg < 2)
+  {
+    theDI << "Use: " << theArgVal[0] << " QACheckBends curve [CosMaxAngle [theNbPoints]]" << "\n";
+    return 1;
+  }
+
+
+  Handle(Geom_Curve) aCurve = DrawTrSurf::GetCurve(theArgVal[1]);
+
+  if(aCurve.IsNull())
+  {
+    theDI << " " << theArgVal[1] << " : NULL curve" << "\n";
+    return 0;
+  }
+  
+  Standard_Real aCosMaxAngle = .8;
+  Standard_Integer aNbPoints = 1000;
+
+  if (theNArg > 2)
+  {
+    aCosMaxAngle = Draw::Atof(theArgVal[2]);
+  }
+
+  if (theNArg > 3)
+  {
+    aNbPoints = Draw::Atoi(theArgVal[3]);
+  }
+
+
+  Standard_Real U1 = aCurve->FirstParameter(), U2 = aCurve->LastParameter();
+  if (Precision::IsInfinite(U1) || Precision::IsInfinite(U2))
+  {
+    theDI << "Infinite interval  : " << U1 << "  " << U2 << "\n";
+    return 0;
+  }
+  
+
+  Standard_Real delta = (U2 - U1) / aNbPoints;
+  gp_Pnt aP;
+  gp_Vec aDC1, aDC2;
+  aCurve->D1(U1, aP, aDC1);
+  gp_Dir aD1(aDC1);
+  Standard_Real p;
+  for (p = U1; p <= U2; p += delta)
+  {
+    aCurve->D1(p, aP, aDC2);
+    gp_Dir aD2(aDC2);
+    Standard_Real aCos = aD1*aD2;
+
+    if (aCos < aCosMaxAngle)
+    {
+      theDI << "Error: The curve " << theArgVal[1] << " is possible to have a bend at parameter " << p << ". Please check carefully \n";
+    }
+
+    aD1 = aD2;
+  }
+
+  return 0;
+}
+
+
+
 void QABugs::Commands_20(Draw_Interpretor& theCommands) {
   const char *group = "QABugs";
 
@@ -4087,6 +4399,8 @@ void QABugs::Commands_20(Draw_Interpretor& theCommands) {
   theCommands.Add("OCC29807", "OCC29807 surface1 surface2 u1 v1 u2 v2", __FILE__, OCC29807, group);
   theCommands.Add("OCC29311", "OCC29311 shape counter nbiter: check performance of OBB calculation", __FILE__, OCC29311, group);
   theCommands.Add("OCC30391", "OCC30391 result face LenBeforeUfirst LenAfterUlast LenBeforeVfirst LenAfterVlast", __FILE__, OCC30391, group);
+  theCommands.Add("OCC29745", "OCC29745 spreading of intervals of continuity on periodic curves",
+    __FILE__, OCC29745, group);
   theCommands.Add("OCC29195", "OCC29195 [nbRep] doc1 [doc2 [doc3 [doc4]]]", __FILE__, OCC29195, group);
   theCommands.Add("OCC30435", "OCC30435 result curve inverse nbit", __FILE__, OCC30435, group);
   theCommands.Add("OCC30747", "OCC30747: create a closed curve", __FILE__, OCC30747, group);
@@ -4130,6 +4444,28 @@ void QABugs::Commands_20(Draw_Interpretor& theCommands) {
   theCommands.Add("QANullifyShape",
                   "Nullify shape. Usage: QANullifyShape shape",
                   __FILE__, QANullifyShape, group);
+
+  theCommands.Add ("OCC29406", 
+                   "Tests the case when newly set axis for gp_Ax3 is parallel to one of current axis", 
+                   __FILE__, OCC29406, group);
+
+  theCommands.Add("OCC32744",
+                  "Tests avoid Endless loop in GCPnts_UniformDeflection",
+                  __FILE__,
+                  OCC32744, group);
+
+  theCommands.Add("OCC33009", 
+                 "Tests the case when", 
+                 __FILE__, OCC33009, group);
+
+  theCommands.Add("OCC33048",
+                 "Kronrod points and weights calculation", 
+                 __FILE__, OCC33048, group);
+
+  theCommands.Add("QACheckBends",
+    "QACheckBends curve [CosMaxAngle [theNbPoints]]",
+    __FILE__,
+    QACheckBends, group);
 
   return;
 }

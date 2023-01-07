@@ -23,8 +23,6 @@
 
 #include <Aspect_Drawable.hxx>
 #include <NCollection_Vec2.hxx>
-#include <Standard_Boolean.hxx>
-#include <Standard_Integer.hxx>
 #include <TCollection_AsciiString.hxx>
 
 #include <memory>
@@ -249,10 +247,10 @@ public:
 
   void Wait (Standard_Boolean theToWait = Standard_True);
 #elif defined(__APPLE__)
-  Standard_Boolean IsEqualWindows (const Standard_Integer& theWindowNumber);
+  Standard_Boolean IsEqualWindows (const long theWindowNumber);
 
   static void GetNextEvent (Standard_Boolean  theWait,
-                            Standard_Integer& theWindowNumber,
+                            long&             theWindowNumber,
                             Standard_Integer& theX,
                             Standard_Integer& theY,
                             Standard_Integer& theButton);

@@ -384,6 +384,8 @@ t TKSTEPBase
 t TKSTL
 t TKVRML
 t TKXCAF
+t TKXDE
+t TKXDECascade
 t TKXDEIGES
 t TKXDESTEP
 t TKXSBase
@@ -394,6 +396,9 @@ n DBRep
 n DDF
 n DDataStd
 n DDocStd
+n DE
+n DEXCAFCascade
+n DEBRepCascade
 n DNaming
 n DPrsStd
 n Draw
@@ -454,6 +459,7 @@ t TKRWMesh
 n RWGltf
 n RWMesh
 n RWObj
+n RWPly
 n DFBrowser
 n DFBrowserPane
 n DFBrowserPaneXDE
@@ -474,3 +480,6 @@ n TreeModel
 n View
 n ViewControl
 n VInspector
+n Express
+t TKExpress
+x ExpToCasExe

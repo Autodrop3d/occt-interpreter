@@ -29,23 +29,13 @@
 #include <Geom_Plane.hxx>
 #include <Geom_RectangularTrimmedSurface.hxx>
 #include <Geom_Surface.hxx>
-#include <GeomLib.hxx>
-#include <gp_Ax2.hxx>
 #include <gp_Ax3.hxx>
-#include <gp_Circ.hxx>
-#include <gp_Elips.hxx>
-#include <gp_Hypr.hxx>
-#include <gp_Lin.hxx>
-#include <gp_Parab.hxx>
 #include <gp_Vec.hxx>
 #include <math_Jacobi.hxx>
 #include <math_Matrix.hxx>
 #include <math_Vector.hxx>
 #include <Precision.hxx>
 #include <Standard_ErrorHandler.hxx>
-#include <Standard_NoSuchObject.hxx>
-#include <TColgp_Array1OfPnt.hxx>
-#include <TColgp_HArray1OfPnt.hxx>
 #include <TColgp_SequenceOfPnt.hxx>
 #include <TColStd_SequenceOfReal.hxx>
 #include <TopExp.hxx>
@@ -215,10 +205,10 @@ static void fillParams (const TColStd_Array1OfReal& theKnots,
   theParams.Append (theParMax);
 }
 
-static void fillPoints (const BRepAdaptor_Curve& theCurve,
-                        const NCollection_Vector<Standard_Real> theParams,
-                        TColgp_SequenceOfPnt& thePoints,
-                        TColStd_SequenceOfReal& theWeights)
+static void fillPoints (const BRepAdaptor_Curve&                 theCurve,
+                        const NCollection_Vector<Standard_Real>& theParams,
+                        TColgp_SequenceOfPnt&                    thePoints,
+                        TColStd_SequenceOfReal&                  theWeights)
 {
   Standard_Real aDistPrev = 0., aDistNext;
   gp_Pnt aPPrev (theCurve.Value (theParams (0))), aPNext;
@@ -516,7 +506,14 @@ void BRepLib_FindSurface::Init(const TopoDS_Shape&    S,
 
   if (!isSolved)
     return;
-
+  //Removing very small values
+  Standard_Real aMaxV = Max(Abs(aVec(1)), Max(Abs(aVec(2)), Abs(aVec(3))));
+  Standard_Real eps = Epsilon(aMaxV);
+  for (i = 1; i <= 3; ++i)
+  {
+    if (Abs(aVec(i)) <= eps)
+      aVec(i) = 0.;
+  }
   gp_Vec aN (aVec (1), aVec (2), aVec (3));
   Handle(Geom_Plane) aPlane = new Geom_Plane (aBaryCenter, aN);
   myTolReached = Controle (aPoints, aPlane);

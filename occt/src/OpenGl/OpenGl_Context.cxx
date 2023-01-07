@@ -15,6 +15,9 @@
 
 #if defined(_WIN32)
   #include <windows.h>
+#elif defined(__APPLE__)
+  // macOS 10.4 deprecated OpenGL framework - suppress useless warnings
+  #define GL_SILENCE_DEPRECATION
 #endif
 
 #include <OpenGl_Context.hxx>
@@ -29,12 +32,12 @@
 #include <OpenGl_GlCore46.hxx>
 #include <OpenGl_FrameBuffer.hxx>
 #include <OpenGl_FrameStats.hxx>
-#include <OpenGl_Sampler.hxx>
 #include <OpenGl_ShaderManager.hxx>
 #include <OpenGl_TextureSetPairIterator.hxx>
 #include <OpenGl_Workspace.hxx>
 #include <OpenGl_Aspects.hxx>
 
+#include <Aspect_Handle.hxx>
 #include <Graphic3d_TransformUtils.hxx>
 #include <Graphic3d_RenderingParams.hxx>
 #include <Image_SupportedFormats.hxx>
@@ -74,6 +77,10 @@ IMPLEMENT_STANDARD_RTTIEXT(OpenGl_Context,Standard_Transient)
 #ifdef __EMSCRIPTEN__
   #include <emscripten.h>
   #include <emscripten/html5.h>
+#endif
+
+#if defined(HAVE_GLES2) || defined(OCCT_UWP) || defined(__ANDROID__) || defined(__QNX__) || defined(__EMSCRIPTEN__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+  #define OCC_USE_GLES2
 #endif
 
 namespace
@@ -121,7 +128,7 @@ OpenGl_Context::OpenGl_Context (const Handle(OpenGl_Caps)& theCaps)
   core20fwd  (NULL),
   caps   (!theCaps.IsNull() ? theCaps : new OpenGl_Caps()),
   hasGetBufferData (Standard_False),
-#if defined(GL_ES_VERSION_2_0)
+#if defined(OCC_USE_GLES2)
   hasPackRowLength (Standard_False),
   hasUnpackRowLength (Standard_False),
   hasHighp   (Standard_False),
@@ -139,7 +146,7 @@ OpenGl_Context::OpenGl_Context (const Handle(OpenGl_Caps)& theCaps)
   hasFboSRGB (Standard_False),
   hasSRGBControl (Standard_False),
   hasFboRenderMipmap (Standard_False),
-#if defined(GL_ES_VERSION_2_0)
+#if defined(OCC_USE_GLES2)
   hasFlatShading (OpenGl_FeatureNotAvailable),
 #else
   hasFlatShading (OpenGl_FeatureInCore),
@@ -169,6 +176,7 @@ OpenGl_Context::OpenGl_Context (const Handle(OpenGl_Caps)& theCaps)
   extDrawBuffers (Standard_False),
   extGS  (NULL),
   extBgra(Standard_False),
+  extTexR16(Standard_False),
   extAnis(Standard_False),
   extPDS (Standard_False),
   atiMem (Standard_False),
@@ -184,6 +192,13 @@ OpenGl_Context::OpenGl_Context (const Handle(OpenGl_Caps)& theCaps)
   myClippingState (),
   myGlLibHandle (NULL),
   myFuncs (new OpenGl_GlFunctions()),
+  myGapi (
+#if defined(OCC_USE_GLES2)
+    Aspect_GraphicsLibrary_OpenGLES
+#else
+    Aspect_GraphicsLibrary_OpenGL
+#endif
+  ),
   mySupportedFormats (new Image_SupportedFormats()),
   myAnisoMax   (1),
   myTexClamp   (GL_CLAMP_TO_EDGE),
@@ -200,6 +215,7 @@ OpenGl_Context::OpenGl_Context (const Handle(OpenGl_Caps)& theCaps)
   myGlVerMinor (0),
   myIsInitialized (Standard_False),
   myIsStereoBuffers (Standard_False),
+  myHasMsaaTextures (Standard_False),
   myIsGlNormalizeEnabled (Standard_False),
   mySpriteTexUnit (Graphic3d_TextureUnit_PointSprite),
   myHasRayTracing (Standard_False),
@@ -217,25 +233,20 @@ OpenGl_Context::OpenGl_Context (const Handle(OpenGl_Caps)& theCaps)
   myActiveMockTextures (0),
   myActiveHatchType (Aspect_HS_SOLID),
   myHatchIsEnabled (false),
-#if !defined(GL_ES_VERSION_2_0)
   myPointSpriteOrig (GL_UPPER_LEFT),
   myRenderMode (GL_RENDER),
   myShadeModel (GL_SMOOTH),
   myPolygonMode (GL_FILL),
-#else
-  myPointSpriteOrig (0),
-  myRenderMode (0),
-  myShadeModel (0),
-  myPolygonMode (0),
-#endif
-  myToCullBackFaces (false),
+  myFaceCulling (Graphic3d_TypeOfBackfacingModel_DoubleSided),
   myReadBuffer (0),
   myDrawBuffers (0, 7),
   myDefaultVao (0),
   myColorMask (true),
   myAlphaToCoverage (false),
   myIsGlDebugCtx (false),
+  myIsWindowDeepColor (false),
   myIsSRgbWindow (false),
+  myIsSRgbActive (false),
   myResolution (Graphic3d_RenderingParams::THE_DEFAULT_RESOLUTION),
   myResolutionRatio (1.0f),
   myLineWidthScale (1.0f),
@@ -278,7 +289,7 @@ OpenGl_Context::OpenGl_Context (const Handle(OpenGl_Caps)& theCaps)
 #endif
 #endif
 
-  memset (myFuncs.operator->(), 0, sizeof(OpenGl_GlFunctions));
+  memset (myFuncs.get(), 0, sizeof(OpenGl_GlFunctions));
   myShaderManager = new OpenGl_ShaderManager (this);
 }
 
@@ -291,7 +302,6 @@ OpenGl_Context::~OpenGl_Context()
   // release clean up queue
   ReleaseDelayed();
 
-#if !defined(GL_ES_VERSION_2_0)
   // release default VAO
   if (myDefaultVao != 0
    && IsValid()
@@ -300,7 +310,6 @@ OpenGl_Context::~OpenGl_Context()
     core32->glDeleteVertexArrays (1, &myDefaultVao);
   }
   myDefaultVao = 0;
-#endif
 
   // release mock textures
   if (!myTextureRgbaBlack.IsNull())
@@ -350,11 +359,13 @@ OpenGl_Context::~OpenGl_Context()
    && IsValid())
   {
     // reset callback
-  #if !defined(GL_ES_VERSION_2_0)
     void* aPtr = NULL;
-    glGetPointerv (GL_DEBUG_CALLBACK_USER_PARAM, &aPtr);
-    if (aPtr == this)
-  #endif
+    if (myGapi == Aspect_GraphicsLibrary_OpenGL)
+    {
+      myFuncs->glGetPointerv (GL_DEBUG_CALLBACK_USER_PARAM, &aPtr);
+    }
+    if (aPtr == this
+     || myGapi != Aspect_GraphicsLibrary_OpenGL)
     {
       arbDbg->glDebugMessageCallback (NULL, NULL);
     }
@@ -413,8 +424,7 @@ void OpenGl_Context::ResizeViewport (const Standard_Integer* theRect)
   }
 }
 
-#if !defined(GL_ES_VERSION_2_0)
-inline Standard_Integer stereoToMonoBuffer (const Standard_Integer theBuffer)
+static Standard_Integer stereoToMonoBuffer (const Standard_Integer theBuffer)
 {
   switch (theBuffer)
   {
@@ -428,7 +438,6 @@ inline Standard_Integer stereoToMonoBuffer (const Standard_Integer theBuffer)
       return theBuffer;
   }
 }
-#endif
 
 // =======================================================================
 // function : SetReadBuffer
@@ -436,17 +445,18 @@ inline Standard_Integer stereoToMonoBuffer (const Standard_Integer theBuffer)
 // =======================================================================
 void OpenGl_Context::SetReadBuffer (const Standard_Integer theReadBuffer)
 {
-#if !defined(GL_ES_VERSION_2_0)
+  if (myGapi == Aspect_GraphicsLibrary_OpenGLES)
+  {
+    return;
+  }
+
   myReadBuffer = !myIsStereoBuffers ? stereoToMonoBuffer (theReadBuffer) : theReadBuffer;
   if (myReadBuffer < GL_COLOR_ATTACHMENT0
    && arbFBO != NULL)
   {
     arbFBO->glBindFramebuffer (GL_FRAMEBUFFER, OpenGl_FrameBuffer::NO_FRAMEBUFFER);
   }
-  ::glReadBuffer (myReadBuffer);
-#else
-  (void )theReadBuffer;
-#endif
+  core11fwd->glReadBuffer (myReadBuffer);
 }
 
 // =======================================================================
@@ -455,20 +465,21 @@ void OpenGl_Context::SetReadBuffer (const Standard_Integer theReadBuffer)
 // =======================================================================
 void OpenGl_Context::SetDrawBuffer (const Standard_Integer theDrawBuffer)
 {
-#if !defined(GL_ES_VERSION_2_0)
+  if (myGapi == Aspect_GraphicsLibrary_OpenGLES)
+  {
+    return;
+  }
+
   const Standard_Integer aDrawBuffer = !myIsStereoBuffers ? stereoToMonoBuffer (theDrawBuffer) : theDrawBuffer;
   if (aDrawBuffer < GL_COLOR_ATTACHMENT0
    && arbFBO != NULL)
   {
     arbFBO->glBindFramebuffer (GL_FRAMEBUFFER, OpenGl_FrameBuffer::NO_FRAMEBUFFER);
   }
-  ::glDrawBuffer (aDrawBuffer);
+  core11fwd->glDrawBuffer (aDrawBuffer);
 
   myDrawBuffers.Init (GL_NONE);
   myDrawBuffers.SetValue (0, aDrawBuffer);
-#else
-  (void )theDrawBuffer;
-#endif
 }
 
 // =======================================================================
@@ -536,26 +547,35 @@ void OpenGl_Context::SetFrameBufferSRGB (bool theIsFbo, bool theIsFboSRgb)
 }
 
 // =======================================================================
-// function : SetCullBackFaces
+// function : SetFaceCulling
 // purpose  :
 // =======================================================================
-void OpenGl_Context::SetCullBackFaces (bool theToEnable)
+void OpenGl_Context::SetFaceCulling (Graphic3d_TypeOfBackfacingModel theMode)
 {
-  if (myToCullBackFaces == theToEnable)
+  if (myFaceCulling == theMode)
   {
     return;
   }
 
-  myToCullBackFaces = theToEnable;
-  if (theToEnable)
+  if (theMode == Graphic3d_TypeOfBackfacingModel_BackCulled)
   {
-    //glCullFace (GL_BACK); GL_BACK by default
+    if (myFaceCulling == Graphic3d_TypeOfBackfacingModel_FrontCulled)
+    {
+      core11fwd->glCullFace (GL_BACK);
+    }
+    core11fwd->glEnable (GL_CULL_FACE);
+  }
+  else if (theMode == Graphic3d_TypeOfBackfacingModel_FrontCulled)
+  {
+    core11fwd->glCullFace (GL_FRONT);
     core11fwd->glEnable (GL_CULL_FACE);
   }
   else
   {
+    core11fwd->glCullFace (GL_BACK);
     core11fwd->glDisable (GL_CULL_FACE);
   }
+  myFaceCulling = theMode;
 }
 
 // =======================================================================
@@ -564,16 +584,20 @@ void OpenGl_Context::SetCullBackFaces (bool theToEnable)
 // =======================================================================
 void OpenGl_Context::FetchState()
 {
-#if !defined(GL_ES_VERSION_2_0)
+  if (myGapi == Aspect_GraphicsLibrary_OpenGLES)
+  {
+    return;
+  }
+
   // cache feedback mode state
   if (core11ffp != NULL)
   {
-    ::glGetIntegerv (GL_RENDER_MODE, &myRenderMode);
-    ::glGetIntegerv (GL_SHADE_MODEL, &myShadeModel);
+    core11fwd->glGetIntegerv (GL_RENDER_MODE, &myRenderMode);
+    core11fwd->glGetIntegerv (GL_SHADE_MODEL, &myShadeModel);
   }
 
   // cache read buffers state
-  ::glGetIntegerv (GL_READ_BUFFER, &myReadBuffer);
+  core11fwd->glGetIntegerv (GL_READ_BUFFER, &myReadBuffer);
 
   // cache draw buffers state
   if (myDrawBuffers.Length() < myMaxDrawBuffers)
@@ -585,18 +609,17 @@ void OpenGl_Context::FetchState()
   Standard_Integer aDrawBuffer = GL_NONE;
   if (myMaxDrawBuffers == 1)
   {
-    ::glGetIntegerv (GL_DRAW_BUFFER, &aDrawBuffer);
+    core11fwd->glGetIntegerv (GL_DRAW_BUFFER, &aDrawBuffer);
     myDrawBuffers.SetValue (0, aDrawBuffer);
   }
   else
   {
     for (Standard_Integer anI = 0; anI < myMaxDrawBuffers; ++anI)
     {
-      ::glGetIntegerv (GL_DRAW_BUFFER0 + anI, &aDrawBuffer);
+      core11fwd->glGetIntegerv (GL_DRAW_BUFFER0 + anI, &aDrawBuffer);
       myDrawBuffers.SetValue (anI, aDrawBuffer);
     }
   }
-#endif
 }
 
 // =======================================================================
@@ -747,7 +770,7 @@ void OpenGl_Context::SwapBuffers()
   if ((HDC )myDisplay != NULL)
   {
     ::SwapBuffers ((HDC )myDisplay);
-    glFlush();
+    core11fwd->glFlush();
   }
 #elif defined(HAVE_XLIB)
   if ((Display* )myDisplay != NULL)
@@ -843,14 +866,14 @@ Standard_Boolean OpenGl_Context::CheckExtension (const char* theExtName) const
     return Standard_False;
   }
 
-#if !defined(GL_ES_VERSION_2_0)
   // available since OpenGL 3.0
   // and the ONLY way to check extensions with OpenGL 3.1+ core profile
-  if (IsGlGreaterEqual (3, 0)
+  if (myGapi == Aspect_GraphicsLibrary_OpenGL
+   && IsGlGreaterEqual (3, 0)
    && myFuncs->glGetStringi != NULL)
   {
     GLint anExtNb = 0;
-    ::glGetIntegerv (GL_NUM_EXTENSIONS, &anExtNb);
+    core11fwd->glGetIntegerv (GL_NUM_EXTENSIONS, &anExtNb);
     const size_t anExtNameLen = strlen (theExtName);
     for (GLint anIter = 0; anIter < anExtNb; ++anIter)
     {
@@ -864,10 +887,9 @@ Standard_Boolean OpenGl_Context::CheckExtension (const char* theExtName) const
     }
     return Standard_False;
   }
-#endif
 
   // use old way with huge string for all extensions
-  const char* anExtString = (const char* )glGetString (GL_EXTENSIONS);
+  const char* anExtString = (const char* )core11fwd->glGetString (GL_EXTENSIONS);
   if (anExtString == NULL)
   {
     Messenger()->Send ("TKOpenGL: glGetString (GL_EXTENSIONS) has returned NULL! No GL context?", Message_Warning);
@@ -1031,10 +1053,8 @@ TCollection_AsciiString OpenGl_Context::FormatGlError (int theGlError)
     case GL_INVALID_ENUM:      return "GL_INVALID_ENUM";
     case GL_INVALID_VALUE:     return "GL_INVALID_VALUE";
     case GL_INVALID_OPERATION: return "GL_INVALID_OPERATION";
-  #ifdef GL_STACK_OVERFLOW
     case GL_STACK_OVERFLOW:    return "GL_STACK_OVERFLOW";
     case GL_STACK_UNDERFLOW:   return "GL_STACK_UNDERFLOW";
-  #endif
     case GL_OUT_OF_MEMORY:     return "GL_OUT_OF_MEMORY";
     case GL_INVALID_FRAMEBUFFER_OPERATION: return "GL_INVALID_FRAMEBUFFER_OPERATION";
   }
@@ -1048,53 +1068,23 @@ TCollection_AsciiString OpenGl_Context::FormatGlError (int theGlError)
 bool OpenGl_Context::ResetErrors (const bool theToPrintErrors)
 {
   int aPrevErr = 0;
-  int anErr    = ::glGetError();
+  int anErr    = core11fwd->glGetError();
   const bool hasError = anErr != GL_NO_ERROR;
   if (!theToPrintErrors)
   {
-    for (; anErr != GL_NO_ERROR && aPrevErr != anErr; aPrevErr = anErr, anErr = ::glGetError())
+    for (; anErr != GL_NO_ERROR && aPrevErr != anErr; aPrevErr = anErr, anErr = core11fwd->glGetError())
     {
       //
     }
     return hasError;
   }
 
-  for (; anErr != GL_NO_ERROR && aPrevErr != anErr; aPrevErr = anErr, anErr = ::glGetError())
+  for (; anErr != GL_NO_ERROR && aPrevErr != anErr; aPrevErr = anErr, anErr = core11fwd->glGetError())
   {
     const TCollection_ExtendedString aMsg = TCollection_ExtendedString ("Unhandled GL error: ") + FormatGlError (anErr);
     PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_OTHER, 0, GL_DEBUG_SEVERITY_LOW, aMsg);
   }
   return hasError;
-}
-
-// =======================================================================
-// function : debugPrintError
-// purpose  :
-// =======================================================================
-bool OpenGl_GlFunctions::debugPrintError (const char* theName) const
-{
-  const int anErr = ::glGetError();
-  if (anErr != GL_NO_ERROR)
-  {
-    Message::SendFail() << theName << "(), unhandled GL error: " << OpenGl_Context::FormatGlError (anErr);
-    // there is no glSetError(), just emulate non-clear state
-    switch (anErr)
-    {
-      case GL_INVALID_VALUE:
-      {
-        ::glLineWidth(-1.0f);
-        ::glLineWidth( 1.0f);
-        break;
-      }
-      default:
-      case GL_INVALID_ENUM:
-      {
-        ::glEnable (0xFFFF);
-        break;
-      }
-    }
-  }
-  return anErr != GL_NO_ERROR;
 }
 
 // =======================================================================
@@ -1104,126 +1094,7 @@ bool OpenGl_GlFunctions::debugPrintError (const char* theName) const
 void OpenGl_Context::ReadGlVersion (Standard_Integer& theGlVerMajor,
                                     Standard_Integer& theGlVerMinor)
 {
-  // reset values
-  theGlVerMajor = 0;
-  theGlVerMinor = 0;
-
-  bool toCheckVer3 = true;
-#if defined(__EMSCRIPTEN__)
-  // WebGL 1.0 prints annoying invalid enumeration warnings to console.
-  toCheckVer3 = false;
-  if (EMSCRIPTEN_WEBGL_CONTEXT_HANDLE aWebGlCtx = emscripten_webgl_get_current_context())
-  {
-    EmscriptenWebGLContextAttributes anAttribs = {};
-    if (emscripten_webgl_get_context_attributes (aWebGlCtx, &anAttribs) == EMSCRIPTEN_RESULT_SUCCESS)
-    {
-      toCheckVer3 = anAttribs.majorVersion >= 2;
-    }
-  }
-#endif
-
-  // Available since OpenGL 3.0 and OpenGL ES 3.0.
-  if (toCheckVer3)
-  {
-    GLint aMajor = 0, aMinor = 0;
-    glGetIntegerv (GL_MAJOR_VERSION, &aMajor);
-    glGetIntegerv (GL_MINOR_VERSION, &aMinor);
-    // glGetError() sometimes does not report an error here even if
-    // GL does not know GL_MAJOR_VERSION and GL_MINOR_VERSION constants.
-    // This happens on some renderers like e.g. Cygwin MESA.
-    // Thus checking additionally if GL has put anything to
-    // the output variables.
-    if (::glGetError() == GL_NO_ERROR && aMajor != 0 && aMinor != 0)
-    {
-      theGlVerMajor = aMajor;
-      theGlVerMinor = aMinor;
-      return;
-    }
-    for (GLenum anErr = ::glGetError(), aPrevErr = GL_NO_ERROR;; aPrevErr = anErr, anErr = ::glGetError())
-    {
-      if (anErr == GL_NO_ERROR
-       || anErr == aPrevErr)
-      {
-        break;
-      }
-    }
-  }
-
-  // Read version string.
-  // Notice that only first two numbers split by point '2.1 XXXXX' are significant.
-  // Following trash (after space) is vendor-specific.
-  // New drivers also returns micro version of GL like '3.3.0' which has no meaning
-  // and should be considered as vendor-specific too.
-  const char* aVerStr = (const char* )glGetString (GL_VERSION);
-  if (aVerStr == NULL || *aVerStr == '\0')
-  {
-    // invalid GL context
-    return;
-  }
-
-//#if defined(GL_ES_VERSION_2_0)
-  // skip "OpenGL ES-** " section
-  for (; *aVerStr != '\0'; ++aVerStr)
-  {
-    if (*aVerStr >= '0' && *aVerStr <= '9')
-    {
-      break;
-    }
-  }
-//#endif
-
-  // parse string for major number
-  char aMajorStr[32];
-  char aMinorStr[32];
-  size_t aMajIter = 0;
-  while (aVerStr[aMajIter] >= '0' && aVerStr[aMajIter] <= '9')
-  {
-    ++aMajIter;
-  }
-  if (aMajIter == 0 || aMajIter >= sizeof(aMajorStr))
-  {
-    return;
-  }
-  memcpy (aMajorStr, aVerStr, aMajIter);
-  aMajorStr[aMajIter] = '\0';
-
-  // parse string for minor number
-  aVerStr += aMajIter + 1;
-  size_t aMinIter = 0;
-  while (aVerStr[aMinIter] >= '0' && aVerStr[aMinIter] <= '9')
-  {
-    ++aMinIter;
-  }
-  if (aMinIter == 0 || aMinIter >= sizeof(aMinorStr))
-  {
-    return;
-  }
-  memcpy (aMinorStr, aVerStr, aMinIter);
-  aMinorStr[aMinIter] = '\0';
-
-  // read numbers
-  theGlVerMajor = atoi (aMajorStr);
-  theGlVerMinor = atoi (aMinorStr);
-#if defined(__EMSCRIPTEN__)
-  if (theGlVerMajor >= 3)
-  {
-    if (!toCheckVer3
-     || ::strstr (aVerStr, "WebGL 1.0") != NULL)
-    {
-      Message::SendWarning() << "Warning! OpenGL context reports version " << theGlVerMajor << "." << theGlVerMinor
-                             << " but WebGL 2.0 was unavailable\n"
-                             << "Fallback to OpenGL ES 2.0 will be used instead of reported version";
-      theGlVerMajor = 2;
-      theGlVerMinor = 0;
-    }
-  }
-#endif
-
-  if (theGlVerMajor <= 0)
-  {
-    theGlVerMajor = 0;
-    theGlVerMinor = 0;
-  }
+  OpenGl_GlFunctions::readGlVersion (theGlVerMajor, theGlVerMinor);
 }
 
 static Standard_CString THE_DBGMSG_UNKNOWN = "UNKNOWN";
@@ -1362,19 +1233,23 @@ void OpenGl_Context::checkWrongVersion (Standard_Integer theGlVerMajor, Standard
     myGlVerMinor = theGlVerMinor - 1;
     return;
   }
-#if defined(GL_ES_VERSION_2_0)
-  switch (theGlVerMajor)
+
+  if (myGapi == Aspect_GraphicsLibrary_OpenGLES)
   {
-    case 3: myGlVerMajor = 2; myGlVerMinor = 0; return;
+    switch (theGlVerMajor)
+    {
+      case 3: myGlVerMajor = 2; myGlVerMinor = 0; return;
+    }
   }
-#else
-  switch (theGlVerMajor)
+  else
   {
-    case 2: myGlVerMajor = 1; myGlVerMinor = 5; return;
-    case 3: myGlVerMajor = 2; myGlVerMinor = 1; return;
-    case 4: myGlVerMajor = 3; myGlVerMinor = 3; return;
+    switch (theGlVerMajor)
+    {
+      case 2: myGlVerMajor = 1; myGlVerMinor = 5; return;
+      case 3: myGlVerMajor = 2; myGlVerMinor = 1; return;
+      case 4: myGlVerMajor = 3; myGlVerMinor = 3; return;
+    }
   }
-#endif
 }
 
 // =======================================================================
@@ -1386,13 +1261,12 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
   // read version
   myGlVerMajor = 0;
   myGlVerMinor = 0;
+  myHasMsaaTextures = false;
   myMaxMsaaSamples = 0;
   myMaxDrawBuffers = 1;
   myMaxColorAttachments = 1;
   myDefaultVao = 0;
-  ReadGlVersion (myGlVerMajor, myGlVerMinor);
-  myVendor = (const char* )::glGetString (GL_VENDOR);
-  myVendor.LowerCase();
+  OpenGl_GlFunctions::readGlVersion (myGlVerMajor, myGlVerMinor);
   mySupportedFormats->Clear();
 
   if (caps->contextMajorVersionUpper != -1)
@@ -1404,19 +1278,22 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
     {
       isLowered = true;
       myGlVerMajor = caps->contextMajorVersionUpper;
-    #if defined(GL_ES_VERSION_2_0)
-      switch (myGlVerMajor)
+      if (myGapi == Aspect_GraphicsLibrary_OpenGLES)
       {
-        case 2: myGlVerMinor = 0; break;
+        switch (myGlVerMajor)
+        {
+          case 2: myGlVerMinor = 0; break;
+        }
       }
-    #else
-      switch (myGlVerMajor)
+      else
       {
-        case 1: myGlVerMinor = 5; break;
-        case 2: myGlVerMinor = 1; break;
-        case 3: myGlVerMinor = 3; break;
+        switch (myGlVerMajor)
+        {
+          case 1: myGlVerMinor = 5; break;
+          case 2: myGlVerMinor = 1; break;
+          case 3: myGlVerMinor = 3; break;
+        }
       }
-    #endif
     }
     if (caps->contextMinorVersionUpper != -1
      && myGlVerMinor > caps->contextMinorVersionUpper)
@@ -1432,78 +1309,53 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
     }
   }
 
+  myFuncs->load (*this, theIsCoreProfile);
+
   if (!caps->ffpEnable
    && !IsGlGreaterEqual (2, 0))
   {
     caps->ffpEnable = true;
     TCollection_ExtendedString aMsg =
       TCollection_ExtendedString("OpenGL driver is too old! Context info:\n")
-                               + "    Vendor:   " + (const char* )::glGetString (GL_VENDOR)   + "\n"
-                               + "    Renderer: " + (const char* )::glGetString (GL_RENDERER) + "\n"
-                               + "    Version:  " + (const char* )::glGetString (GL_VERSION)  + "\n"
+                               + "    Vendor:   " + (const char* )core11fwd->glGetString (GL_VENDOR)   + "\n"
+                               + "    Renderer: " + (const char* )core11fwd->glGetString (GL_RENDERER) + "\n"
+                               + "    Version:  " + (const char* )core11fwd->glGetString (GL_VERSION)  + "\n"
                                + "  Fallback using deprecated fixed-function pipeline.\n"
                                + "  Visualization might work incorrectly.\n"
                                  "  Consider upgrading the graphics driver.";
     PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_PORTABILITY, 0, GL_DEBUG_SEVERITY_HIGH, aMsg);
   }
 
-#if defined(GL_ES_VERSION_2_0)
-  (void )theIsCoreProfile;
-  const bool isCoreProfile = false;
-#else
-
+  myVendor = (const char* )core11fwd->glGetString (GL_VENDOR);
+  myVendor.LowerCase();
   if (myVendor.Search ("nvidia") != -1)
   {
     // Buffer detailed info: Buffer object 1 (bound to GL_ARRAY_BUFFER_ARB, usage hint is GL_STATIC_DRAW)
     // will use VIDEO memory as the source for buffer object operations.
     ExcludeMessage (GL_DEBUG_SOURCE_API, 131185);
   }
-  if (IsGlGreaterEqual (3, 0))
-  {
-    // retrieve auxiliary function in advance
-    FindProc ("glGetStringi", myFuncs->glGetStringi);
-  }
-
-  bool isCoreProfile = false;
-  if (IsGlGreaterEqual (3, 2))
-  {
-    isCoreProfile = (theIsCoreProfile == Standard_True);
-
-    // detect Core profile
-    if (!isCoreProfile)
-    {
-      GLint aProfile = 0;
-      ::glGetIntegerv (GL_CONTEXT_PROFILE_MASK, &aProfile);
-      isCoreProfile = (aProfile & GL_CONTEXT_CORE_PROFILE_BIT) != 0;
-    }
-  }
-#endif
-
-  myFuncs->load (*this, isCoreProfile);
 
   // setup shader generator
   myShaderManager->SetGapiVersion (myGlVerMajor, myGlVerMinor);
   myShaderManager->SetEmulateDepthClamp (!arbDepthClamp);
 
-  bool toReverseDFdxSign = false;
-#if defined(GL_ES_VERSION_2_0)
   // workaround Adreno driver bug computing reversed normal using dFdx/dFdy
-  toReverseDFdxSign = myVendor.Search("qualcomm") != -1;
-#endif
+  bool toReverseDFdxSign = myGapi == Aspect_GraphicsLibrary_OpenGLES
+                        && myVendor.Search("qualcomm") != -1;
   myShaderManager->SetFlatShading (hasFlatShading != OpenGl_FeatureNotAvailable, toReverseDFdxSign);
-#if defined(GL_ES_VERSION_2_0)
-  myShaderManager->SetUseRedAlpha (false);
-#else
-  myShaderManager->SetUseRedAlpha (core11ffp == NULL);
-#endif
+  myShaderManager->SetUseRedAlpha (myGapi != Aspect_GraphicsLibrary_OpenGLES
+                                && core11ffp == NULL);
   #define checkGlslExtensionShort(theName) myShaderManager->EnableGlslExtension (Graphic3d_GlslExtension_ ## theName, CheckExtension (#theName))
-#if defined(GL_ES_VERSION_2_0)
-  checkGlslExtensionShort(GL_OES_standard_derivatives);
-  checkGlslExtensionShort(GL_EXT_shader_texture_lod);
-  checkGlslExtensionShort(GL_EXT_frag_depth);
-#else
-  checkGlslExtensionShort(GL_EXT_gpu_shader4);
-#endif
+  if (myGapi == Aspect_GraphicsLibrary_OpenGLES)
+  {
+    checkGlslExtensionShort(GL_OES_standard_derivatives);
+    checkGlslExtensionShort(GL_EXT_shader_texture_lod);
+    checkGlslExtensionShort(GL_EXT_frag_depth);
+  }
+  else
+  {
+    checkGlslExtensionShort(GL_EXT_gpu_shader4);
+  }
 
   // initialize debug context extension
   if (arbDbg != NULL
@@ -1512,51 +1364,49 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
     // setup default callback
     myIsGlDebugCtx = Standard_True;
     arbDbg->glDebugMessageCallback (debugCallbackWrap, this);
-  #if defined(GL_ES_VERSION_2_0)
-    ::glEnable (GL_DEBUG_OUTPUT);
-  #else
-    if (core43 != NULL)
+    if (myGapi == Aspect_GraphicsLibrary_OpenGLES)
     {
-      ::glEnable (GL_DEBUG_OUTPUT);
+      core11fwd->glEnable (GL_DEBUG_OUTPUT);
     }
-  #endif
+    else if (core43 != NULL)
+    {
+      core11fwd->glEnable (GL_DEBUG_OUTPUT);
+    }
     if (caps->contextSyncDebug)
     {
       // note that some broken implementations (e.g. simulators) might generate error message on this call
-      ::glEnable (GL_DEBUG_OUTPUT_SYNCHRONOUS);
+      core11fwd->glEnable (GL_DEBUG_OUTPUT_SYNCHRONOUS);
     }
   }
 
   if (hasDrawBuffers)
   {
-    glGetIntegerv (GL_MAX_DRAW_BUFFERS,      &myMaxDrawBuffers);
-    glGetIntegerv (GL_MAX_COLOR_ATTACHMENTS, &myMaxColorAttachments);
+    core11fwd->glGetIntegerv (GL_MAX_DRAW_BUFFERS,      &myMaxDrawBuffers);
+    core11fwd->glGetIntegerv (GL_MAX_COLOR_ATTACHMENTS, &myMaxColorAttachments);
     if (myDrawBuffers.Length() < myMaxDrawBuffers)
     {
       myDrawBuffers.Resize (0, myMaxDrawBuffers - 1, false);
     }
   }
 
-  glGetIntegerv (GL_MAX_TEXTURE_SIZE, &myMaxTexDim);
-#if !defined(GL_ES_VERSION_2_0)
+  core11fwd->glGetIntegerv (GL_MAX_TEXTURE_SIZE, &myMaxTexDim);
   if (IsGlGreaterEqual (1, 3) && core11ffp != NULL)
   {
     // this is a maximum of texture units for FFP functionality,
     // usually smaller than combined texture units available for GLSL
-    glGetIntegerv (GL_MAX_TEXTURE_UNITS, &myMaxTexUnitsFFP);
+    core11fwd->glGetIntegerv (GL_MAX_TEXTURE_UNITS, &myMaxTexUnitsFFP);
     myMaxTexCombined = myMaxTexUnitsFFP;
   }
-#endif
   if (IsGlGreaterEqual (2, 0))
   {
-    glGetIntegerv (GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &myMaxTexCombined);
+    core11fwd->glGetIntegerv (GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &myMaxTexCombined);
   }
   mySpriteTexUnit = myMaxTexCombined >= 2
                   ? Graphic3d_TextureUnit_PointSprite
                   : Graphic3d_TextureUnit_0;
 
   GLint aMaxVPortSize[2] = {0, 0};
-  glGetIntegerv (GL_MAX_VIEWPORT_DIMS, aMaxVPortSize);
+  core11fwd->glGetIntegerv (GL_MAX_VIEWPORT_DIMS, aMaxVPortSize);
   myMaxDumpSizeX = Min (aMaxVPortSize[0], myMaxTexDim);
   myMaxDumpSizeY = Min (aMaxVPortSize[1], myMaxTexDim);
   if (myVendor == "intel")
@@ -1567,75 +1417,84 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
 
   if (extAnis)
   {
-    glGetIntegerv (GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &myAnisoMax);
+    core11fwd->glGetIntegerv (GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &myAnisoMax);
   }
 
   myClippingState.Init();
 
-#if defined(GL_ES_VERSION_2_0)
-  if (IsGlGreaterEqual (3, 1)
-   && myFuncs->glTexStorage2DMultisample != NULL)
+  if (myGapi == Aspect_GraphicsLibrary_OpenGLES)
   {
-    // MSAA RenderBuffers have been defined in OpenGL ES 3.0,
-    // but MSAA Textures - only in OpenGL ES 3.1+
-    ::glGetIntegerv (GL_MAX_SAMPLES, &myMaxMsaaSamples);
+    if (IsGlGreaterEqual (3, 0))
+    {
+      // MSAA RenderBuffers have been defined in OpenGL ES 3.0, but MSAA Textures - only in OpenGL ES 3.1+
+      myHasMsaaTextures = IsGlGreaterEqual (3, 1)
+                       && myFuncs->glTexStorage2DMultisample != NULL;
+      core11fwd->glGetIntegerv (GL_MAX_SAMPLES, &myMaxMsaaSamples);
+    }
   }
-#else
-  if (core30 != NULL)
+  else if (core30 != NULL)
   {
-    // MSAA RenderBuffers have been defined in OpenGL 3.0,
-    // but MSAA Textures - only in OpenGL 3.2+
+    // MSAA RenderBuffers have been defined in OpenGL 3.0, but MSAA Textures - only in OpenGL 3.2+
     if (core32 != NULL)
     {
-      ::glGetIntegerv (GL_MAX_SAMPLES, &myMaxMsaaSamples);
+      myHasMsaaTextures = true;
+      core11fwd->glGetIntegerv (GL_MAX_SAMPLES, &myMaxMsaaSamples);
     }
     else if (CheckExtension ("GL_ARB_texture_multisample")
           && myFuncs->glTexImage2DMultisample != NULL)
     {
+      myHasMsaaTextures = true;
       GLint aNbColorSamples = 0, aNbDepthSamples = 0;
-      ::glGetIntegerv (GL_MAX_COLOR_TEXTURE_SAMPLES, &aNbColorSamples);
-      ::glGetIntegerv (GL_MAX_DEPTH_TEXTURE_SAMPLES, &aNbDepthSamples);
+      core11fwd->glGetIntegerv (GL_MAX_COLOR_TEXTURE_SAMPLES, &aNbColorSamples);
+      core11fwd->glGetIntegerv (GL_MAX_DEPTH_TEXTURE_SAMPLES, &aNbDepthSamples);
       myMaxMsaaSamples = Min (aNbColorSamples, aNbDepthSamples);
     }
   }
-#endif
-
-#if !defined(GL_ES_VERSION_2_0)
-  if (core32 != NULL && isCoreProfile)
+  if (myMaxMsaaSamples <= 1)
   {
-    core32->glGenVertexArrays (1, &myDefaultVao);
+    myHasMsaaTextures = false;
   }
 
-  myTexClamp = IsGlGreaterEqual (1, 2) ? GL_CLAMP_TO_EDGE : GL_CLAMP;
+  if (myGapi != Aspect_GraphicsLibrary_OpenGLES)
+  {
+    if (core32 != NULL && core11ffp == NULL)
+    {
+      core32->glGenVertexArrays (1, &myDefaultVao);
+    }
 
-  GLint aStereo = GL_FALSE;
-  glGetIntegerv (GL_STEREO, &aStereo);
-  myIsStereoBuffers = aStereo == 1;
+    myTexClamp = IsGlGreaterEqual (1, 2) ? GL_CLAMP_TO_EDGE : GL_CLAMP;
 
-  // get number of maximum clipping planes
-  glGetIntegerv (GL_MAX_CLIP_PLANES, &myMaxClipPlanes);
-#endif
+    GLint aStereo = GL_FALSE;
+    core11fwd->glGetIntegerv (GL_STEREO, &aStereo);
+    myIsStereoBuffers = aStereo == 1;
 
-#if defined(GL_ES_VERSION_2_0)
-  // check whether ray tracing mode is supported
-  myHasRayTracing = IsGlGreaterEqual (3, 2);
-  myHasRayTracingTextures = myHasRayTracingAdaptiveSampling = myHasRayTracingAdaptiveSamplingAtomic = false;
-#else
-  // check whether ray tracing mode is supported
-  myHasRayTracing = IsGlGreaterEqual (3, 1)
-                 && arbTboRGB32
-                 && arbFBOBlit  != NULL;
+    // get number of maximum clipping planes
+    core11fwd->glGetIntegerv (GL_MAX_CLIP_PLANES, &myMaxClipPlanes);
+  }
 
-  // check whether textures in ray tracing mode are supported
-  myHasRayTracingTextures = myHasRayTracing
-                         && arbTexBindless != NULL;
+  if (myGapi == Aspect_GraphicsLibrary_OpenGLES)
+  {
+    // check whether ray tracing mode is supported
+    myHasRayTracing = IsGlGreaterEqual (3, 2);
+    myHasRayTracingTextures = myHasRayTracingAdaptiveSampling = myHasRayTracingAdaptiveSamplingAtomic = false;
+  }
+  else
+  {
+    // check whether ray tracing mode is supported
+    myHasRayTracing = IsGlGreaterEqual (3, 1)
+                   && arbTboRGB32
+                   && arbFBOBlit  != NULL;
 
-  // check whether adaptive screen sampling in ray tracing mode is supported
-  myHasRayTracingAdaptiveSampling = myHasRayTracing
-                                 && core44 != NULL;
-  myHasRayTracingAdaptiveSamplingAtomic = myHasRayTracingAdaptiveSampling
-                                       && CheckExtension ("GL_NV_shader_atomic_float");
-#endif
+    // check whether textures in ray tracing mode are supported
+    myHasRayTracingTextures = myHasRayTracing
+                           && arbTexBindless != NULL;
+
+    // check whether adaptive screen sampling in ray tracing mode is supported
+    myHasRayTracingAdaptiveSampling = myHasRayTracing
+                                   && core44 != NULL;
+    myHasRayTracingAdaptiveSamplingAtomic = myHasRayTracingAdaptiveSampling
+                                         && CheckExtension ("GL_NV_shader_atomic_float");
+  }
 
   if (arbFBO != NULL
    && hasFboSRGB)
@@ -1643,17 +1502,13 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
     // Detect if window buffer is considered by OpenGL as sRGB-ready
     // (linear RGB color written by shader is automatically converted into sRGB)
     // or not (offscreen FBO should be blit into window buffer with gamma correction).
-    const GLenum aDefWinBuffer =
-    #if !defined(GL_ES_VERSION_2_0)
-      GL_BACK_LEFT;
-    #else
-      GL_BACK;
-    #endif
+    const GLenum aDefWinBuffer = myGapi == Aspect_GraphicsLibrary_OpenGLES ? GL_BACK : GL_BACK_LEFT;
     GLint aWinColorEncoding = 0; // GL_LINEAR
     bool toSkipCheck = false;
-  #if defined(GL_ES_VERSION_2_0)
-    toSkipCheck = !IsGlGreaterEqual (3, 0);
-  #endif
+    if (myGapi == Aspect_GraphicsLibrary_OpenGLES)
+    {
+      toSkipCheck = !IsGlGreaterEqual (3, 0);
+    }
     if (!toSkipCheck)
     {
       arbFBO->glGetFramebufferAttachmentParameteriv (GL_FRAMEBUFFER, aDefWinBuffer, GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING, &aWinColorEncoding);
@@ -1667,23 +1522,29 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
     // NVIDIA drivers, however, always return GL_LINEAR even for sRGB-ready pixel formats on Windows platform,
     // while AMD and Intel report GL_SRGB as expected.
     // macOS drivers seems to be also report GL_LINEAR even for [NSColorSpace sRGBColorSpace].
-  #if !defined(GL_ES_VERSION_2_0)
-  #ifdef __APPLE__
-    myIsSRgbWindow = true;
-  #else
-    if (!myIsSRgbWindow
-      && myVendor.Search ("nvidia") != -1)
+    if (myGapi != Aspect_GraphicsLibrary_OpenGLES)
     {
+    #ifdef __APPLE__
       myIsSRgbWindow = true;
+    #else
+      if (!myIsSRgbWindow
+        && myVendor.Search ("nvidia") != -1)
+      {
+        myIsSRgbWindow = true;
+      }
+    #endif
     }
-  #endif
-  #endif
     if (!myIsSRgbWindow)
     {
       Message::SendTrace ("OpenGl_Context, warning: window buffer is not sRGB-ready.\n"
                           "Check OpenGL window creation parameters for optimal performance.");
     }
   }
+
+  Graphic3d_Vec4i aWinBitsRGBA;
+  Graphic3d_Vec2i aWinBitsDepthStencil;
+  WindowBufferBits (aWinBitsRGBA, aWinBitsDepthStencil);
+  myIsWindowDeepColor = aWinBitsRGBA.r() >= 10;
 
   // standard formats
   mySupportedFormats->Add (Image_Format_Gray);
@@ -1693,12 +1554,17 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
   mySupportedFormats->Add (Image_Format_RGBA);
   if (extBgra)
   {
-  #if !defined(GL_ES_VERSION_2_0)
-    // no BGR on OpenGL ES - only BGRA as extension
-    mySupportedFormats->Add (Image_Format_BGR);
-  #endif
+    if (myGapi != Aspect_GraphicsLibrary_OpenGLES)
+    {
+      // no BGR on OpenGL ES - only BGRA as extension
+      mySupportedFormats->Add (Image_Format_BGR);
+    }
     mySupportedFormats->Add (Image_Format_BGR32);
     mySupportedFormats->Add (Image_Format_BGRA);
+  }
+  if (extTexR16)
+  {
+    mySupportedFormats->Add (Image_Format_Gray16);
   }
   if (arbTexFloat)
   {
@@ -1715,14 +1581,16 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
       mySupportedFormats->Add (Image_Format_RGF);
       if (hasHalfFloatBuffer != OpenGl_FeatureNotAvailable)
       {
+        mySupportedFormats->Add (Image_Format_GrayF_half);
         mySupportedFormats->Add (Image_Format_RGF_half);
       }
     }
     if (extBgra)
     {
-    #if !defined(GL_ES_VERSION_2_0)
-      mySupportedFormats->Add (Image_Format_BGRF);
-    #endif
+      if (myGapi != Aspect_GraphicsLibrary_OpenGLES)
+      {
+        mySupportedFormats->Add (Image_Format_BGRF);
+      }
       mySupportedFormats->Add (Image_Format_BGRAF);
     }
   }
@@ -1767,17 +1635,23 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
 #endif
 
   // check whether PBR shading model is supported
-  myHasPBR = arbFBO != NULL
-          && myMaxTexCombined >= 4
-          && arbTexFloat
-          && (IsGlGreaterEqual (3, 0)
-        #if defined(GL_ES_VERSION_2_0)
-           || hasHighp
-        // || CheckExtension ("GL_EXT_shader_texture_lod") fallback is used when extension is unavailable
-        #else
-          || (IsGlGreaterEqual (2, 1) && CheckExtension ("GL_EXT_gpu_shader4"))
-        #endif
-             );
+  myHasPBR = false;
+  if (arbFBO != NULL
+   && myMaxTexCombined >= 4
+   && arbTexFloat)
+  {
+    if (myGapi == Aspect_GraphicsLibrary_OpenGLES)
+    {
+      myHasPBR = IsGlGreaterEqual (3, 0)
+              || hasHighp;
+           // || CheckExtension ("GL_EXT_shader_texture_lod") fallback is used when extension is unavailable
+    }
+    else
+    {
+      myHasPBR = IsGlGreaterEqual (3, 0)
+             || (IsGlGreaterEqual (2, 1) && CheckExtension ("GL_EXT_gpu_shader4"));
+    }
+  }
 
   myDepthPeelingDepthTexUnit      = static_cast<Graphic3d_TextureUnit>(myMaxTexCombined + Graphic3d_TextureUnit_DepthPeelingDepth);      // -6
   myDepthPeelingFrontColorTexUnit = static_cast<Graphic3d_TextureUnit>(myMaxTexCombined + Graphic3d_TextureUnit_DepthPeelingFrontColor); // -5
@@ -1799,7 +1673,6 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
 // =======================================================================
 Standard_Size OpenGl_Context::AvailableMemory() const
 {
-#if !defined(GL_ES_VERSION_2_0)
   if (atiMem)
   {
     // this is actually information for VBO pool
@@ -1807,7 +1680,8 @@ Standard_Size OpenGl_Context::AvailableMemory() const
     // it can be used for total GPU memory estimations
     GLint aMemInfo[4];
     aMemInfo[0] = 0;
-    glGetIntegerv (GL_VBO_FREE_MEMORY_ATI, aMemInfo);
+
+    core11fwd->glGetIntegerv (GL_VBO_FREE_MEMORY_ATI, aMemInfo);
     // returned value is in KiB, however this maybe changed in future
     return Standard_Size(aMemInfo[0]) * 1024;
   }
@@ -1815,10 +1689,9 @@ Standard_Size OpenGl_Context::AvailableMemory() const
   {
     // current available dedicated video memory (in KiB), currently unused GPU memory
     GLint aMemInfo = 0;
-    glGetIntegerv (GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &aMemInfo);
+    core11fwd->glGetIntegerv (GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &aMemInfo);
     return Standard_Size(aMemInfo) * 1024;
   }
-#endif
   return 0;
 }
 
@@ -1849,7 +1722,7 @@ TCollection_AsciiString OpenGl_Context::MemoryInfo() const
 // =======================================================================
 void OpenGl_Context::MemoryInfo (TColStd_IndexedDataMapOfStringString& theDict) const
 {
-#if defined(GL_ES_VERSION_2_0)
+#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
   (void )theDict;
 #elif defined(__APPLE__) && !defined(HAVE_XLIB)
   GLint aGlRendId = 0;
@@ -1893,12 +1766,11 @@ void OpenGl_Context::MemoryInfo (TColStd_IndexedDataMapOfStringString& theDict) 
   }
 #endif
 
-#if !defined(GL_ES_VERSION_2_0)
   if (atiMem)
   {
     GLint aValues[4];
     memset (aValues, 0, sizeof(aValues));
-    glGetIntegerv (GL_VBO_FREE_MEMORY_ATI, aValues);
+    core11fwd->glGetIntegerv (GL_VBO_FREE_MEMORY_ATI, aValues);
 
     // total memory free in the pool
     addInfo (theDict, "GPU free memory",    TCollection_AsciiString() + (aValues[0] / 1024) + " MiB");
@@ -1918,16 +1790,16 @@ void OpenGl_Context::MemoryInfo (TColStd_IndexedDataMapOfStringString& theDict) 
   {
     //current available dedicated video memory (in KiB), currently unused GPU memory
     GLint aValue = 0;
-    glGetIntegerv (GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &aValue);
+    core11fwd->glGetIntegerv (GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &aValue);
     addInfo (theDict, "GPU free memory", TCollection_AsciiString() + (aValue / 1024) + " MiB");
 
     // dedicated video memory, total size (in KiB) of the GPU memory
     GLint aDedicated = 0;
-    glGetIntegerv (GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX, &aDedicated);
+    core11fwd->glGetIntegerv (GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX, &aDedicated);
     addInfo (theDict, "GPU memory", TCollection_AsciiString() + (aDedicated / 1024) + " MiB");
 
     // total available memory, total size (in KiB) of the memory available for allocations
-    glGetIntegerv (GL_GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX, &aValue);
+    core11fwd->glGetIntegerv (GL_GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX, &aValue);
     if (aValue != aDedicated)
     {
       // different only for special configurations
@@ -1949,19 +1821,70 @@ void OpenGl_Context::MemoryInfo (TColStd_IndexedDataMapOfStringString& theDict) 
     }
   }
 #endif
-#endif
 
-#if !defined(GL_ES_VERSION_2_0) && !defined(__APPLE__) && !defined(_WIN32)
+#if defined(HAVE_XLIB) && !defined(__APPLE__) && !defined(_WIN32)
   // GLX_RENDERER_VENDOR_ID_MESA
   if (myFuncs->glXQueryCurrentRendererIntegerMESA != NULL)
   {
     unsigned int aVMemMiB = 0;
-    if (myFuncs->glXQueryCurrentRendererIntegerMESA (GLX_RENDERER_VIDEO_MEMORY_MESA, &aVMemMiB) != False)
+    if (myFuncs->glXQueryCurrentRendererIntegerMESA (GLX_RENDERER_VIDEO_MEMORY_MESA, &aVMemMiB) != 0)
     {
       addInfo (theDict, "GPU memory", TCollection_AsciiString() + int(aVMemMiB) + " MiB");
     }
   }
 #endif
+}
+
+// =======================================================================
+// function : WindowBufferBits
+// purpose  :
+// =======================================================================
+void OpenGl_Context::WindowBufferBits (Graphic3d_Vec4i& theColorBits,
+                                       Graphic3d_Vec2i& theDepthStencilBits) const
+{
+  if (core11ffp != NULL
+   || myGapi == Aspect_GraphicsLibrary_OpenGLES)
+  {
+    // removed from core with no working alternative
+    core11fwd->glGetIntegerv (GL_RED_BITS,     &theColorBits.r());
+    core11fwd->glGetIntegerv (GL_GREEN_BITS,   &theColorBits.g());
+    core11fwd->glGetIntegerv (GL_BLUE_BITS,    &theColorBits.b());
+    core11fwd->glGetIntegerv (GL_ALPHA_BITS,   &theColorBits.a());
+    core11fwd->glGetIntegerv (GL_DEPTH_BITS,   &theDepthStencilBits[0]);
+    core11fwd->glGetIntegerv (GL_STENCIL_BITS, &theDepthStencilBits[1]);
+  }
+  else
+  {
+  #if defined(HAVE_EGL)
+    //
+  #elif defined(_WIN32)
+    const int aPixFrmtIndex = GetPixelFormat ((HDC )myDisplay);
+    PIXELFORMATDESCRIPTOR aFormat;
+    memset (&aFormat, 0, sizeof(aFormat));
+    aFormat.nSize      = sizeof(aFormat);
+    DescribePixelFormat ((HDC )myDisplay, aPixFrmtIndex, sizeof(PIXELFORMATDESCRIPTOR), &aFormat);
+    theColorBits.SetValues (aFormat.cRedBits, aFormat.cGreenBits, aFormat.cBlueBits, aFormat.cAlphaBits);
+    theDepthStencilBits.SetValues (aFormat.cDepthBits, aFormat.cStencilBits);
+  #elif defined(HAVE_XLIB)
+    Display* aDisplay = (Display* )myDisplay;
+    XWindowAttributes aWinAttribs;
+    XGetWindowAttributes (aDisplay, (::Window )myWindow, &aWinAttribs);
+    XVisualInfo aVisInfo;
+    aVisInfo.visualid = aWinAttribs.visual->visualid;
+    aVisInfo.screen   = DefaultScreen(aDisplay);
+    int aNbItems = 0;
+    std::unique_ptr<XVisualInfo, int(*)(void*)> aVis (XGetVisualInfo (aDisplay, VisualIDMask | VisualScreenMask, &aVisInfo, &aNbItems), &XFree);
+    if (aVis.get() != NULL)
+    {
+      glXGetConfig (aDisplay, aVis.get(), GLX_RED_SIZE,     &theColorBits.r());
+      glXGetConfig (aDisplay, aVis.get(), GLX_GREEN_SIZE,   &theColorBits.g());
+      glXGetConfig (aDisplay, aVis.get(), GLX_BLUE_SIZE,    &theColorBits.b());
+      glXGetConfig (aDisplay, aVis.get(), GLX_ALPHA_SIZE,   &theColorBits.a());
+      glXGetConfig (aDisplay, aVis.get(), GLX_DEPTH_SIZE,   &theDepthStencilBits[0]);
+      glXGetConfig (aDisplay, aVis.get(), GLX_STENCIL_SIZE, &theDepthStencilBits[1]);
+    }
+  #endif
+  }
 }
 
 // =======================================================================
@@ -2014,24 +1937,24 @@ void OpenGl_Context::DiagnosticInformation (TColStd_IndexedDataMapOfStringString
   if ((theFlags & Graphic3d_DiagnosticInfo_Device) != 0)
   {
     Standard_Integer aDriverVer[2] = {};
-    ReadGlVersion (aDriverVer[0], aDriverVer[1]);
-    addInfo (theDict, "GLvendor",    (const char*)::glGetString (GL_VENDOR));
-    addInfo (theDict, "GLdevice",    (const char*)::glGetString (GL_RENDERER));
+    OpenGl_GlFunctions::readGlVersion (aDriverVer[0], aDriverVer[1]);
+    addInfo (theDict, "GLvendor",    (const char*)core11fwd->glGetString (GL_VENDOR));
+    addInfo (theDict, "GLdevice",    (const char*)core11fwd->glGetString (GL_RENDERER));
   #ifdef __EMSCRIPTEN__
     if (CheckExtension ("GL_WEBGL_debug_renderer_info"))
     {
-      if (const char* aVendor = (const char*)::glGetString (0x9245))
+      if (const char* aVendor = (const char*)core11fwd->glGetString (0x9245))
       {
         addInfo (theDict, "GLunmaskedVendor", aVendor);
       }
-      if (const char* aDevice = (const char*)::glGetString (0x9246))
+      if (const char* aDevice = (const char*)core11fwd->glGetString (0x9246))
       {
         addInfo (theDict, "GLunmaskedDevice", aDevice);
       }
     }
   #endif
 
-    addInfo (theDict, "GLversion",   (const char*)::glGetString (GL_VERSION));
+    addInfo (theDict, "GLversion",   (const char*)core11fwd->glGetString (GL_VERSION));
     if (myGlVerMajor != aDriverVer[0]
      || myGlVerMinor != aDriverVer[1])
     {
@@ -2039,7 +1962,7 @@ void OpenGl_Context::DiagnosticInformation (TColStd_IndexedDataMapOfStringString
     }
     if (IsGlGreaterEqual (2, 0))
     {
-      addInfo (theDict, "GLSLversion", (const char*)::glGetString (GL_SHADING_LANGUAGE_VERSION));
+      addInfo (theDict, "GLSLversion", (const char*)core11fwd->glGetString (GL_SHADING_LANGUAGE_VERSION));
     }
     if (myIsGlDebugCtx)
     {
@@ -2058,8 +1981,15 @@ void OpenGl_Context::DiagnosticInformation (TColStd_IndexedDataMapOfStringString
   if ((theFlags & Graphic3d_DiagnosticInfo_FrameBuffer) != 0)
   {
     GLint aViewport[4] = {};
-    ::glGetIntegerv (GL_VIEWPORT, aViewport);
+    core11fwd->glGetIntegerv (GL_VIEWPORT, aViewport);
     addInfo (theDict, "Viewport", TCollection_AsciiString() + aViewport[2] + "x" + aViewport[3]);
+
+    Graphic3d_Vec4i aWinBitsRGBA;
+    Graphic3d_Vec2i aWinBitsDepthStencil;
+    WindowBufferBits (aWinBitsRGBA, aWinBitsDepthStencil);
+    addInfo (theDict, "Window buffer",
+             TCollection_AsciiString() + "RGB" + aWinBitsRGBA.r() + " ALPHA" + aWinBitsRGBA.a()
+             + " DEPTH" + aWinBitsDepthStencil[0] + " STENCIL" + aWinBitsDepthStencil[1]);
   }
 
   if ((theFlags & Graphic3d_DiagnosticInfo_Memory) != 0)
@@ -2069,13 +1999,13 @@ void OpenGl_Context::DiagnosticInformation (TColStd_IndexedDataMapOfStringString
 
   if ((theFlags & Graphic3d_DiagnosticInfo_Extensions) != 0)
   {
-  #if !defined(GL_ES_VERSION_2_0)
-    if (IsGlGreaterEqual (3, 0)
+    if (myGapi != Aspect_GraphicsLibrary_OpenGLES
+     && IsGlGreaterEqual (3, 0)
      && myFuncs->glGetStringi != NULL)
     {
       TCollection_AsciiString anExtList;
       GLint anExtNb = 0;
-      ::glGetIntegerv (GL_NUM_EXTENSIONS, &anExtNb);
+      core11fwd->glGetIntegerv (GL_NUM_EXTENSIONS, &anExtNb);
       for (GLint anIter = 0; anIter < anExtNb; ++anIter)
       {
         const char* anExtension = (const char*)myFuncs->glGetStringi (GL_EXTENSIONS, (GLuint)anIter);
@@ -2088,9 +2018,8 @@ void OpenGl_Context::DiagnosticInformation (TColStd_IndexedDataMapOfStringString
       addInfo(theDict, "GLextensions", anExtList);
     }
     else
-  #endif
     {
-      addInfo (theDict, "GLextensions", (const char*)::glGetString (GL_EXTENSIONS));
+      addInfo (theDict, "GLextensions", (const char*)core11fwd->glGetString (GL_EXTENSIONS));
     }
   }
 }
@@ -2216,13 +2145,13 @@ Handle(OpenGl_TextureSet) OpenGl_Context::BindTextures (const Handle(OpenGl_Text
     myTextureRgbaWhite = new OpenGl_Texture();
     Image_PixMap anImage;
     anImage.InitZero (Image_Format_RGBA, 2, 2, 0, (Standard_Byte )0);
-    if (!myTextureRgbaBlack->Init (this, OpenGl_TextureFormat::Create<GLubyte, 4>(), Graphic3d_Vec2i (2, 2), Graphic3d_TOT_2D, &anImage))
+    if (!myTextureRgbaBlack->Init (this, OpenGl_TextureFormat::Create<GLubyte, 4>(), Graphic3d_Vec2i (2, 2), Graphic3d_TypeOfTexture_2D, &anImage))
     {
       PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_PORTABILITY, 0, GL_DEBUG_SEVERITY_HIGH,
                     "Error: unable to create unit mock PBR texture map.");
     }
     anImage.InitZero (Image_Format_RGBA, 2, 2, 0, (Standard_Byte )255);
-    if (!myTextureRgbaWhite->Init (this, OpenGl_TextureFormat::Create<GLubyte, 4>(), Graphic3d_Vec2i (2, 2), Graphic3d_TOT_2D, &anImage))
+    if (!myTextureRgbaWhite->Init (this, OpenGl_TextureFormat::Create<GLubyte, 4>(), Graphic3d_Vec2i (2, 2), Graphic3d_TypeOfTexture_2D, &anImage))
     {
       PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_PORTABILITY, 0, GL_DEBUG_SEVERITY_HIGH,
                     "Error: unable to create normal mock PBR texture map.");
@@ -2265,23 +2194,19 @@ Handle(OpenGl_TextureSet) OpenGl_Context::BindTextures (const Handle(OpenGl_Text
             OpenGl_Sampler::applySamplerParams (aThisCtx, aTextureNew->Sampler()->Parameters(), aTextureNew->Sampler().get(), aTextureNew->GetTarget(), aTextureNew->MaxMipmapLevel());
           }
         }
-      #if !defined(GL_ES_VERSION_2_0)
         if (core11ffp != NULL)
         {
           OpenGl_Sampler::applyGlobalTextureParams (aThisCtx, *aTextureNew, aTextureNew->Sampler()->Parameters());
         }
-      #endif
       }
       else if (aTextureOld != NULL
             && aTextureOld->IsValid())
       {
         aTextureOld->Unbind (aThisCtx, aTexUnit);
-      #if !defined(GL_ES_VERSION_2_0)
         if (core11ffp != NULL)
         {
           OpenGl_Sampler::resetGlobalTextureParams (aThisCtx, *aTextureOld, aTextureOld->Sampler()->Parameters());
         }
-      #endif
       }
     }
     myActiveTextures = theTextures;
@@ -2348,7 +2273,6 @@ Standard_Boolean OpenGl_Context::BindProgram (const Handle(OpenGl_ShaderProgram)
 // =======================================================================
 void OpenGl_Context::BindDefaultVao()
 {
-#if !defined(GL_ES_VERSION_2_0)
   if (myDefaultVao == 0
    || core32 == NULL)
   {
@@ -2356,7 +2280,6 @@ void OpenGl_Context::BindDefaultVao()
   }
 
   core32->glBindVertexArray (myDefaultVao);
-#endif
 }
 
 // =======================================================================
@@ -2368,6 +2291,24 @@ Handle(OpenGl_FrameBuffer) OpenGl_Context::SetDefaultFrameBuffer (const Handle(O
   Handle(OpenGl_FrameBuffer) aFbo = myDefaultFbo;
   myDefaultFbo = theFbo;
   return aFbo;
+}
+
+// =======================================================================
+// function : IsRender
+// purpose  :
+// =======================================================================
+Standard_Boolean OpenGl_Context::IsRender() const
+{
+  return myRenderMode == GL_RENDER;
+}
+
+// =======================================================================
+// function : IsFeedback
+// purpose  :
+// =======================================================================
+Standard_Boolean OpenGl_Context::IsFeedback() const
+{
+  return myRenderMode == GL_FEEDBACK;
 }
 
 // =======================================================================
@@ -2498,12 +2439,10 @@ void OpenGl_Context::SetColor4fv (const OpenGl_Vec4& theColor)
       myActiveProgram->SetUniform (this, aLoc, Vec4FromQuantityColor (theColor));
     }
   }
-#if !defined(GL_ES_VERSION_2_0)
   else if (core11ffp != NULL)
   {
     core11ffp->glColor4fv (theColor.GetData());
   }
-#endif
 }
 
 // =======================================================================
@@ -2545,25 +2484,19 @@ void OpenGl_Context::SetLineStipple (const Standard_ShortReal theFactor,
     return;
   }
 
-#if !defined(GL_ES_VERSION_2_0)
-  if (thePattern != 0xFFFF)
+  if (core11ffp != NULL)
   {
-    if (core11ffp != NULL)
+    if (thePattern != 0xFFFF)
     {
       core11fwd->glEnable (GL_LINE_STIPPLE);
-
       core11ffp->glLineStipple (static_cast<GLint>    (theFactor),
                                 static_cast<GLushort> (thePattern));
     }
-  }
-  else
-  {
-    if (core11ffp != NULL)
+    else
     {
       core11fwd->glDisable (GL_LINE_STIPPLE);
     }
   }
-#endif
 }
 
 // =======================================================================
@@ -2572,9 +2505,8 @@ void OpenGl_Context::SetLineStipple (const Standard_ShortReal theFactor,
 // =======================================================================
 void OpenGl_Context::SetLineWidth (const Standard_ShortReal theWidth)
 {
-#if !defined(GL_ES_VERSION_2_0)
-  if (core11ffp != NULL)
-#endif
+  if (myGapi == Aspect_GraphicsLibrary_OpenGLES
+   || core11ffp != NULL)
   {
     // glLineWidth() is still defined within Core Profile, but has no effect with values != 1.0f
     core11fwd->glLineWidth (theWidth * myLineWidthScale);
@@ -2621,11 +2553,10 @@ void OpenGl_Context::SetTextureMatrix (const Handle(Graphic3d_TextureParams)& th
     return;
   }
 
-#if !defined(GL_ES_VERSION_2_0)
   if (core11ffp != NULL)
   {
     GLint aMatrixMode = GL_TEXTURE;
-    ::glGetIntegerv (GL_MATRIX_MODE, &aMatrixMode);
+    core11fwd->glGetIntegerv (GL_MATRIX_MODE, &aMatrixMode);
 
     core11ffp->glMatrixMode (GL_TEXTURE);
     OpenGl_Mat4 aTextureMat;
@@ -2644,7 +2575,6 @@ void OpenGl_Context::SetTextureMatrix (const Handle(Graphic3d_TextureParams)& th
     core11ffp->glLoadMatrixf (aTextureMat.GetData());
     core11ffp->glMatrixMode (aMatrixMode);
   }
-#endif
 }
 
 // =======================================================================
@@ -2656,20 +2586,19 @@ void OpenGl_Context::SetPointSize (const Standard_ShortReal theSize)
   if (!myActiveProgram.IsNull())
   {
     myActiveProgram->SetUniform (this, myActiveProgram->GetStateLocation (OpenGl_OCCT_POINT_SIZE), theSize);
-  #if !defined(GL_ES_VERSION_2_0)
-    //myContext->core11fwd->glEnable (GL_VERTEX_PROGRAM_POINT_SIZE);
-  #endif
+    //if (myGapi == Aspect_GraphicsLibrary_OpenGL)
+    //core11fwd->glEnable (GL_VERTEX_PROGRAM_POINT_SIZE);
   }
-#if !defined(GL_ES_VERSION_2_0)
   //else
+
+  if (myGapi != Aspect_GraphicsLibrary_OpenGLES)
   {
     core11fwd->glPointSize (theSize);
     if (core20fwd != NULL)
     {
-      //myContext->core11fwd->glDisable (GL_VERTEX_PROGRAM_POINT_SIZE);
+      //core11fwd->glDisable (GL_VERTEX_PROGRAM_POINT_SIZE);
     }
   }
-#endif
 }
 
 // =======================================================================
@@ -2678,8 +2607,8 @@ void OpenGl_Context::SetPointSize (const Standard_ShortReal theSize)
 // =======================================================================
 void OpenGl_Context::SetPointSpriteOrigin()
 {
-#if !defined(GL_ES_VERSION_2_0)
-  if (core15fwd == NULL)
+  if (myGapi == Aspect_GraphicsLibrary_OpenGLES
+   || core15fwd == NULL)
   {
     return;
   }
@@ -2690,7 +2619,6 @@ void OpenGl_Context::SetPointSpriteOrigin()
     myPointSpriteOrig = aNewState;
     core15fwd->glPointParameteri (GL_POINT_SPRITE_COORD_ORIGIN, aNewState);
   }
-#endif
 }
 
 // =======================================================================
@@ -2706,7 +2634,7 @@ Standard_Boolean OpenGl_Context::SetGlNormalizeEnabled (Standard_Boolean isEnabl
 
   Standard_Boolean anOldGlNormalize = myIsGlNormalizeEnabled;
   myIsGlNormalizeEnabled = isEnabled;
-#if !defined(GL_ES_VERSION_2_0)
+
   if (core11ffp != NULL)
   {
     if (isEnabled)
@@ -2718,7 +2646,6 @@ Standard_Boolean OpenGl_Context::SetGlNormalizeEnabled (Standard_Boolean isEnabl
       core11fwd->glDisable (GL_NORMALIZE);
     }
   }
-#endif
 
   return anOldGlNormalize;
 }
@@ -2729,7 +2656,6 @@ Standard_Boolean OpenGl_Context::SetGlNormalizeEnabled (Standard_Boolean isEnabl
 // =======================================================================
 void OpenGl_Context::SetShadeModel (Graphic3d_TypeOfShadingModel theModel)
 {
-#if !defined(GL_ES_VERSION_2_0)
   if (core11ffp != NULL)
   {
     const Standard_Integer aModel = theModel == Graphic3d_TypeOfShadingModel_PhongFacet
@@ -2741,9 +2667,6 @@ void OpenGl_Context::SetShadeModel (Graphic3d_TypeOfShadingModel theModel)
     myShadeModel = aModel;
     core11ffp->glShadeModel (aModel);
   }
-#else
-  (void )theModel;
-#endif
 }
 
 // =======================================================================
@@ -2758,13 +2681,11 @@ Standard_Integer OpenGl_Context::SetPolygonMode (const Standard_Integer theMode)
   }
 
   const Standard_Integer anOldPolygonMode = myPolygonMode;
-
   myPolygonMode = theMode;
-
-#if !defined(GL_ES_VERSION_2_0)
-  ::glPolygonMode (GL_FRONT_AND_BACK, (GLenum)theMode);
-#endif
-
+  if (myGapi != Aspect_GraphicsLibrary_OpenGLES)
+  {
+    core11fwd->glPolygonMode (GL_FRONT_AND_BACK, (GLenum)theMode);
+  }
   return anOldPolygonMode;
 }
 
@@ -2784,7 +2705,6 @@ bool OpenGl_Context::SetPolygonHatchEnabled (const bool theIsEnabled)
   }
 
   const bool anOldIsEnabled = myHatchIsEnabled;
-#if !defined(GL_ES_VERSION_2_0)
   if (theIsEnabled
    && myActiveHatchType != Aspect_HS_SOLID)
   {
@@ -2794,7 +2714,7 @@ bool OpenGl_Context::SetPolygonHatchEnabled (const bool theIsEnabled)
   {
     core11fwd->glDisable (GL_POLYGON_STIPPLE);
   }
-#endif
+
   myHatchIsEnabled = theIsEnabled;
   return anOldIsEnabled;
 }
@@ -2812,7 +2732,6 @@ Standard_Integer OpenGl_Context::SetPolygonHatchStyle (const Handle(Graphic3d_Ha
     return myActiveHatchType;
   }
 
-#if !defined(GL_ES_VERSION_2_0)
   if (aNewStyle == Aspect_HS_SOLID)
   {
     if (myHatchIsEnabled)
@@ -2839,9 +2758,6 @@ Standard_Integer OpenGl_Context::SetPolygonHatchStyle (const Handle(Graphic3d_Ha
     core11fwd->glEnable (GL_POLYGON_STIPPLE);
   }
   return anOldType;
-#else
-  return myActiveHatchType;
-#endif
 }
 
 // =======================================================================
@@ -2864,35 +2780,36 @@ void OpenGl_Context::SetPolygonOffset (const Graphic3d_PolygonOffset& theOffset)
     }
   }
 
-#if !defined(GL_ES_VERSION_2_0)
-  const bool toLineOld = (myPolygonOffset.Mode & Aspect_POM_Line) == Aspect_POM_Line;
-  const bool toLineNew = (theOffset.Mode       & Aspect_POM_Line) == Aspect_POM_Line;
-  if (toLineNew != toLineOld)
+  if (myGapi != Aspect_GraphicsLibrary_OpenGLES)
   {
-    if (toLineNew)
+    const bool toLineOld = (myPolygonOffset.Mode & Aspect_POM_Line) == Aspect_POM_Line;
+    const bool toLineNew = (theOffset.Mode       & Aspect_POM_Line) == Aspect_POM_Line;
+    if (toLineNew != toLineOld)
     {
-      core11fwd->glEnable (GL_POLYGON_OFFSET_LINE);
+      if (toLineNew)
+      {
+        core11fwd->glEnable (GL_POLYGON_OFFSET_LINE);
+      }
+      else
+      {
+        core11fwd->glDisable (GL_POLYGON_OFFSET_LINE);
+      }
     }
-    else
-    {
-      core11fwd->glDisable (GL_POLYGON_OFFSET_LINE);
-    }
-  }
 
-  const bool toPointOld = (myPolygonOffset.Mode & Aspect_POM_Point) == Aspect_POM_Point;
-  const bool toPointNew = (theOffset.Mode       & Aspect_POM_Point) == Aspect_POM_Point;
-  if (toPointNew != toPointOld)
-  {
-    if (toPointNew)
+    const bool toPointOld = (myPolygonOffset.Mode & Aspect_POM_Point) == Aspect_POM_Point;
+    const bool toPointNew = (theOffset.Mode       & Aspect_POM_Point) == Aspect_POM_Point;
+    if (toPointNew != toPointOld)
     {
-      core11fwd->glEnable (GL_POLYGON_OFFSET_POINT);
-    }
-    else
-    {
-      core11fwd->glDisable (GL_POLYGON_OFFSET_POINT);
+      if (toPointNew)
+      {
+        core11fwd->glEnable (GL_POLYGON_OFFSET_POINT);
+      }
+      else
+      {
+        core11fwd->glDisable (GL_POLYGON_OFFSET_POINT);
+      }
     }
   }
-#endif
 
   if (myPolygonOffset.Factor != theOffset.Factor
    || myPolygonOffset.Units  != theOffset.Units)
@@ -2995,7 +2912,6 @@ void OpenGl_Context::DisableFeatures() const
   core11fwd->glDisable(GL_DEPTH_TEST);
   core11fwd->glDisable(GL_STENCIL_TEST);
 
-#if !defined(GL_ES_VERSION_2_0)
   if (core11ffp == NULL)
   {
     return;
@@ -3009,37 +2925,43 @@ void OpenGl_Context::DisableFeatures() const
   core11fwd->glDisable(GL_FOG);
   core11fwd->glDisable(GL_LOGIC_OP);
 
-  glPixelTransferi(GL_MAP_COLOR, GL_FALSE);
-  glPixelTransferi(GL_RED_SCALE, 1);
-  glPixelTransferi(GL_RED_BIAS, 0);
-  glPixelTransferi(GL_GREEN_SCALE, 1);
-  glPixelTransferi(GL_GREEN_BIAS, 0);
-  glPixelTransferi(GL_BLUE_SCALE, 1);
-  glPixelTransferi(GL_BLUE_BIAS, 0);
-  glPixelTransferi(GL_ALPHA_SCALE, 1);
-  glPixelTransferi(GL_ALPHA_BIAS, 0);
+  core11ffp->glPixelTransferi (GL_MAP_COLOR, GL_FALSE);
+  core11ffp->glPixelTransferi (GL_RED_SCALE, 1);
+  core11ffp->glPixelTransferi (GL_RED_BIAS, 0);
+  core11ffp->glPixelTransferi (GL_GREEN_SCALE, 1);
+  core11ffp->glPixelTransferi (GL_GREEN_BIAS, 0);
+  core11ffp->glPixelTransferi (GL_BLUE_SCALE, 1);
+  core11ffp->glPixelTransferi (GL_BLUE_BIAS, 0);
+  core11ffp->glPixelTransferi (GL_ALPHA_SCALE, 1);
+  core11ffp->glPixelTransferi (GL_ALPHA_BIAS, 0);
 
-  if ((myGlVerMajor >= 1) && (myGlVerMinor >= 2))
+  if (IsGlGreaterEqual (1, 2))
   {
     if (CheckExtension ("GL_CONVOLUTION_1D_EXT"))
+    {
       core11fwd->glDisable(GL_CONVOLUTION_1D_EXT);
-
+    }
     if (CheckExtension ("GL_CONVOLUTION_2D_EXT"))
+    {
       core11fwd->glDisable(GL_CONVOLUTION_2D_EXT);
-
+    }
     if (CheckExtension ("GL_SEPARABLE_2D_EXT"))
+    {
       core11fwd->glDisable(GL_SEPARABLE_2D_EXT);
-
+    }
     if (CheckExtension ("GL_SEPARABLE_2D_EXT"))
+    {
       core11fwd->glDisable(GL_HISTOGRAM_EXT);
-
+    }
     if (CheckExtension ("GL_MINMAX_EXT"))
+    {
       core11fwd->glDisable(GL_MINMAX_EXT);
-
+    }
     if (CheckExtension ("GL_TEXTURE_3D_EXT"))
+    {
       core11fwd->glDisable(GL_TEXTURE_3D_EXT);
+    }
   }
-#endif
 }
 
 // =======================================================================
@@ -3102,7 +3024,7 @@ bool OpenGl_Context::SetSampleAlphaToCoverage (bool theToEnable)
 // function : GetBufferSubData
 // purpose  :
 // =======================================================================
-bool OpenGl_Context::GetBufferSubData (GLenum theTarget, GLintptr theOffset, GLsizeiptr theSize, void* theData)
+bool OpenGl_Context::GetBufferSubData (unsigned int theTarget, intptr_t theOffset, intptr_t theSize, void* theData)
 {
   if (!hasGetBufferData)
   {
@@ -3114,7 +3036,7 @@ bool OpenGl_Context::GetBufferSubData (GLenum theTarget, GLintptr theOffset, GLs
     Module.ctx.getBufferSubData($0, $1, HEAPU8.subarray($2, $2 + $3));
   }, theTarget, theOffset, theData, theSize);
   return true;
-#elif defined(GL_ES_VERSION_2_0)
+#elif defined(OCC_USE_GLES2)
   if (void* aData = core30->glMapBufferRange (theTarget, theOffset, theSize, GL_MAP_READ_BIT))
   {
     memcpy (theData, aData, theSize);
@@ -3171,7 +3093,7 @@ void OpenGl_Context::DumpJson (Standard_OStream& theOStream, Standard_Integer th
   OCCT_DUMP_FIELD_VALUE_NUMERICAL (theOStream, myRenderMode)
   OCCT_DUMP_FIELD_VALUE_NUMERICAL (theOStream, myPolygonMode)
   OCCT_DUMP_FIELD_VALUES_DUMPED (theOStream, theDepth, &myPolygonOffset)
-  OCCT_DUMP_FIELD_VALUE_NUMERICAL (theOStream, myToCullBackFaces)
+  OCCT_DUMP_FIELD_VALUE_NUMERICAL (theOStream, myFaceCulling)
   OCCT_DUMP_FIELD_VALUE_NUMERICAL (theOStream, myReadBuffer)
 
   OCCT_DUMP_FIELD_VALUE_NUMERICAL (theOStream, myDefaultVao)
@@ -3199,12 +3121,11 @@ void OpenGl_Context::DumpJson (Standard_OStream& theOStream, Standard_Integer th
 // =======================================================================
 void OpenGl_Context::DumpJsonOpenGlState (Standard_OStream& theOStream, Standard_Integer)
 {
-  GLboolean isEnableBlend = glIsEnabled (GL_BLEND);
-  GLboolean isEnableCullFace = glIsEnabled (GL_CULL_FACE);
-  GLboolean isEnableDepthTest = glIsEnabled (GL_DEPTH_TEST);
+  GLboolean isEnableBlend = core11fwd->glIsEnabled (GL_BLEND);
+  GLboolean isEnableCullFace = core11fwd->glIsEnabled (GL_CULL_FACE);
+  GLboolean isEnableDepthTest = core11fwd->glIsEnabled (GL_DEPTH_TEST);
   
   OCCT_DUMP_FIELD_VALUE_NUMERICAL (theOStream, isEnableBlend)
   OCCT_DUMP_FIELD_VALUE_NUMERICAL (theOStream, isEnableCullFace)
   OCCT_DUMP_FIELD_VALUE_NUMERICAL (theOStream, isEnableDepthTest)
 }
-

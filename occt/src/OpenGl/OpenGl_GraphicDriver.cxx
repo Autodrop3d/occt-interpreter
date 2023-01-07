@@ -14,24 +14,17 @@
 // commercial license or contractual agreement.
 
 #if defined(_WIN32)
-  #include <windows.h>
+  #include <windows.h> // for UWP
 #endif
 
 #include <OpenGl_GraphicDriver.hxx>
 #include <OpenGl_Context.hxx>
-#include <OpenGl_Flipper.hxx>
-#include <OpenGl_GraduatedTrihedron.hxx>
-#include <OpenGl_Group.hxx>
 #include <OpenGl_View.hxx>
-#include <OpenGl_StencilTest.hxx>
 #include <OpenGl_Text.hxx>
 #include <OpenGl_Window.hxx>
-#include <OpenGl_Workspace.hxx>
 
 #include <Aspect_GraphicDeviceDefinitionError.hxx>
-#include <Aspect_IdentDefinitionError.hxx>
 #include <Graphic3d_StructureManager.hxx>
-#include <Message_Messenger.hxx>
 #include <OSD_Environment.hxx>
 #include <Standard_NotImplemented.hxx>
 
@@ -52,42 +45,58 @@ IMPLEMENT_STANDARD_RTTIEXT(OpenGl_GraphicDriver,Graphic3d_GraphicDriver)
   #include <GL/glx.h>
 #endif
 
-#if defined(HAVE_EGL) || defined(HAVE_GLES2) || defined(OCCT_UWP) || defined(__ANDROID__) || defined(__QNX__) || defined(__EMSCRIPTEN__)
+#if !defined(HAVE_EGL)
+#if defined(__ANDROID__) || defined(__QNX__) || defined(__EMSCRIPTEN__) || defined(HAVE_GLES2) || defined(OCCT_UWP)
+  #if !defined(__APPLE__)
+    #define HAVE_EGL // EAGL is used instead of EGL
+  #endif
+#elif !defined(_WIN32) && !defined(__APPLE__) && !defined(HAVE_XLIB)
+  #define HAVE_EGL
+#endif
+#endif
+
+#if defined(HAVE_EGL)
   #include <EGL/egl.h>
   #ifndef EGL_OPENGL_ES3_BIT
     #define EGL_OPENGL_ES3_BIT 0x00000040
   #endif
 #endif
 
+#if defined(HAVE_GLES2) || defined(OCCT_UWP) || defined(__ANDROID__) || defined(__QNX__) || defined(__EMSCRIPTEN__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+  #define OpenGl_USE_GLES2
+#endif
+
 namespace
 {
   static const Handle(OpenGl_Context) TheNullGlCtx;
 
-#if defined(HAVE_EGL) || defined(HAVE_GLES2) || defined(OCCT_UWP) || defined(__ANDROID__) || defined(__QNX__) || defined(__EMSCRIPTEN__)
+#if defined(HAVE_EGL)
   //! Wrapper over eglChooseConfig() called with preferred defaults.
-  static EGLConfig chooseEglSurfConfig (EGLDisplay theDisplay)
+  static EGLConfig chooseEglSurfConfig (EGLDisplay theDisplay,
+                                        const Handle(OpenGl_Caps)& theCaps)
   {
-    EGLint aConfigAttribs[] =
-    {
-      EGL_RED_SIZE,     8,
-      EGL_GREEN_SIZE,   8,
-      EGL_BLUE_SIZE,    8,
-      EGL_ALPHA_SIZE,   0,
-      EGL_DEPTH_SIZE,   24,
-      EGL_STENCIL_SIZE, 8,
-    #if defined(GL_ES_VERSION_2_0)
-      EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-    #else
-      EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
-    #endif
-      EGL_NONE
-    };
-
     EGLConfig aCfg = NULL;
     EGLint aNbConfigs = 0;
     for (Standard_Integer aGlesVer = 3; aGlesVer >= 2; --aGlesVer)
     {
-    #if defined(GL_ES_VERSION_2_0)
+      bool isDeepColor = theCaps->buffersDeepColor;
+      EGLint aConfigAttribs[] =
+      {
+        EGL_RED_SIZE,     isDeepColor ? 10 : 8,
+        EGL_GREEN_SIZE,   isDeepColor ? 10 : 8,
+        EGL_BLUE_SIZE,    isDeepColor ? 10 : 8,
+        EGL_ALPHA_SIZE,   0,
+        EGL_DEPTH_SIZE,   24,
+        EGL_STENCIL_SIZE, 8,
+      #if defined(OpenGl_USE_GLES2)
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+      #else
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+      #endif
+        EGL_NONE
+      };
+
+    #if defined(OpenGl_USE_GLES2)
       aConfigAttribs[6 * 2 + 1] = aGlesVer == 3 ? EGL_OPENGL_ES3_BIT : EGL_OPENGL_ES2_BIT;
     #else
       if (aGlesVer == 2)
@@ -103,13 +112,30 @@ namespace
       }
       eglGetError();
 
-      aConfigAttribs[4 * 2 + 1] = 16; // try config with smaller depth buffer
-      if (eglChooseConfig (theDisplay, aConfigAttribs, &aCfg, 1, &aNbConfigs) == EGL_TRUE
-       && aCfg != NULL)
+      if (isDeepColor)
       {
-        return aCfg;
+        // try config with smaller color buffer
+        aConfigAttribs[0 * 2 + 1] = 8;
+        aConfigAttribs[1 * 2 + 1] = 8;
+        aConfigAttribs[2 * 2 + 1] = 8;
+        if (eglChooseConfig (theDisplay, aConfigAttribs, &aCfg, 1, &aNbConfigs) == EGL_TRUE
+         && aCfg != NULL)
+        {
+          return aCfg;
+        }
+        eglGetError();
       }
-      eglGetError();
+
+      {
+        // try config with smaller depth buffer
+        aConfigAttribs[4 * 2 + 1] = 16;
+        if (eglChooseConfig (theDisplay, aConfigAttribs, &aCfg, 1, &aNbConfigs) == EGL_TRUE
+         && aCfg != NULL)
+        {
+          return aCfg;
+        }
+        eglGetError();
+      }
     }
     return aCfg;
   }
@@ -155,9 +181,12 @@ OpenGl_GraphicDriver::OpenGl_GraphicDriver (const Handle(Aspect_DisplayConnectio
   myMapOfView      (1, NCollection_BaseAllocator::CommonBaseAllocator()),
   myMapOfStructure (1, NCollection_BaseAllocator::CommonBaseAllocator())
 {
-#if defined(HAVE_EGL) || defined(HAVE_GLES2) || defined(OCCT_UWP) || defined(__ANDROID__) || defined(__QNX__) || defined(__EMSCRIPTEN__)
+#if defined(HAVE_EGL)
   myEglDisplay = (Aspect_Display )EGL_NO_DISPLAY;
   myEglContext = (Aspect_RenderingContext )EGL_NO_CONTEXT;
+#endif
+#if defined(OpenGl_USE_GLES2)
+  myCaps->contextCompatible = false;
 #endif
 
 #if defined(HAVE_XLIB)
@@ -250,7 +279,7 @@ void OpenGl_GraphicDriver::ReleaseContext()
     aWindow->GetGlContext()->forcedRelease();
   }
 
-#if defined(HAVE_EGL) || defined(HAVE_GLES2) || defined(OCCT_UWP) || defined(__ANDROID__) || defined(__QNX__) || defined(__EMSCRIPTEN__)
+#if defined(HAVE_EGL)
   if (myIsOwnContext)
   {
     if (myEglContext != (Aspect_RenderingContext )EGL_NO_CONTEXT)
@@ -285,7 +314,7 @@ void OpenGl_GraphicDriver::ReleaseContext()
 Standard_Boolean OpenGl_GraphicDriver::InitContext()
 {
   ReleaseContext();
-#if defined(HAVE_EGL) || defined(HAVE_GLES2) || defined(OCCT_UWP) || defined(__ANDROID__) || defined(__QNX__) || defined(__EMSCRIPTEN__)
+#if defined(HAVE_EGL)
 
 #if defined(HAVE_XLIB)
   if (myDisplayConnection.IsNull())
@@ -310,14 +339,14 @@ Standard_Boolean OpenGl_GraphicDriver::InitContext()
     return Standard_False;
   }
 
-  myEglConfig = chooseEglSurfConfig ((EGLDisplay )myEglDisplay);
+  myEglConfig = chooseEglSurfConfig ((EGLDisplay )myEglDisplay, myCaps);
   if (myEglConfig == NULL)
   {
     ::Message::SendFail ("Error: EGL does not provide compatible configurations");
     return Standard_False;
   }
 
-#if defined(GL_ES_VERSION_2_0)
+#if defined(OpenGl_USE_GLES2)
   EGLint anEglCtxAttribs3[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE, EGL_NONE };
   EGLint anEglCtxAttribs2[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE, EGL_NONE };
   if (eglBindAPI (EGL_OPENGL_ES_API) != EGL_TRUE)
@@ -369,7 +398,7 @@ Standard_Boolean OpenGl_GraphicDriver::InitEglContext (Aspect_Display          t
                                                        void*                   theEglConfig)
 {
   ReleaseContext();
-#if defined(HAVE_EGL) || defined(HAVE_GLES2) || defined(OCCT_UWP) || defined(__ANDROID__) || defined(__QNX__) || defined(__EMSCRIPTEN__)
+#if defined(HAVE_EGL)
 #if defined(HAVE_XLIB)
   if (myDisplayConnection.IsNull())
   {
@@ -387,7 +416,7 @@ Standard_Boolean OpenGl_GraphicDriver::InitEglContext (Aspect_Display          t
   myEglConfig  = theEglConfig;
   if (theEglConfig == NULL)
   {
-    myEglConfig = chooseEglSurfConfig ((EGLDisplay )myEglDisplay);
+    myEglConfig = chooseEglSurfConfig ((EGLDisplay )myEglDisplay, myCaps);
     if (myEglConfig == NULL)
     {
       ::Message::SendFail ("Error: EGL does not provide compatible configurations");
@@ -420,7 +449,7 @@ void OpenGl_GraphicDriver::chooseVisualInfo()
 
   XVisualInfo* aVisInfo = NULL;
   Aspect_FBConfig anFBConfig = NULL;
-#if defined(HAVE_EGL) || defined(HAVE_GLES2)
+#if defined(HAVE_EGL)
   XVisualInfo aVisInfoTmp;
   memset (&aVisInfoTmp, 0, sizeof(aVisInfoTmp));
   aVisInfoTmp.screen = DefaultScreen (aDisp);
@@ -739,7 +768,7 @@ void OpenGl_GraphicDriver::SetZLayerSettings (const Graphic3d_ZLayerId theLayerI
 Handle(Graphic3d_CStructure) OpenGl_GraphicDriver::CreateStructure (const Handle(Graphic3d_StructureManager)& theManager)
 {
   Handle(OpenGl_Structure) aStructure = new OpenGl_Structure (theManager);
-  myMapOfStructure.Bind (aStructure->Id, aStructure.operator->());
+  myMapOfStructure.Bind (aStructure->Identification(), aStructure.operator->());
   return aStructure;
 }
 
@@ -750,12 +779,12 @@ Handle(Graphic3d_CStructure) OpenGl_GraphicDriver::CreateStructure (const Handle
 void OpenGl_GraphicDriver::RemoveStructure (Handle(Graphic3d_CStructure)& theCStructure)
 {
   OpenGl_Structure* aStructure = NULL;
-  if (!myMapOfStructure.Find (theCStructure->Id, aStructure))
+  if (!myMapOfStructure.Find (theCStructure->Identification(), aStructure))
   {
     return;
   }
 
-  myMapOfStructure.UnBind (theCStructure->Id);
+  myMapOfStructure.UnBind (theCStructure->Identification());
   aStructure->Release (GetSharedContext());
   theCStructure.Nullify();
 }
@@ -832,14 +861,16 @@ void OpenGl_GraphicDriver::RemoveView (const Handle(Graphic3d_CView)& theView)
 }
 
 // =======================================================================
-// function : Window
+// function : CreateRenderWindow
 // purpose  :
 // =======================================================================
-Handle(OpenGl_Window) OpenGl_GraphicDriver::CreateRenderWindow (const Handle(Aspect_Window)&  theWindow,
+Handle(OpenGl_Window) OpenGl_GraphicDriver::CreateRenderWindow (const Handle(Aspect_Window)& theNativeWindow,
+                                                                const Handle(Aspect_Window)& theSizeWindow,
                                                                 const Aspect_RenderingContext theContext)
 {
   Handle(OpenGl_Context) aShareCtx = GetSharedContext();
-  Handle(OpenGl_Window) aWindow = new OpenGl_Window (this, theWindow, theContext, myCaps, aShareCtx);
+  Handle(OpenGl_Window) aWindow = new OpenGl_Window();
+  aWindow->Init (this, theNativeWindow, theSizeWindow, theContext, myCaps, aShareCtx);
   return aWindow;
 }
 

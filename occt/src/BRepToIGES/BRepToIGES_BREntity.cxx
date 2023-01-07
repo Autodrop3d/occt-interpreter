@@ -22,14 +22,11 @@
 #include <BRepToIGES_BRShell.hxx>
 #include <BRepToIGES_BRSolid.hxx>
 #include <BRepToIGES_BRWire.hxx>
-#include <Geom_Geometry.hxx>
-#include <gp_Trsf.hxx>
 #include <IGESData_IGESEntity.hxx>
 #include <IGESData_IGESModel.hxx>
 #include <Interface_Macros.hxx>
 #include <Interface_Static.hxx>
 #include <Standard_Transient.hxx>
-#include <TopLoc_Location.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Compound.hxx>
 #include <TopoDS_CompSolid.hxx>
@@ -43,7 +40,6 @@
 #include <Transfer_FinderProcess.hxx>
 #include <Transfer_SimpleBinderOfTransient.hxx>
 #include <Transfer_TransientMapper.hxx>
-#include <TransferBRep_OrientedShapeMapper.hxx>
 #include <TransferBRep_ShapeMapper.hxx>
 
 //#include <ShapeCustom.hxx>
@@ -146,7 +142,8 @@ Handle(IGESData_IGESEntity) BRepToIGES_BREntity::TransferShape
     TopoDS_Edge E =  TopoDS::Edge(start);
     BRepToIGES_BRWire BW(*this);
     BW.SetModel(GetModel());
-    res = BW.TransferEdge(E, Standard_False);
+    TopTools_DataMapOfShapeShape anEmptyMap;
+    res = BW.TransferEdge(E, anEmptyMap, Standard_False);
   }  
   else if (start.ShapeType() == TopAbs_WIRE) {
     TopoDS_Wire W =  TopoDS::Wire(start);

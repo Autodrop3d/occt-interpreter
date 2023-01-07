@@ -14,7 +14,6 @@
 // commercial license or contractual agreement.
 
 #include <DDocStd.hxx>
-#include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
 #include <Draw_Viewer.hxx>
 #include <Draw_ProgressIndicator.hxx>
@@ -23,20 +22,14 @@
 #include <TDocStd_Document.hxx>
 #include <TDataStd_Name.hxx>
 #include <Draw.hxx>
-#include <Standard_GUID.hxx>
-#include <Standard_ExtString.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <TCollection_ExtendedString.hxx>
-#include <TDF.hxx>
 #include <TDF_Data.hxx>
 #include <TDF_ChildIterator.hxx>
-#include <TDF_Tool.hxx> 
 #include <PCDM_ReaderFilter.hxx>
 
 #include <OSD_FileSystem.hxx>
-#include <OSD_Path.hxx>
 #include <TDocStd_PathParser.hxx>
-#include <XmlLDrivers.hxx>
 
 #include <AIS_InteractiveContext.hxx>
 #include <TPrsStd_AISViewer.hxx>
@@ -180,7 +173,7 @@ static Standard_Integer DDocStd_Open (Draw_Interpretor& di,
     if (anUseStream)
     {
       const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-      opencascade::std::shared_ptr<std::istream> aFileStream = aFileSystem->OpenIStream (path, std::ios::in | std::ios::binary);
+      std::shared_ptr<std::istream> aFileStream = aFileSystem->OpenIStream (path, std::ios::in | std::ios::binary);
 
       theStatus = A->Open (*aFileStream, D, aFilter, aProgress->Start());
     }
@@ -298,7 +291,7 @@ static Standard_Integer DDocStd_SaveAs (Draw_Interpretor& di,
     if (anUseStream)
     {
       const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-      opencascade::std::shared_ptr<std::ostream> aFileStream = aFileSystem->OpenOStream (path, std::ios::out | std::ios::binary);
+      std::shared_ptr<std::ostream> aFileStream = aFileSystem->OpenOStream (path, std::ios::out | std::ios::binary);
       theStatus = A->SaveAs (D, *aFileStream, aProgress->Start());
     }
     else

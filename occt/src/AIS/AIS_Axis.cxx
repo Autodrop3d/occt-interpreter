@@ -36,8 +36,6 @@
 #include <SelectMgr_Selection.hxx>
 #include <Standard_NumericError.hxx>
 #include <StdPrs_Curve.hxx>
-#include <TColgp_Array1OfPnt.hxx>
-#include <TopoDS.hxx>
 #include <UnitsAPI.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(AIS_Axis,AIS_InteractiveObject)
@@ -188,7 +186,6 @@ void AIS_Axis::Compute (const Handle(PrsMgr_PresentationManager)& ,
 		        const Standard_Integer )
 {
   thePrs->SetInfiniteState (myInfiniteState);
-  thePrs->SetDisplayPriority (5);
   if (!myIsXYZAxis)
   {
     GeomAdaptor_Curve curv (myComponent);

@@ -40,7 +40,8 @@
 #include <XSDRAW.hxx>
 #include <XSDRAW_Vars.hxx>
 
-#include <stdio.h>
+#include <iostream>
+#include <string>
 //#include <XSDRAW_Shape.hxx>
 static int deja = 0, dejald = 0;
 //unused variable 
@@ -123,23 +124,34 @@ void XSDRAW::LoadDraw (Draw_Interpretor& theCommands)
   XSDRAW::RemoveCommand("exit");
 
 //  if (!getenv("WBHOSTTOP")) XSDRAW::RemoveCommand("xsnew");
-  Handle(TColStd_HSequenceOfAsciiString) list =
-    IFSelect_Activator::Commands(0);
-  TCollection_AsciiString com;
-  Standard_Integer i, nb = list->Length();
-  for (i = 1; i <= nb; i ++) {
-    Handle(IFSelect_Activator) act;
-    Standard_Integer nact, num = -1;
-    char help[200];
-    com = list->Value(i);
+  Handle(TColStd_HSequenceOfAsciiString) list = IFSelect_Activator::Commands (0);
+  for (TColStd_HSequenceOfAsciiString::Iterator aCmdIter (*list); aCmdIter.More(); aCmdIter.Next())
+  {
+    Standard_Integer num = -1;
+    const TCollection_AsciiString& aCmd = aCmdIter.Value();
     if (!theolds.IsEmpty())
-      theolds.Find(com, num);
-    if (num == 0) continue;
-    if (!IFSelect_Activator::Select(com.ToCString(),nact,act))
-      Sprintf (help,"type :  xhelp %s for help",com.ToCString());
-    else if (!act.IsNull()) strcpy(help,act->Help(nact));
-    if (num < 0) theCommands.Add (com.ToCString(),help,XSTEPDRAWRUN,act->Group());
-    else theCommands.Add (thenews->Value(num).ToCString(),help,XSTEPDRAWRUN,act->Group());
+    {
+      theolds.Find (aCmd, num);
+    }
+    if (num == 0)
+    {
+      continue;
+    }
+
+    Standard_Integer nact = 0;
+    Handle(IFSelect_Activator) anAct;
+    TCollection_AsciiString aHelp;
+    if (!IFSelect_Activator::Select (aCmd.ToCString(), nact, anAct))
+    {
+      aHelp = TCollection_AsciiString("type :  xhelp ") + aCmd + " for help";
+    }
+    else if (!anAct.IsNull())
+    {
+      aHelp = anAct->Help (nact);
+    }
+
+    const TCollection_AsciiString& aCmdName = num < 0 ? aCmd : thenews->Value (num);
+    theCommands.Add (aCmdName.ToCString(), aHelp.ToCString(), "", XSTEPDRAWRUN, anAct->Group());
   }
 }
 
@@ -245,16 +257,23 @@ void XSDRAW::LoadDraw (Draw_Interpretor& theCommands)
     Handle(TColStd_HSequenceOfTransient)  XSDRAW::GetList
   (const Standard_CString first, const Standard_CString second)
 {
-  Handle(TColStd_HSequenceOfTransient) list;
-  if (!first || first[0] == '\0') {
-    char ligne[80];  ligne[0] = '\0'; char truc;
-//    std::cin.clear();  std::cin.get (ligne,79,'\n');
-    std::cin >> ligne;  Standard_Size ln = strlen(ligne);
-    char *ff = &ligne[0], *ss = NULL;
-    std::cin.get(truc);  if (truc != '\n') { std::cin>>&ligne[ln+1]; ss = &ligne[ln+1]; }
-    return  XSDRAW::GetList (ff,ss);
+  if ( !first || first[0] == '\0' )
+  {
+    std::string aLineFirst;
+    std::cin >> aLineFirst;
+    
+    char terminateSymbol = '\0';
+    std::cin.get(terminateSymbol);
+
+    if ( terminateSymbol == '\n' )
+      return XSDRAW::GetList (aLineFirst.c_str(), nullptr);
+    else
+    {
+      std::string aLineSecond;
+      std::cin >> aLineSecond;
+      return XSDRAW::GetList (aLineFirst.c_str(), aLineSecond.c_str());
+    }
   }
-//  return IFSelect_Functions::GiveList (Session(),first,second);
   return IFSelect_Functions::GiveList (Session(),first,second);
 }
 

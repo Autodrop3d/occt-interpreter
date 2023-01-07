@@ -18,34 +18,27 @@
 #include <Adaptor3d_CurveOnSurface.hxx>
 #include <Approx_CurveOnSurface.hxx>
 #include <Approx_SameParameter.hxx>
-#include <Bnd_Box.hxx>
 #include <BOPTools_AlgoTools.hxx>
 #include <BRep_Builder.hxx>
-#include <BRep_CurveRepresentation.hxx>
 #include <BRep_GCurve.hxx>
-#include <BRep_ListIteratorOfListOfCurveRepresentation.hxx>
 #include <BRep_TEdge.hxx>
 #include <BRep_Tool.hxx>
 #include <BRep_TVertex.hxx>
 #include <BRepAdaptor_Curve.hxx>
-#include <BRepAdaptor_Curve2d.hxx>
 #include <BRepAdaptor_Surface.hxx>
 #include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRepCheck_Edge.hxx>
-#include <BRepFill_CurveConstraint.hxx>
 #include <BRepFill_LocationLaw.hxx>
 #include <BRepFill_SectionLaw.hxx>
 #include <BRepFill_Sweep.hxx>
 #include <BRepFill_TrimShellCorner.hxx>
 #include <BRepLib.hxx>
-#include <BRepLib_FaceError.hxx>
 #include <BRepLib_FindSurface.hxx>
 #include <BRepLib_MakeEdge.hxx>
 #include <BRepLib_MakeFace.hxx>
 #include <BRepTools_Substitution.hxx>
 #include <BRepTools_WireExplorer.hxx>
 #include <GCPnts_AbscissaPoint.hxx>
-#include <Geom2d_BSplineCurve.hxx>
 #include <Geom2d_Line.hxx>
 #include <Geom2d_TrimmedCurve.hxx>
 #include <Geom2dAdaptor_Curve.hxx>
@@ -58,7 +51,6 @@
 #include <Geom_SurfaceOfRevolution.hxx>
 #include <GeomAdaptor_Curve.hxx>
 #include <GeomAdaptor_Surface.hxx>
-#include <GeomConvert_ApproxSurface.hxx>
 #include <GeomFill_LocationLaw.hxx>
 #include <GeomFill_SectionLaw.hxx>
 #include <GeomFill_Sweep.hxx>
@@ -68,14 +60,12 @@
 #include <gp_Vec2d.hxx>
 #include <Precision.hxx>
 #include <Standard_ConstructionError.hxx>
-#include <Standard_OutOfRange.hxx>
 #include <StdFail_NotDone.hxx>
 #include <TColGeom_Array2OfSurface.hxx>
 #include <TColgp_Array1OfPnt.hxx>
 #include <TColStd_Array1OfBoolean.hxx>
 #include <TColStd_Array1OfReal.hxx>
 #include <TColStd_Array2OfBoolean.hxx>
-#include <TColStd_Array2OfInteger.hxx>
 #include <TColStd_Array2OfReal.hxx>
 #include <TColStd_HArray1OfInteger.hxx>
 #include <TopAbs_Orientation.hxx>
@@ -91,13 +81,11 @@
 #include <TopoDS_Wire.hxx>
 #include <TopTools_Array1OfShape.hxx>
 #include <TopTools_Array2OfShape.hxx>
-#include <TopTools_DataMapIteratorOfDataMapOfShapeShape.hxx>
 #include <TopTools_HArray1OfShape.hxx>
 #include <TopTools_HArray2OfShape.hxx>
 #include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
-#include <TopTools_ListIteratorOfListOfShape.hxx>
 #include <TopTools_ListOfShape.hxx>
-#include <TopTools_SequenceOfShape.hxx>
+#include <GeomLib_CheckCurveOnSurface.hxx>
 
 #include <stdio.h>
 //#include <BRepFill_TrimCorner.hxx>
@@ -303,6 +291,34 @@ static Standard_Boolean CheckSameParameter
 }
 
 //=======================================================================
+//function : CheckSameParameterExact
+//purpose  : Check a posteriori that sameparameter has worked correctly
+// with exact calculation method of edge tolerance 
+//=======================================================================
+static Standard_Boolean CheckSameParameterExact
+(const Handle(Adaptor3d_Curve)& C3d,
+  const Handle(Adaptor3d_CurveOnSurface)& curveOnSurface,
+  const Standard_Real             tol3d,
+  Standard_Real& tolreached)
+{
+  GeomLib_CheckCurveOnSurface aCheckCurveOnSurface(C3d);
+  aCheckCurveOnSurface.SetParallel(Standard_False);
+  aCheckCurveOnSurface.Perform(curveOnSurface);
+
+  tolreached = aCheckCurveOnSurface.MaxDistance();
+
+  if (tolreached > tol3d) {
+    return Standard_False;
+  }
+  else
+  {
+    tolreached = Max(tolreached, Precision::Confusion());
+    tolreached *= 1.05;
+  }
+  return Standard_True;
+}
+
+//=======================================================================
 //function : SameParameter
 //purpose  : Encapsulation of Sameparameter
 // Boolean informs if the pcurve was computed or not...
@@ -353,8 +369,10 @@ static Standard_Boolean SameParameter(TopoDS_Edge&    E,
     return Standard_False;
   }
 
-  ResTol = sp.TolReached();
-  if(ResTol > tolreached ){
+  Handle(Adaptor3d_Curve) curve3d = sp.Curve3d();
+  Handle(Adaptor3d_CurveOnSurface) curveOnSurface = sp.CurveOnSurface();
+
+  if (!CheckSameParameterExact(curve3d, curveOnSurface, tol3d, ResTol) &&  ResTol > tolreached) {
 #ifdef OCCT_DEBUG
     std::cout<<"SameParameter : Tolerance not reached!"<<std::endl;
     std::cout<<"tol visee : "<<tol3d<<" tol obtained : "<<ResTol<<std::endl;
@@ -874,7 +892,8 @@ static Standard_Boolean Filling(const TopoDS_Shape& EF,
   Prof2 = BRep_Tool::Curve(E2, f2, l2);
 
   // Indeed, both Prof1 and Prof2 are the same curves but in different positions
-
+  // Prof1's param domain may equals to Prof2's param domain *(-1), which means EF.Orientation() == EL.Orientation()
+  Standard_Boolean bSameCurveDomain = EF.Orientation() != EL.Orientation();
   gp_Pnt P1, P2, P;
 
   // Choose the angle of opening
@@ -900,7 +919,8 @@ static Standard_Boolean Filling(const TopoDS_Shape& EF,
     }
   }
 
-  const gp_Pnt aP2 = Prof2->Value(aPrm[aMaxIdx]).Transformed(aTf);
+  const Standard_Real aPrm2[] = { f2, 0.5*(f2 + l2), l2 };
+  const gp_Pnt aP2 = Prof2->Value(aPrm2[bSameCurveDomain ? aMaxIdx : 2 - aMaxIdx]).Transformed(aTf);
   const gp_Vec2d aV1(aP1[aMaxIdx].Z(), aP1[aMaxIdx].X());
   const gp_Vec2d aV2(aP2.Z(), aP2.X());
   if (aV1.SquareMagnitude() <= gp::Resolution() ||
@@ -2982,7 +3002,7 @@ void BRepFill_Sweep::Build(TopTools_MapOfShape& ReversedEdges,
         }
       }
 
-    if (aNbFaces == 0)
+    if ((NbTrous > 0) ? (aNbFaces < NbLaw) : (aNbFaces == 0))
     {
       isDone = Standard_False;
       return;
@@ -3264,7 +3284,7 @@ TopoDS_Shape BRepFill_Sweep::Tape(const Standard_Integer Index) const
 
   Tang = T1 + T2; //Average direction
   gp_Dir NormalOfBisPlane = Tang;
-
+  gp_Vec anIntersectPointCrossDirection = T1.Crossed(T2);
   if (isTangent) {
     Sortant -= Tang.Dot(Tang)*Tang;
   }
@@ -3311,7 +3331,7 @@ TopoDS_Shape BRepFill_Sweep::Tape(const Standard_Integer Index) const
     }
   }
 
-  BRepFill_TrimShellCorner aTrim(aFaces, Transition, AxeOfBisPlane);
+  BRepFill_TrimShellCorner aTrim(aFaces, Transition, AxeOfBisPlane, anIntersectPointCrossDirection);
   aTrim.AddBounds(Bounds);
   aTrim.AddUEdges(aUEdges);
   aTrim.AddVEdges(myVEdges, Index);

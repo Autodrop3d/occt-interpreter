@@ -7,6 +7,8 @@ Upgrade from older OCCT versions  {#occt__upgrade}
 
 This document provides technical details on changes made in particular versions of OCCT. It can help to upgrade user applications based on previous versions of OCCT to newer ones.
 
+@ref upgrade_occt770 "SEEK TO THE LAST CHAPTER (UPGRADE TO 7.7.0)"
+
 @subsection upgrade_intro_precautions Precautions
 
 Back-up your code before the upgrade.
@@ -23,7 +25,6 @@ Take this document with discretion; apply your expertise and knowledge of your a
 The automatic upgrade tool is provided as is, without warranty of any kind, and we explicitly disclaim any liability for possible errors that may appear due to use of this tool. 
 It is your responsibility to ensure that the changes you made in your code are correct. 
 When you upgrade the code by an automatic script, make sure to carefully review the introduced changes at each step before committing them.
-
 
 @section upgrade_65 Upgrade to OCCT 6.5.0
 
@@ -2293,3 +2294,52 @@ void Perform(const Handle(Adaptor3d_CurveOnSurface)& theCurveOnSurface,
   - *BRepAlgo_Cut*
   - *BRepAlgo_Section*
   The corresponding classes from the *BRepAlgoAPI* package have to be used instead.
+  
+@section upgrade_occt770 Upgrade to OCCT 7.7.0
+
+Building OCCT now requires C++11-compliant compiler, so that some legacy compilers (Visual Studio 2010 and 2012) are no more supported.
+It is recommended using Visual Studio 2015 or newer for building OCCT on Windows platform.
+
+@subsection upgrade_770_removed_features Removed features
+
+* One of the constructors of the BRepExtrema_DistanceSS class (the one without deflection parameter) has been removed as excessive. The remaining constructor has to be used instead.
+
+@subsection upgrade_occt770_parallel_flag_removed Removed parameter theIsParallel from Put/Compute/Perform
+
+theIsParallel parameter has been removed from Put/Compute/Perform from the next classes:
+ - BRepCheck_Analyzer
+ - BRepCheck_Edge
+ - BRepLib_ValidateEdge
+ - GeomLib_CheckCurveOnSurface
+ - BRepLib_CheckCurveOnSurface
+
+Now, to set this flag, it is necessary to use method SetParallel()
+For example:
+~~~~{.cpp}
+BRepLib_ValidateEdge aValidateEdge(myHCurve, ACS, SameParameter);
+aValidateEdge.SetParallel(toRunParallel);
+aValidateEdge.Process();
+~~~~
+
+@subsection upgrade_occt770_drawer_aspects Prs3d_Drawer aspects
+
+`Prs3d_Drawer` getters no more implicitly create "default" aspects.
+If specific property has not been set before to this drawer instance nor to linked drawer instance, then NULL property will be returned.
+Make sure to set property beforehand or to call `SetOwn*` / `SetupOwn*` methods to derive from defaults.
+
+@subsection upgrade_occt770_opengl OpenGL functions
+
+Applications extending OCCT 3D Viewer and calling OpenGL functions directly (like @c @::glEnable(), e.g. using global namespace) might be affected by changes in `OpenGl_GlFunctions.hxx`.
+This header, as well as `OpenGl_GlCore20.hxx` and similar, no more include system OpenGL / OpenGL ES headers to define function table.
+Application code calling OpenGL functions directly should be changed to either use `OpenGl_Context::core11fwd` (as designed)
+or to include system OpenGL headers in advance (with help of `OpenGl_GlNative.hxx`).
+
+@subsection upgrade_occt770_tooltriangulatedshape StdPrs_ToolTriangulatedShape
+
+Method `StdPrs_ToolTriangulatedShape::Normal()` has been removed.
+Please use `BRepLib_ToolTriangulatedShape::ComputeNormals()` to fill in normal attributes in triangulation and fetch them directly using `Poly_Triangulation::Normal()`.
+
+@subsection upgrade_occt770_shapeproximity BRepExtrema_ShapeProximity
+
+A new way of using the `BRepExtrema_ShapeProximity` class was provided for computing a proximity value between two shapes.
+If at initialization of the `BRepExtrema_ShapeProximity` class the *theTolerance* parameter is not defined (Precision::Infinite() by default), the proximity value will be computed.

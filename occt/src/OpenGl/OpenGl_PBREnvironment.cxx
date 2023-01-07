@@ -14,7 +14,6 @@
 
 #include <OpenGl_PBREnvironment.hxx>
 
-#include <Graphic3d_PBRMaterial.hxx>
 #include <OpenGl_ArbFBO.hxx>
 #include <OpenGl_FrameBuffer.hxx>
 #include <OpenGl_ShaderManager.hxx>
@@ -290,7 +289,7 @@ bool OpenGl_PBREnvironment::initTextures (const Handle(OpenGl_Context)& theCtx)
   // NVIDIA's driver didn't work properly with 3 channel texture for diffuse SH coefficients so that alpha channel has been added
   if (!myIBLMaps[OpenGl_TypeOfIBLMap_DiffuseSH].Init (theCtx,
                                                       OpenGl_TextureFormat::FindFormat (theCtx, Image_Format_RGBAF, false),
-                                                      Graphic3d_Vec2i (9, 1), Graphic3d_TOT_2D))
+                                                      Graphic3d_Vec2i (9, 1), Graphic3d_TypeOfTexture_2D))
   {
     Message::SendFail() << "OpenGl_PBREnvironment, DiffuseSH texture creation failed";
     return false;
@@ -305,7 +304,7 @@ bool OpenGl_PBREnvironment::initTextures (const Handle(OpenGl_Context)& theCtx)
 
   if (!myIBLMaps[OpenGl_TypeOfIBLMap_DiffuseFallback].Init (theCtx,
                                                             OpenGl_TextureFormat::FindFormat (theCtx, Image_Format_RGBA, false),
-                                                            Graphic3d_Vec2i (10, 4), Graphic3d_TOT_2D))
+                                                            Graphic3d_Vec2i (10, 4), Graphic3d_TypeOfTexture_2D))
   {
     Message::SendFail() << "OpenGl_PBREnvironment, DiffuseFallback texture creation failed";
     return false;
@@ -432,7 +431,7 @@ bool OpenGl_PBREnvironment::processDiffIBLMap (const Handle(OpenGl_Context)& the
   {
     if (!myIBLMaps[OpenGl_TypeOfIBLMap_DiffuseSH].Init (theCtx,
                                                         OpenGl_TextureFormat::FindFormat (theCtx, Image_Format_RGBAF, false),
-                                                        Graphic3d_Vec2i (9, 1), Graphic3d_TOT_2D, &anImageF))
+                                                        Graphic3d_Vec2i (9, 1), Graphic3d_TypeOfTexture_2D, &anImageF))
     {
       Message::SendFail() << "OpenGl_PBREnvironment, DiffuseSH texture update failed";
       return false;
@@ -468,12 +467,11 @@ bool OpenGl_PBREnvironment::processSpecIBLMap (const Handle(OpenGl_Context)& the
 
   const bool canRenderMipmaps = theCtx->hasFboRenderMipmap;
   const OpenGl_TextureFormat aTexFormat = OpenGl_TextureFormat::FindSizedFormat (theCtx, myIBLMaps[OpenGl_TypeOfIBLMap_Specular].SizedFormat());
-#if !defined(GL_ES_VERSION_2_0)
-  const GLint anIntFormat = aTexFormat.InternalFormat();
-#else
   // ES 2.0 does not support sized formats and format conversions - them detected from data type
-  const GLint anIntFormat = theCtx->IsGlGreaterEqual (3, 0) ? aTexFormat.InternalFormat() : aTexFormat.PixelFormat();
-#endif
+  const GLint anIntFormat = (theCtx->GraphicsLibrary() != Aspect_GraphicsLibrary_OpenGLES
+                          || theCtx->IsGlGreaterEqual (3, 0))
+                          ? aTexFormat.InternalFormat()
+                          : aTexFormat.PixelFormat();
 
   for (int aLevelIter = mySpecMapLevelsNumber - 1;; --aLevelIter)
   {

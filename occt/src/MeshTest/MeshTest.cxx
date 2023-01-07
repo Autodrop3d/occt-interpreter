@@ -18,7 +18,6 @@
 
 #include <stdio.h>
 
-#include <Bnd_Box.hxx>
 #include <BRep_Builder.hxx>
 #include <BRepAdaptor_Surface.hxx>
 #include <BRepBndLib.hxx>
@@ -40,14 +39,11 @@
 #include <Message.hxx>
 #include <Message_ProgressRange.hxx>
 #include <OSD_OpenFile.hxx>
-#include <Poly_Connect.hxx>
 #include <Poly_MergeNodesTool.hxx>
 #include <Poly_TriangulationParameters.hxx>
 #include <Prs3d_Drawer.hxx>
 #include <StdPrs_ToolTriangulatedShape.hxx>
 #include <TopExp_Explorer.hxx>
-#include <TopTools_MapIteratorOfMapOfShape.hxx>
-#include <BRep_CurveRepresentation.hxx>
 #include <BRep_TEdge.hxx>
 #include <TopExp.hxx> 
 
@@ -119,6 +115,10 @@ static Standard_Integer incrementalmesh (Draw_Interpretor& theDI,
     else if (aNameCase == "-surf_def_off")
     {
       aMeshParams.ControlSurfaceDeflection = !Draw::ParseOnOffIterator (theNbArgs, theArgVec, anArgIter);
+    }
+    else if (aNameCase == "-surf_def_all")
+    {
+      aMeshParams.EnableControlSurfaceDeflectionAllSurfaces = Draw::ParseOnOffIterator(theNbArgs, theArgVec, anArgIter);
     }
     else if (aNameCase == "-adjust_min")
     {
@@ -1624,6 +1624,8 @@ void  MeshTest::Commands(Draw_Interpretor& theCommands)
     "\n\t\t:  -ai             angular deflection inside of faces in deg (~57.29 deg = 1 rad by default);"
     "\n\t\t:  -int_vert_off   disables insertion of internal vertices into mesh (enabled by default);"
     "\n\t\t:  -surf_def_off   disables control of deflection of mesh from real surface (enabled by default);"
+    "\n\t\t:  -surf_def_all   enables control of deflection of mesh from real surface for all types of surfaces"
+    "\n\t\t:                  (FALSE by default);"
     "\n\t\t:  -adjust_min     enables local adjustment of min size depending on edge size (FALSE by default);"
     "\n\t\t:  -force_face_def disables usage of shape tolerances for computing face deflection (FALSE by default);"
     "\n\t\t:  -decrease       enforces the meshing of the shape even if current mesh satisfies the new criteria"

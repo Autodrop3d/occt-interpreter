@@ -23,8 +23,6 @@
 #include <gp_Pnt.hxx>
 #include <gp_Pnt2d.hxx>
 #include <Interface_Static.hxx>
-#include <Message_ListIteratorOfListOfMsg.hxx>
-#include <Message_ListOfMsg.hxx>
 #include <Message_Msg.hxx>
 #include <Resource_Manager.hxx>
 #include <ShapeAlgo.hxx>
@@ -34,7 +32,6 @@
 #include <ShapeBuild_Edge.hxx>
 #include <ShapeBuild_ReShape.hxx>
 #include <ShapeCustom.hxx>
-#include <ShapeExtend_DataMapOfShapeListOfMsg.hxx>
 #include <ShapeExtend_MsgRegistrator.hxx>
 #include <ShapeFix_Edge.hxx>
 #include <ShapeFix_Shape.hxx>
@@ -48,10 +45,8 @@
 #include <TopoDS.hxx>
 #include <TopoDS_Edge.hxx>
 #include <TopoDS_Face.hxx>
-#include <TopoDS_Iterator.hxx>
 #include <TopoDS_Shape.hxx>
 #include <TopoDS_Vertex.hxx>
-#include <TopTools_DataMapIteratorOfDataMapOfShapeShape.hxx>
 #include <TopTools_DataMapOfShapeShape.hxx>
 #include <Transfer_FinderProcess.hxx>
 #include <Transfer_TransientListBinder.hxx>
@@ -105,9 +100,17 @@ TopoDS_Shape XSAlgo_AlgoContainer::ProcessShape (const TopoDS_Shape& shape,
   if ( context.IsNull() )
   {
     Standard_CString rscfile = Interface_Static::CVal(prscfile);
-    if (!rscfile)
-      rscfile = prscfile;
-    context = new ShapeProcess_ShapeContext(shape, rscfile);
+    if (rscfile != nullptr && strlen (rscfile) == 0)
+    {
+      context = new ShapeProcess_ShapeContext(shape, nullptr);
+      Interface_Static::FillMap(context->ResourceManager()->GetMap());
+    }
+    else
+    {
+      if (!rscfile)
+        rscfile = prscfile;
+      context = new ShapeProcess_ShapeContext(shape, rscfile);
+    }
     context->SetDetalisation(TopAbs_EDGE);
   }
   context->SetNonManifold(NonManifold);

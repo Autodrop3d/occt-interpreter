@@ -38,17 +38,25 @@
   #include <emscripten.h>
   #include <emscripten/html5.h>
 
-  //! Callback flushing events and redrawing the WebGL canvas.
-  static void onWasmRedrawView (void* )
+//=======================================================================
+//function : onWasmRedrawView
+//purpose  :
+//=======================================================================
+void ViewerTest_EventManager::onWasmRedrawView (void* )
+{
+  Handle(ViewerTest_EventManager) aViewCtrl = ViewerTest::CurrentEventManager();
+  if (!aViewCtrl.IsNull())
   {
-    Handle(ViewerTest_EventManager) aViewCtrl = ViewerTest::CurrentEventManager();
+    aViewCtrl->myNbUpdateRequests = 0;
+
     const Handle(V3d_View)& aView = ViewerTest::CurrentView();
     const Handle(AIS_InteractiveContext)& aCtx = ViewerTest::GetAISContext();
-    if (!aViewCtrl.IsNull() && !aView.IsNull() && !aCtx.IsNull())
+    if (!aView.IsNull() && !aCtx.IsNull())
     {
       aViewCtrl->ProcessExpose();
     }
   }
+}
 #endif
 
 Standard_IMPORT Standard_Boolean Draw_Interprete (const char* theCommand);
@@ -76,31 +84,41 @@ ViewerTest_EventManager::ViewerTest_EventManager (const Handle(V3d_View)&       
   myView (theView),
   myToPickPnt (Standard_False),
   myIsTmpContRedraw (Standard_False),
-  myUpdateRequests (0)
+  myNbUpdateRequests (0)
 {
   myViewAnimation = GlobalViewAnimation();
 
-  addActionHotKeys (Aspect_VKey_NavForward,        Aspect_VKey_W, Aspect_VKey_W | Aspect_VKeyFlags_SHIFT);
-  addActionHotKeys (Aspect_VKey_NavBackward ,      Aspect_VKey_S, Aspect_VKey_S | Aspect_VKeyFlags_SHIFT);
-  addActionHotKeys (Aspect_VKey_NavSlideLeft,      Aspect_VKey_A, Aspect_VKey_A | Aspect_VKeyFlags_SHIFT);
-  addActionHotKeys (Aspect_VKey_NavSlideRight,     Aspect_VKey_D, Aspect_VKey_D | Aspect_VKeyFlags_SHIFT);
-  addActionHotKeys (Aspect_VKey_NavRollCCW,        Aspect_VKey_Q, Aspect_VKey_Q | Aspect_VKeyFlags_SHIFT);
-  addActionHotKeys (Aspect_VKey_NavRollCW,         Aspect_VKey_E, Aspect_VKey_E | Aspect_VKeyFlags_SHIFT);
+  addActionHotKeys (Aspect_VKey_NavForward,        (Standard_UInteger )Aspect_VKey_W,
+                                                   (Standard_UInteger )Aspect_VKey_W | (Standard_UInteger )Aspect_VKeyFlags_SHIFT);
+  addActionHotKeys (Aspect_VKey_NavBackward ,      (Standard_UInteger )Aspect_VKey_S,
+                                                   (Standard_UInteger )Aspect_VKey_S | (Standard_UInteger )Aspect_VKeyFlags_SHIFT);
+  addActionHotKeys (Aspect_VKey_NavSlideLeft,      (Standard_UInteger )Aspect_VKey_A,
+                                                   (Standard_UInteger )Aspect_VKey_A | (Standard_UInteger )Aspect_VKeyFlags_SHIFT);
+  addActionHotKeys (Aspect_VKey_NavSlideRight,     (Standard_UInteger )Aspect_VKey_D,
+                                                   (Standard_UInteger )Aspect_VKey_D | (Standard_UInteger )Aspect_VKeyFlags_SHIFT);
+  addActionHotKeys (Aspect_VKey_NavRollCCW,        (Standard_UInteger )Aspect_VKey_Q,
+                                                   (Standard_UInteger )Aspect_VKey_Q | (Standard_UInteger )Aspect_VKeyFlags_SHIFT);
+  addActionHotKeys (Aspect_VKey_NavRollCW,         (Standard_UInteger )Aspect_VKey_E,
+                                                   (Standard_UInteger )Aspect_VKey_E | (Standard_UInteger )Aspect_VKeyFlags_SHIFT);
 
-  addActionHotKeys (Aspect_VKey_NavSpeedIncrease,  Aspect_VKey_Plus,  Aspect_VKey_Plus  | Aspect_VKeyFlags_SHIFT,
-                                                   Aspect_VKey_Equal,
-                                                   Aspect_VKey_NumpadAdd, Aspect_VKey_NumpadAdd | Aspect_VKeyFlags_SHIFT);
-  addActionHotKeys (Aspect_VKey_NavSpeedDecrease,  Aspect_VKey_Minus, Aspect_VKey_Minus | Aspect_VKeyFlags_SHIFT,
-                                                   Aspect_VKey_NumpadSubtract, Aspect_VKey_NumpadSubtract | Aspect_VKeyFlags_SHIFT);
+  addActionHotKeys (Aspect_VKey_NavSpeedIncrease,  (Standard_UInteger )Aspect_VKey_Plus,
+                                                   (Standard_UInteger )Aspect_VKey_Plus | (Standard_UInteger )Aspect_VKeyFlags_SHIFT,
+                                                   (Standard_UInteger )Aspect_VKey_Equal,
+                                                   (Standard_UInteger )Aspect_VKey_NumpadAdd,
+                                                   (Standard_UInteger )Aspect_VKey_NumpadAdd | (Standard_UInteger )Aspect_VKeyFlags_SHIFT);
+  addActionHotKeys (Aspect_VKey_NavSpeedDecrease,  (Standard_UInteger )Aspect_VKey_Minus,
+                                                   (Standard_UInteger )Aspect_VKey_Minus | (Standard_UInteger )Aspect_VKeyFlags_SHIFT,
+                                                   (Standard_UInteger )Aspect_VKey_NumpadSubtract,
+                                                   (Standard_UInteger )Aspect_VKey_NumpadSubtract | (Standard_UInteger )Aspect_VKeyFlags_SHIFT);
 
-  addActionHotKeys (Aspect_VKey_NavLookUp,         Aspect_VKey_Up);
-  addActionHotKeys (Aspect_VKey_NavLookDown,       Aspect_VKey_Down);
-  addActionHotKeys (Aspect_VKey_NavLookLeft,       Aspect_VKey_Left);
-  addActionHotKeys (Aspect_VKey_NavLookRight,      Aspect_VKey_Right);
-  addActionHotKeys (Aspect_VKey_NavSlideLeft,      Aspect_VKey_Left  | Aspect_VKeyFlags_SHIFT);
-  addActionHotKeys (Aspect_VKey_NavSlideRight,     Aspect_VKey_Right | Aspect_VKeyFlags_SHIFT);
-  addActionHotKeys (Aspect_VKey_NavSlideUp,        Aspect_VKey_Up    | Aspect_VKeyFlags_SHIFT);
-  addActionHotKeys (Aspect_VKey_NavSlideDown,      Aspect_VKey_Down  | Aspect_VKeyFlags_SHIFT);
+  addActionHotKeys (Aspect_VKey_NavLookUp,         (Standard_UInteger )Aspect_VKey_Up);
+  addActionHotKeys (Aspect_VKey_NavLookDown,       (Standard_UInteger )Aspect_VKey_Down);
+  addActionHotKeys (Aspect_VKey_NavLookLeft,       (Standard_UInteger )Aspect_VKey_Left);
+  addActionHotKeys (Aspect_VKey_NavLookRight,      (Standard_UInteger )Aspect_VKey_Right);
+  addActionHotKeys (Aspect_VKey_NavSlideLeft,      (Standard_UInteger )Aspect_VKey_Left  | (Standard_UInteger)Aspect_VKeyFlags_SHIFT);
+  addActionHotKeys (Aspect_VKey_NavSlideRight,     (Standard_UInteger )Aspect_VKey_Right | (Standard_UInteger)Aspect_VKeyFlags_SHIFT);
+  addActionHotKeys (Aspect_VKey_NavSlideUp,        (Standard_UInteger )Aspect_VKey_Up    | (Standard_UInteger)Aspect_VKeyFlags_SHIFT);
+  addActionHotKeys (Aspect_VKey_NavSlideDown,      (Standard_UInteger )Aspect_VKey_Down  | (Standard_UInteger)Aspect_VKeyFlags_SHIFT);
 
   // window could be actually not yet set to the View
   //SetupWindowCallbacks (theView->Window());
@@ -141,11 +159,51 @@ bool ViewerTest_EventManager::UpdateMouseClick (const Graphic3d_Vec2i& thePoint,
 //function : UpdateMouseButtons
 //purpose  :
 //=======================================================================
+bool ViewerTest_EventManager::UpdateMouseScroll (const Aspect_ScrollDelta& theDelta)
+{
+  if (!myView.IsNull()
+    && (myView->IsSubview()
+    || !myView->Subviews().IsEmpty()))
+  {
+    Handle(V3d_View) aParent = !myView->IsSubview() ? myView : myView->ParentView();
+    Handle(V3d_View) aPickedView = aParent->PickSubview (theDelta.Point);
+    if (!aPickedView.IsNull()
+      && aPickedView != myView)
+    {
+      // switch input focus to another subview
+      OnSubviewChanged (myCtx, myView, aPickedView);
+      return true;
+    }
+  }
+
+  return AIS_ViewController::UpdateMouseScroll (theDelta);
+}
+
+//=======================================================================
+//function : UpdateMouseButtons
+//purpose  :
+//=======================================================================
 bool ViewerTest_EventManager::UpdateMouseButtons (const Graphic3d_Vec2i& thePoint,
                                                   Aspect_VKeyMouse theButtons,
                                                   Aspect_VKeyFlags theModifiers,
                                                   bool theIsEmulated)
 {
+  if (!myView.IsNull()
+    && myMousePressed == Aspect_VKeyMouse_NONE
+    && theButtons != Aspect_VKeyMouse_NONE
+    && (myView->IsSubview()
+    || !myView->Subviews().IsEmpty()))
+  {
+    Handle(V3d_View) aParent = !myView->IsSubview() ? myView : myView->ParentView();
+    Handle(V3d_View) aPickedView = aParent->PickSubview (thePoint);
+    if (!aPickedView.IsNull()
+      && aPickedView != myView)
+    {
+      // switch input focus to another subview
+      OnSubviewChanged (myCtx, myView, aPickedView);
+    }
+  }
+
   SetAllowRotation (!ViewerTest_V3dView::IsCurrentViewIn2DMode());
 
   if (theButtons == Aspect_VKeyMouse_LeftButton)
@@ -183,7 +241,6 @@ void ViewerTest_EventManager::ProcessExpose()
 void ViewerTest_EventManager::handleViewRedraw (const Handle(AIS_InteractiveContext)& theCtx,
                                                 const Handle(V3d_View)& theView)
 {
-  myUpdateRequests = 0;
   AIS_ViewController::handleViewRedraw (theCtx, theView);
 
   // On non-Windows platforms Aspect_Window::InvalidateContent() from rendering thread does not work as expected
@@ -196,21 +253,23 @@ void ViewerTest_EventManager::handleViewRedraw (const Handle(AIS_InteractiveCont
      && (!aRedrawer.IsStarted() || aRedrawer.IsPaused()))
     {
       myIsTmpContRedraw = true;
-    #if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
+    #if !defined(_WIN32) && !defined(__EMSCRIPTEN__) && !defined(__APPLE__)
       aRedrawer.Start (theView, 60.0);
     #endif
     }
 
     // ask more frames
-    ++myUpdateRequests;
-  #if defined(__EMSCRIPTEN__)
-    emscripten_async_call (onWasmRedrawView, this, 0);
-  #endif
+    if (++myNbUpdateRequests == 1)
+    {
+    #if defined(__EMSCRIPTEN__)
+      emscripten_async_call (onWasmRedrawView, this, -1);
+    #endif
+    }
   }
   else if (myIsTmpContRedraw)
   {
     myIsTmpContRedraw = false;
-  #ifndef _WIN32
+  #if !defined(_WIN32) && !defined(__APPLE__)
     ViewerTest_ContinuousRedrawer& aRedrawer = ViewerTest_ContinuousRedrawer::Instance();
     aRedrawer.Pause();
   #endif
@@ -223,22 +282,45 @@ void ViewerTest_EventManager::handleViewRedraw (const Handle(AIS_InteractiveCont
 //==============================================================================
 void ViewerTest_EventManager::ProcessConfigure (bool theIsResized)
 {
-  if (!myView.IsNull())
+  if (myView.IsNull())
   {
-    if (!theIsResized
-     // track window moves to reverse stereo pair
-     && myView->RenderingParams().StereoMode != Graphic3d_StereoMode_RowInterlaced
-     && myView->RenderingParams().StereoMode != Graphic3d_StereoMode_ColumnInterlaced
-     && myView->RenderingParams().StereoMode != Graphic3d_StereoMode_ChessBoard)
-    {
-      return;
-    }
-
-    myView->Window()->DoResize();
-    myView->MustBeResized();
-    myView->Invalidate();
-    FlushViewEvents (myCtx, myView, true);
+    return;
   }
+
+  if (!theIsResized
+    // track window moves to reverse stereo pair
+    && myView->RenderingParams().StereoMode != Graphic3d_StereoMode_RowInterlaced
+    && myView->RenderingParams().StereoMode != Graphic3d_StereoMode_ColumnInterlaced
+    && myView->RenderingParams().StereoMode != Graphic3d_StereoMode_ChessBoard)
+  {
+    return;
+  }
+
+  Handle(V3d_View) aParent = !myView->IsSubview()
+                            ? myView
+                            : myView->ParentView();
+  aParent->Window()->DoResize();
+  aParent->MustBeResized();
+  aParent->Invalidate();
+  for (const Handle(V3d_View)& aChildIter : aParent->Subviews())
+  {
+    aChildIter->Window()->DoResize();
+    aChildIter->MustBeResized();
+    aChildIter->Invalidate();
+  }
+
+  FlushViewEvents (myCtx, myView, true);
+}
+
+//==============================================================================
+//function : OnSubviewChanged
+//purpose  :
+//==============================================================================
+void ViewerTest_EventManager::OnSubviewChanged (const Handle(AIS_InteractiveContext)& ,
+                                                const Handle(V3d_View)& ,
+                                                const Handle(V3d_View)& theNewView)
+{
+  ViewerTest::ActivateView (theNewView, false);
 }
 
 //==============================================================================
@@ -256,11 +338,11 @@ void ViewerTest_EventManager::ProcessInput()
   // Queue onWasmRedrawView() callback to redraw canvas after all user input is flushed by browser.
   // Redrawing viewer on every single message would be a pointless waste of resources,
   // as user will see only the last drawn frame due to WebGL implementation details.
-  if (++myUpdateRequests == 1)
+  // -1 in emscripten_async_call() redirects to requestAnimationFrame();
+  // requestPostAnimationFrame() is a better under development alternative.
+  if (++myNbUpdateRequests == 1)
   {
-  #if defined(__EMSCRIPTEN__)
-    emscripten_async_call (onWasmRedrawView, this, 0);
-  #endif
+    emscripten_async_call (onWasmRedrawView, this, -1);
   }
 #else
   // handle synchronously
@@ -436,11 +518,11 @@ void ViewerTest_EventManager::ProcessKeyPress (Aspect_VKey theKey)
       myCtx->UpdateCurrentViewer();
       break;
     }
-    case Aspect_VKey_S | Aspect_VKeyFlags_CTRL:
-    case Aspect_VKey_W | Aspect_VKeyFlags_CTRL:
+    case (Standard_UInteger)Aspect_VKey_S | (Standard_UInteger)Aspect_VKeyFlags_CTRL:
+    case (Standard_UInteger)Aspect_VKey_W | (Standard_UInteger)Aspect_VKeyFlags_CTRL:
     {
       Standard_Integer aDispMode = AIS_Shaded;
-      if (theKey == (Aspect_VKey_S | Aspect_VKeyFlags_CTRL))
+      if (theKey == ((Standard_UInteger)Aspect_VKey_S | (Standard_UInteger)Aspect_VKeyFlags_CTRL))
       {
         aDispMode = AIS_Shaded;
         std::cout << "setup Shaded display mode\n";

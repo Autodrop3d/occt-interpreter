@@ -14,22 +14,14 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-// 21.12.98 rln, gka S4054
-// 06.01.99 pdn  transmission from ShapeTool_MakeWire back to BRepAPI_MakeWire
-// 19.03.99 abv  //:q5: code improvement, unnecessary includes removed
-//S4181 pdn 15.04.99 Recognition of elementary surfaces as basic.
+#include <IGESToBRep.hxx>
 
 #include <BRep_Builder.hxx>
 #include <BRep_Tool.hxx>
 #include <Geom2d_Curve.hxx>
-#include <Geom_Curve.hxx>
-#include <Geom_Surface.hxx>
 #include <GeomLib.hxx>
-#include <gp_Pnt.hxx>
-#include <gp_Pnt2d.hxx>
 #include <IGESBasic_SingleParent.hxx>
 #include <IGESData_IGESEntity.hxx>
-#include <IGESGeom_Boundary.hxx>
 #include <IGESGeom_BoundedSurface.hxx>
 #include <IGESGeom_BSplineCurve.hxx>
 #include <IGESGeom_BSplineSurface.hxx>
@@ -37,7 +29,6 @@
 #include <IGESGeom_CompositeCurve.hxx>
 #include <IGESGeom_ConicArc.hxx>
 #include <IGESGeom_CopiousData.hxx>
-#include <IGESGeom_CurveOnSurface.hxx>
 #include <IGESGeom_Line.hxx>
 #include <IGESGeom_OffsetCurve.hxx>
 #include <IGESGeom_OffsetSurface.hxx>
@@ -52,28 +43,21 @@
 #include <IGESSolid_ConicalSurface.hxx>
 #include <IGESSolid_CylindricalSurface.hxx>
 #include <IGESSolid_EdgeList.hxx>
-#include <IGESSolid_Face.hxx>
-#include <IGESSolid_Loop.hxx>
 #include <IGESSolid_ManifoldSolid.hxx>
 #include <IGESSolid_PlaneSurface.hxx>
 #include <IGESSolid_Shell.hxx>
 #include <IGESSolid_SphericalSurface.hxx>
 #include <IGESSolid_ToroidalSurface.hxx>
 #include <IGESSolid_VertexList.hxx>
-#include <IGESToBRep.hxx>
 #include <IGESToBRep_AlgoContainer.hxx>
 #include <Interface_Macros.hxx>
 #include <Precision.hxx>
 #include <Standard_ErrorHandler.hxx>
 #include <Standard_Failure.hxx>
 #include <Standard_Stream.hxx>
-#include <TCollection_HAsciiString.hxx>
-#include <TopLoc_Location.hxx>
-#include <TopoDS.hxx>
 #include <TopoDS_Edge.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Shape.hxx>
-#include <TopoDS_Wire.hxx>
 #include <XSAlgo.hxx>
 
 static Handle(IGESToBRep_AlgoContainer) theContainer; 

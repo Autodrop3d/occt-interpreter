@@ -23,14 +23,13 @@
 #include <Geom_Plane.hxx>
 #include <GeomProjLib.hxx>
 #include <gp_Ax2.hxx>
-#include <Standard_DomainError.hxx>
 
 //=======================================================================
 //function : Project
 //purpose  : 
 //=======================================================================
 static Handle(Geom2d_Curve) Project(const Handle(Geom_Curve)& M,
-				    const gp_Ax3 Axis)
+                                    const gp_Ax3&             Axis)
 {
   Handle(Geom2d_Curve) C;
   C = GeomProjLib::Curve2d(M,new Geom_Plane(Axis));

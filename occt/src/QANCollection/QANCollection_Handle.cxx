@@ -16,12 +16,10 @@
 #include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
 
-#include <Message_Status.hxx>
 #include <NCollection_StdAllocator.hxx>
 #include <NCollection_IncAllocator.hxx>
 #include <NCollection_HeapAllocator.hxx>
 #include <OSD_Timer.hxx>
-#include <Standard_Assert.hxx>
 #include <Standard_DefineHandle.hxx>
 #include <Standard_Transient.hxx>
 #include <TCollection_AsciiString.hxx>
@@ -32,7 +30,6 @@
 
 #include <vector>
 #include <memory>
-#include <typeinfo>
 
 // Auxiliary macro to check and report status.
 // Note that if() is used to ensure that condition is
@@ -463,7 +460,7 @@ static Standard_Integer QAHandleInc (Draw_Interpretor& theDI,
   }
 
   Handle(Standard_Transient) aHandle  = new Standard_Transient();
-  opencascade::std::shared_ptr<Standard_Transient> aSharePtr (new Standard_Transient());
+  std::shared_ptr<Standard_Transient> aSharePtr (new Standard_Transient());
   theDI << "Time of creating and destroying " << aNbIters << " smart pointers to the same object, per item, ns:";
   {
     {
@@ -479,7 +476,7 @@ static Standard_Integer QAHandleInc (Draw_Interpretor& theDI,
     {
       QATimer aTimer (theDI, "\nC++ shared_ptr: ", QATimer::ns, aNbIters);
       {
-        std::vector< opencascade::std::shared_ptr<Standard_Transient> > aSharePointers (aNbIters);
+        std::vector< std::shared_ptr<Standard_Transient> > aSharePointers (aNbIters);
         for (Standard_Integer anIter = 0; anIter < aNbIters; ++anIter)
         {
           aSharePointers[anIter] = aSharePtr;

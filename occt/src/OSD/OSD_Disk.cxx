@@ -14,12 +14,9 @@
 
 #include <OSD_Disk.hxx>
 
-#include <OSD_OSDError.hxx>
 #include <OSD_Path.hxx>
 #include <OSD_WhoAmI.hxx>
-#include <Standard_ProgramError.hxx>
 #include <NCollection_Array1.hxx>
-#include <NCollection_String.hxx>
 #include <TCollection_ExtendedString.hxx>
 
 #ifdef _WIN32
@@ -187,11 +184,11 @@ Standard_Integer OSD_Disk::DiskSize()
   ULONGLONG aSize = aNbTotalBytes.QuadPart / 512;
   return (Standard_Integer )aSize; // may be an overflow
 #else
-  struct statvfs buffer;
-  if (statvfs (myDiskName.ToCString(), &buffer) == 0)
+  struct statvfs aBuffer;
+  if (statvfs (myDiskName.ToCString(), &aBuffer) == 0)
   {
-    int BSize512 = buffer.f_frsize / 512;
-    return buffer.f_blocks * BSize512;
+    unsigned long aBSize512 = aBuffer.f_frsize / 512;
+    return Standard_Integer(aBuffer.f_blocks * aBSize512);
   }
   myError.SetValue (errno, Iam, "OSD_Disk: statvfs failed.");
   return 0;
@@ -219,11 +216,11 @@ Standard_Integer OSD_Disk::DiskFree()
   ULONGLONG aSize = aNbFreeAvailableBytes.QuadPart / 512;
   return (Standard_Integer )aSize; // may be an overflow
 #else
-  struct statvfs buffer;
-  if (statvfs (myDiskName.ToCString(), &buffer) == 0)
+  struct statvfs aBuffer;
+  if (statvfs (myDiskName.ToCString(), &aBuffer) == 0)
   {
-    int BSize512 = buffer.f_frsize / 512;
-    return buffer.f_bavail * BSize512;
+    unsigned long aBSize512 = aBuffer.f_frsize / 512;
+    return Standard_Integer(aBuffer.f_bavail * aBSize512);
   }
   myError.SetValue (errno, Iam, "OSD_Disk: statvfs failed.");
   return 0;

@@ -15,15 +15,9 @@
 // commercial license or contractual agreement.
 
 
-#include <Adaptor2d_Curve2d.hxx>
-#include <gp_Pnt.hxx>
-#include <gp_Pnt2d.hxx>
-#include <IntPatch_Point.hxx>
 #include <IntPatch_WLine.hxx>
 #include <IntSurf_LineOn2S.hxx>
 #include <IntSurf_PntOn2S.hxx>
-#include <Standard_DomainError.hxx>
-#include <Standard_OutOfRange.hxx>
 #include <Standard_Type.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(IntPatch_WLine,IntPatch_PointLine)
@@ -31,7 +25,6 @@ IMPLEMENT_STANDARD_RTTIEXT(IntPatch_WLine,IntPatch_PointLine)
 #define DEBUG 0
 #define DEBUGV 0
 
-#include <IntSurf_PntOn2S.hxx>
 #include <Precision.hxx>
 #include <stdio.h>
 
@@ -471,8 +464,7 @@ void IntPatch_WLine::ComputeVertexParameters( const Standard_Real RTol)
   
   //----------------------------------------------------
   //-- On detecte les points confondus dans la LineOn2S
-  Standard_Real dmini = Precision::Confusion();
-  dmini*=dmini;
+  Standard_Real dmini = Precision::SquareConfusion();
   for(i=2; (i<=nbponline) && (nbponline > 2); i++) { 
     const IntSurf_PntOn2S& aPnt1=curv->Value(i-1);
     const IntSurf_PntOn2S& aPnt2=curv->Value(i);
@@ -516,7 +508,20 @@ void IntPatch_WLine::ComputeVertexParameters( const Standard_Real RTol)
 	
 	IntSurf_PntOn2S POn2S = svtx.Value(i).PntOn2S();
 	RecadreMemePeriode(POn2S,curv->Value(1),U1Period(),V1Period(),U2Period(),V2Period());
-	curv->Value(1,POn2S);
+        if (myCreationWay == IntPatch_WLImpImp)
+        {
+          //Adjust first point of curve to corresponding vertex the following way:
+          //set 3D point as the point of the vertex and 2D points as the points of the point on curve.
+          curv->SetPoint (1, POn2S.Value());
+          Standard_Real mu1,mv1,mu2,mv2;
+          curv->Value(1).Parameters(mu1,mv1,mu2,mv2);
+          svtx.ChangeValue(i).SetParameter(1);
+          svtx.ChangeValue(i).SetParameters(mu1,mv1,mu2,mv2);
+        }
+        else
+        {
+          curv->Value(1,POn2S);
+        }
 
 	//--curv->Value(1,svtx.Value(i).PntOn2S());
 	svtx.ChangeValue(i).SetParameter(1.0);
@@ -551,6 +556,9 @@ void IntPatch_WLine::ComputeVertexParameters( const Standard_Real RTol)
       //---------------------------------------------------------
       Standard_Boolean Substitution = Standard_False;
       //-- for(k=indicevertexonline+1; !Substitution && k>=indicevertexonline-1;k--) {   avant le 9 oct 97 
+      Standard_Real mu1,mv1,mu2,mv2;
+      curv->Value(indicevertexonline).Parameters(mu1,mv1,mu2,mv2);
+      
       for(k=indicevertexonline+1; k>=indicevertexonline-1;k--) { 
 	if(k>0 && k<=nbponline) { 
 	  if(CompareVertexAndPoint(P,curv->Value(k).Value(),vTol)) {
@@ -560,9 +568,21 @@ void IntPatch_WLine::ComputeVertexParameters( const Standard_Real RTol)
 	    //-------------------------------------------------------
 	    IntSurf_PntOn2S POn2S = svtx.Value(i).PntOn2S();
 	    RecadreMemePeriode(POn2S,curv->Value(k),U1Period(),V1Period(),U2Period(),V2Period());
-	    curv->Value(k,POn2S);
-	    Standard_Real mu1,mv1,mu2,mv2;
-	    POn2S.Parameters(mu1,mv1,mu2,mv2);
+
+            if (myCreationWay == IntPatch_WLImpImp)
+            {
+              //Adjust a point of curve to corresponding vertex the following way:
+              //set 3D point as the point of the vertex and 2D points as the points
+              //of the point on curve with index <indicevertexonline>
+              curv->SetPoint (k, POn2S.Value());
+              curv->SetUV (k, Standard_True,  mu1, mv1);
+              curv->SetUV (k, Standard_False, mu2, mv2);
+            }
+            else
+            {
+              curv->Value(k,POn2S);
+              POn2S.Parameters(mu1,mv1,mu2,mv2);
+            }
 	    svtx.ChangeValue(i).SetParameter(k);
 	    svtx.ChangeValue(i).SetParameters(mu1,mv1,mu2,mv2);
 	    Substitution = Standard_True;

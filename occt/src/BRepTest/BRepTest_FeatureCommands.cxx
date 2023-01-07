@@ -22,22 +22,12 @@
 #include <TopTools_MapOfShape.hxx>
 #include <TopTools_MapIteratorOfMapOfShape.hxx>
 #include <TopExp_Explorer.hxx>
-#include <TopoDS_Face.hxx>
-#include <TopoDS_Wire.hxx>
-#include <TopoDS_Shell.hxx>
-#include <TopoDS_Compound.hxx>
-#include <TopoDS_Edge.hxx>
-#include <TopoDS.hxx>
 
 #include <Geom_RectangularTrimmedSurface.hxx>
 #include <Geom_Plane.hxx>
 #include <Geom_CylindricalSurface.hxx>
-#include <gp_Lin.hxx>
-#include <gp_Pln.hxx>
-#include <gp_Cylinder.hxx>
 
 //#include <BRepFeat_LocalOperation.hxx>
-#include <BRepFeat_Builder.hxx>
 #include <BRepFeat_MakeCylindricalHole.hxx>
 #include <BRepFeat_SplitShape.hxx>
 #include <BRepFeat_Gluer.hxx>
@@ -54,8 +44,8 @@
 #include <LocOpe_FindEdgesInFace.hxx>
 
 #include <BRepOffset_MakeOffset.hxx>
+#include <BRepOffsetAPI_MakeOffsetShape.hxx>
 #include <BRepOffset_MakeSimpleOffset.hxx>
-#include <BRep_Tool.hxx>
 #include <BRep_Builder.hxx>
 #include <DBRep.hxx>
 #include <BRepTest.hxx>
@@ -982,6 +972,81 @@ Standard_Integer thickshell(Draw_Interpretor& theCommands,
   reportOffsetState(theCommands, aRetCode);
 
   DBRep::Set(a[1], B.Shape());
+  return 0;
+}
+
+//=======================================================================
+//function : mkoffsetshape
+//purpose :
+//=======================================================================
+static Standard_Integer mkoffsetshape(Draw_Interpretor& theDI,
+  Standard_Integer  theArgNb,
+  const char**      theArgVec)
+{
+  if (theArgNb < 4)
+  {
+    return 0;
+  }
+  TopoDS_Shape aShape = DBRep::Get(theArgVec[2]);
+  if (aShape.IsNull())
+  {
+    theDI << "Shape is null";
+    return 1;
+  }
+  Standard_Real anOffVal = Draw::Atof(theArgVec[3]);
+  BRepOffsetAPI_MakeOffsetShape aMaker;
+  if (theArgNb == 4)
+  {
+    aMaker.PerformBySimple(aShape, anOffVal);
+  }
+  else
+  {
+    Standard_Real aTol = Draw::Atof(theArgVec[4]);
+
+    Standard_Boolean anInt = Standard_False;
+    if (theArgNb > 5)
+    {
+      if ((Draw::Atof(theArgVec[5]) == 1))
+      {
+        anInt = Standard_True;
+      }
+    }
+
+    Standard_Boolean aSelfInt = Standard_False;
+    if (theArgNb > 6)
+    {
+      if (Draw::Atof(theArgVec[6]) == 1)
+      {
+        aSelfInt = Standard_True;
+      }
+    }
+
+    GeomAbs_JoinType aJoin = GeomAbs_Arc;
+    if (theArgNb > 7)
+    {
+      if (!strcmp(theArgVec[7], "i"))
+      {
+        aJoin = GeomAbs_Intersection;
+      }
+    }
+
+    Standard_Boolean aRemIntEdges = Standard_False;
+    if (theArgNb > 8)
+    {
+      if (Draw::Atof(theArgVec[8]) == 1)
+      {
+        aRemIntEdges = Standard_True;
+      }
+    }
+    aMaker.PerformByJoin(aShape, anOffVal, aTol, BRepOffset_Skin, anInt, aSelfInt, aJoin, aRemIntEdges);
+  }
+
+  if (!aMaker.IsDone())
+  {
+    theDI << " Error: Offset is not done.\n";
+    return 1;
+  }
+  DBRep::Set(theArgVec[1], aMaker.Shape());
   return 0;
 }
 
@@ -2486,6 +2551,10 @@ void BRepTest::FeatureCommands(Draw_Interpretor& theCommands)
     "thickshell r shape offset [jointype [tol] ]",
     __FILE__, thickshell, g);
 
+  theCommands.Add("mkoffsetshape",
+    "mkoffsetshape r shape offset [Tol] [Intersection(0/1)] [SelfInter(0/1)] [JoinType(a/i)] [RemoveInternalEdges(0/1)]",
+    __FILE__, mkoffsetshape, g);
+
   theCommands.Add("offsetshape",
     "offsetshape r shape offset [tol] [face ...]",
     __FILE__, offsetshape, g);
@@ -2496,7 +2565,7 @@ void BRepTest::FeatureCommands(Draw_Interpretor& theCommands)
 
   theCommands.Add("offsetparameter",
     "offsetparameter Tol Inter(c/p) JoinType(a/i/t) [RemoveInternalEdges(r/k)]",
-    __FILE__, offsetparameter);
+    __FILE__, offsetparameter, g);
 
   theCommands.Add("offsetload",
     "offsetload shape offset bouchon1 bouchon2 ...",
@@ -2517,53 +2586,53 @@ void BRepTest::FeatureCommands(Draw_Interpretor& theCommands)
 
   theCommands.Add("featprism",
     "Defines the arguments for a prism : featprism shape element skface  Dirx Diry Dirz Fuse(0/1/2) Modify(0/1)",
-    __FILE__, DEFIN);
+    __FILE__, DEFIN, g);
 
   theCommands.Add("featrevol",
     "Defines the arguments for a revol : featrevol shape element skface  Ox Oy Oz Dx Dy Dz Fuse(0/1/2) Modify(0/1)",
-    __FILE__, DEFIN);
+    __FILE__, DEFIN, g);
 
   theCommands.Add("featpipe",
     "Defines the arguments for a pipe : featpipe shape element skface  spine Fuse(0/1/2) Modify(0/1)",
-    __FILE__, DEFIN);
+    __FILE__, DEFIN, g);
 
   theCommands.Add("featdprism",
     "Defines the arguments for a drafted prism : featdprism shape face skface angle Fuse(0/1/2) Modify(0/1)",
-    __FILE__, DEFIN);
+    __FILE__, DEFIN, g);
 
   theCommands.Add("featlf",
     "Defines the arguments for a linear rib or slot : featlf shape wire plane DirX DirY DirZ DirX DirY DirZ Fuse(0/1/2) Modify(0/1)",
-    __FILE__, DEFIN);
+    __FILE__, DEFIN, g);
 
   theCommands.Add("featrf",
     "Defines the arguments for a rib or slot of revolution : featrf shape wire plane X Y Z DirX DirY DirZ Size Size Fuse(0/1/2) Modify(0/1)",
-    __FILE__, DEFIN);
+    __FILE__, DEFIN, g);
 
   theCommands.Add("addslide",
     " Adds sliding elements : addslide prism/revol/pipe edge face [edge face...]",
-    __FILE__, ADD);
+    __FILE__, ADD, g);
 
   theCommands.Add("featperform",
     " Performs the prism revol dprism linform or pipe :featperform prism/revol/pipe/dprism/lf result [[Ffrom] Funtil]",
-    __FILE__, PERF);
+    __FILE__, PERF, g);
 
   theCommands.Add("featperformval",
     " Performs the prism revol dprism or linform with a value :featperformval prism/revol/dprism/lf result value",
-    __FILE__, PERF);
+    __FILE__, PERF, g);
 
   theCommands.Add("endedges",
     " Return top and bottom edges of dprism :endedges dprism shapetop shapebottom First/LastShape (1/2)",
-    __FILE__, BOSS);
+    __FILE__, BOSS, g);
 
   theCommands.Add("fillet",
     " Perform fillet on compounds of edges :fillet result object rad1 comp1 rad2 comp2 ...",
-    __FILE__, BOSS);
+    __FILE__, BOSS, g);
 
   theCommands.Add("bossage",
     " Perform fillet on top and bottom edges of dprism :bossage dprism result radtop radbottom First/LastShape (1/2)",
-    __FILE__, BOSS);
+    __FILE__, BOSS, g);
 
   theCommands.Add("offsetshapesimple",
     "offsetshapesimple result shape offsetvalue [solid] [tolerance=1e-7]",
-    __FILE__, ComputeSimpleOffset);
+    __FILE__, ComputeSimpleOffset, g);
 }

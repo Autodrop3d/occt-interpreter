@@ -40,15 +40,11 @@
 #include <Geom_Plane.hxx>
 #include <Geom_Surface.hxx>
 #include <Geom_TrimmedCurve.hxx>
-#include <gp.hxx>
 #include <gp_Dir.hxx>
 #include <gp_GTrsf.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Pnt2d.hxx>
 #include <gp_Trsf2d.hxx>
-#include <gp_XY.hxx>
-#include <IGESData_HArray1OfIGESEntity.hxx>
-#include <IGESData_IGESEntity.hxx>
 #include <IGESData_IGESModel.hxx>
 #include <IGESData_ToolLocation.hxx>
 #include <IGESGeom_Boundary.hxx>
@@ -61,7 +57,6 @@
 #include <IGESToBRep.hxx>
 #include <IGESToBRep_AlgoContainer.hxx>
 #include <IGESToBRep_BasicCurve.hxx>
-#include <IGESToBRep_BasicSurface.hxx>
 #include <IGESToBRep_CurveAndSurface.hxx>
 #include <IGESToBRep_IGESBoundary.hxx>
 #include <IGESToBRep_ToolContainer.hxx>
@@ -73,16 +68,11 @@
 #include <ShapeAlgo.hxx>
 #include <ShapeAlgo_AlgoContainer.hxx>
 #include <ShapeBuild_Edge.hxx>
-#include <ShapeExtend_WireData.hxx>
 #include <ShapeFix_Wire.hxx>
 #include <Standard_ErrorHandler.hxx>
-#include <Standard_Failure.hxx>
 #include <TColGeom2d_HSequenceOfBoundedCurve.hxx>
 #include <TColGeom_HSequenceOfBoundedCurve.hxx>
-#include <TColgp_Array1OfPnt.hxx>
-#include <TColgp_Array1OfPnt2d.hxx>
 #include <TCollection_HAsciiString.hxx>
-#include <TopAbs.hxx>
 #include <TopLoc_Location.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Edge.hxx>
@@ -391,7 +381,7 @@ TopoDS_Shape  IGESToBRep_TopoCurve::Transfer2dCompositeCurve
   //  SendWarning(start,Msg1036);
   // AddWarning(start, "The Trsf cannot be applied to the entity.");
   //}
-  return  res;
+  return res;
 }
 
 //=======================================================================
@@ -704,7 +694,7 @@ TopoDS_Shape  IGESToBRep_TopoCurve::TransferOffsetCurve
     }
       //AddWarning(start, "Transformation skipped (not a similarity)");
   }
-
+  SetShapeResult(start, res);
   return  res;
 }
 
@@ -798,6 +788,7 @@ TopoDS_Shape  IGESToBRep_TopoCurve::Transfer2dOffsetCurve
       res = sfw->Wire();
     }
   }
+  SetShapeResult(start, res);
   return  res;
 }
 
@@ -1041,7 +1032,7 @@ TopoDS_Shape  IGESToBRep_TopoCurve::TransferTopoBasicCurve
   if (start->IsKind(STANDARD_TYPE(IGESGeom_CircularArc)) &&
       Handle(IGESGeom_CircularArc)::DownCast (start)->IsClosed())
     TheBadCase = Standard_True;
-
+  SetShapeResult(start, myshape);
   return myedge;
 }
 
@@ -1214,7 +1205,6 @@ TopoDS_Shape  IGESToBRep_TopoCurve::Transfer2dTopoBasicCurve
   if (start->IsKind(STANDARD_TYPE(IGESGeom_CircularArc)) &&
       Handle(IGESGeom_CircularArc)::DownCast (start)->IsClosed())
     TheBadCase = Standard_True;
-
   return myedge;
 }
 

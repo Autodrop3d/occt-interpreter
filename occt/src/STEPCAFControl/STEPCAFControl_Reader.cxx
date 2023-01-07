@@ -20,42 +20,32 @@
 #include <Geom_CartesianPoint.hxx>
 #include <Geom_Plane.hxx>
 #include <Interface_EntityIterator.hxx>
-#include <Interface_InterfaceModel.hxx>
 #include <StepData_StepModel.hxx>
 #include <HeaderSection_FileSchema.hxx>
 #include <Interface_Static.hxx>
 #include <Message_ProgressScope.hxx>
 #include <NCollection_DataMap.hxx>
 #include <OSD_Path.hxx>
-#include <Quantity_Color.hxx>
 #include <Quantity_ColorRGBA.hxx>
-#include <StepAP214_AppliedExternalIdentificationAssignment.hxx>
 #include <StepBasic_ConversionBasedUnitAndLengthUnit.hxx>
 #include <StepBasic_ConversionBasedUnitAndPlaneAngleUnit.hxx>
 #include <StepBasic_ConversionBasedUnitAndMassUnit.hxx>
 #include <StepBasic_DerivedUnit.hxx>
 #include <StepBasic_DerivedUnitElement.hxx>
+#include <StepBasic_DocumentFile.hxx>
 #include <StepBasic_MeasureValueMember.hxx>
-#include <StepBasic_MeasureWithUnit.hxx>
 #include <StepBasic_NamedUnit.hxx>
 #include <StepBasic_Product.hxx>
 #include <StepBasic_ProductDefinition.hxx>
 #include <StepBasic_ProductDefinitionFormation.hxx>
-#include <StepBasic_ProductDefinitionRelationship.hxx>
 #include <StepBasic_ProductDefinitionWithAssociatedDocuments.hxx>
-#include <StepBasic_SiUnit.hxx>
 #include <StepBasic_SiUnitAndLengthUnit.hxx>
-#include <StepBasic_Unit.hxx>
-#include <StepBasic_DocumentFile.hxx>
 #include <StepData_GlobalFactors.hxx>
 #include <STEPCAFControl_Controller.hxx>
-#include <STEPCAFControl_DataMapIteratorOfDataMapOfShapePD.hxx>
 #include <STEPCAFControl_DataMapOfPDExternFile.hxx>
-#include <STEPCAFControl_DataMapOfSDRExternFile.hxx>
 #include <STEPCAFControl_DataMapOfShapePD.hxx>
 #include <STEPCAFControl_ExternFile.hxx>
 #include <STEPConstruct.hxx>
-#include <STEPConstruct_Assembly.hxx>
 #include <STEPConstruct_ExternRefs.hxx>
 #include <STEPConstruct_Styles.hxx>
 #include <STEPConstruct_Tool.hxx>
@@ -63,7 +53,6 @@
 #include <STEPConstruct_ValidationProps.hxx>
 #include <STEPControl_ActorRead.hxx>
 #include <STEPControl_Reader.hxx>
-#include <StepGeom_GeometricRepresentationItem.hxx>
 #include <StepGeom_Axis2Placement3d.hxx>
 #include <StepGeom_Direction.hxx>
 #include <StepDimTol_AngularityTolerance.hxx>
@@ -75,13 +64,11 @@
 #include <StepDimTol_DatumFeature.hxx>
 #include <StepDimTol_DatumReference.hxx>
 #include <StepDimTol_DatumReferenceElement.hxx>
-#include <StepDimTol_DatumReferenceCompartment.hxx>
 #include <StepDimTol_DatumSystem.hxx>
 #include <StepDimTol_FlatnessTolerance.hxx>
 #include <StepDimTol_GeometricTolerance.hxx>
 #include <StepDimTol_GeometricToleranceWithDatumReference.hxx>
 #include <StepDimTol_GeoTolAndGeoTolWthDatRefAndModGeoTolAndPosTol.hxx>
-#include <StepDimTol_GeoTolAndGeoTolWthDatRef.hxx>
 #include <StepDimTol_GeoTolAndGeoTolWthDatRefAndGeoTolWthMaxTol.hxx>
 #include <StepDimTol_GeoTolAndGeoTolWthDatRefAndUneqDisGeoTol.hxx>
 #include <StepDimTol_GeoTolAndGeoTolWthMaxTol.hxx>
@@ -100,35 +87,20 @@
 #include <StepDimTol_ToleranceZone.hxx>
 #include <StepDimTol_ToleranceZoneForm.hxx>
 #include <StepDimTol_TotalRunoutTolerance.hxx>
-#include <StepDimTol_GeometricToleranceWithModifiers.hxx>
-#include <StepDimTol_HArray1OfGeometricToleranceModifier.hxx>
 #include <StepDimTol_GeoTolAndGeoTolWthDatRefAndGeoTolWthMod.hxx>
 #include <StepDimTol_GeoTolAndGeoTolWthMod.hxx>
 #include <StepDimTol_GeometricToleranceWithMaximumTolerance.hxx>
-#include <StepGeom_Axis2Placement3d.hxx>
-#include <StepGeom_GeometricRepresentationContextAndGlobalUnitAssignedContext.hxx>
-#include <StepGeom_GeomRepContextAndGlobUnitAssCtxAndGlobUncertaintyAssCtx.hxx>
 #include <StepGeom_Plane.hxx>
-#include <StepGeom_Polyline.hxx>
 #include <StepDimTol_PlacedDatumTargetFeature.hxx>
-#include <StepRepr_AssemblyComponentUsage.hxx>
-#include <StepRepr_CharacterizedDefinition.hxx>
-#include <StepRepr_CompoundRepresentationItem.hxx>
 #include <StepRepr_DerivedShapeAspect.hxx>
 #include <StepRepr_DescriptiveRepresentationItem.hxx>
-#include <StepRepr_HArray1OfRepresentationItem.hxx>
 #include <StepRepr_MappedItem.hxx>
 #include <StepRepr_MeasureRepresentationItem.hxx>
 #include <StepRepr_NextAssemblyUsageOccurrence.hxx>
 #include <StepRepr_ProductDefinitionShape.hxx>
 #include <StepRepr_PropertyDefinition.hxx>
-#include <StepRepr_PropertyDefinitionRepresentation.hxx>
-#include <StepRepr_Representation.hxx>
 #include <StepRepr_RepresentationItem.hxx>
-#include <StepRepr_HArray1OfRepresentationItem.hxx>
 #include <StepRepr_RepresentationMap.hxx>
-#include <StepRepr_RepresentationRelationship.hxx>
-#include <StepRepr_RepresentedDefinition.hxx>
 #include <StepRepr_ReprItemAndLengthMeasureWithUnit.hxx>
 #include <StepRepr_ReprItemAndLengthMeasureWithUnitAndQRI.hxx>
 #include <StepRepr_ReprItemAndPlaneAngleMeasureWithUnit.hxx>
@@ -136,9 +108,7 @@
 #include <StepRepr_SequenceOfRepresentationItem.hxx>
 #include <StepRepr_ShapeAspect.hxx>
 #include <StepRepr_ShapeAspectDerivingRelationship.hxx>
-#include <StepRepr_CompositeShapeAspect.hxx>
 #include <StepRepr_AllAroundShapeAspect.hxx>
-#include <StepRepr_CompShAspAndDatumFeatAndShAsp.hxx>
 #include <StepRepr_ShapeAspectRelationship.hxx>
 #include <StepRepr_ShapeRepresentationRelationship.hxx>
 #include <StepRepr_SpecifiedHigherUsageOccurrence.hxx>
@@ -146,31 +116,23 @@
 #include <StepRepr_FeatureForDatumTargetRelationship.hxx>
 #include <StepShape_AdvancedFace.hxx>
 #include <StepShape_AdvancedBrepShapeRepresentation.hxx>
-#include <StepShape_AngleRelator.hxx>
 #include <StepShape_AngularSize.hxx>
 #include <StepShape_AngularLocation.hxx>
 #include <StepShape_ClosedShell.hxx>
 #include <StepShape_ConnectedFaceSet.hxx>
-#include <StepShape_ContextDependentShapeRepresentation.hxx>
-#include <StepRepr_CompGroupShAspAndCompShAspAndDatumFeatAndShAsp.hxx>
 #include <StepRepr_CompShAspAndDatumFeatAndShAsp.hxx>
 #include <StepShape_DimensionalCharacteristicRepresentation.hxx>
 #include <StepShape_DimensionalSizeWithPath.hxx>
 #include <StepShape_DimensionalLocationWithPath.hxx>
-#include <StepShape_ShapeDimensionRepresentationItem.hxx>
 #include <StepShape_ShapeRepresentationWithParameters.hxx>
-#include <StepShape_HArray1OfShapeDimensionRepresentationItem.hxx>
 #include <StepShape_DimensionalSize.hxx>
 #include <StepShape_DimensionalLocation.hxx>
 #include <StepShape_EdgeCurve.hxx>
 #include <StepShape_EdgeLoop.hxx>
-#include <StepShape_GeometricCurveSet.hxx>
 #include <StepShape_GeometricSet.hxx>
 #include <StepShape_HArray1OfFace.hxx>
 #include <StepShape_HArray1OfFaceBound.hxx>
 #include <StepShape_HArray1OfOrientedEdge.hxx>
-#include <StepShape_HArray1OfShell.hxx>
-#include <StepShape_LimitsAndFits.hxx>
 #include <StepShape_Loop.hxx>
 #include <StepShape_ManifoldSolidBrep.hxx>
 #include <StepShape_PlusMinusTolerance.hxx>
@@ -186,24 +148,20 @@
 #include <StepShape_ValueFormatTypeQualifier.hxx>
 #include <StepShape_Vertex.hxx>
 #include <StepToGeom.hxx>
-#include <StepVisual_AnnotationCurveOccurrence.hxx>
-#include <StepVisual_AnnotationFillArea.hxx>
 #include <StepVisual_AnnotationPlane.hxx>
-#include <StepVisual_CameraModelD3.hxx>
 #include <StepVisual_CameraModelD3MultiClipping.hxx>
 #include <StepVisual_CameraModelD3MultiClippingIntersection.hxx>
 #include <StepVisual_CameraModelD3MultiClippingUnion.hxx>
-#include <StepVisual_CoordinatesList.hxx>
 #include <StepVisual_HArray1OfCameraModelD3MultiClippingInterectionSelect.hxx>
 #include <StepVisual_HArray1OfCameraModelD3MultiClippingUnionSelect.hxx>
 #include <StepVisual_DraughtingCallout.hxx>
 #include <StepVisual_DraughtingCalloutElement.hxx>
 #include <StepVisual_DraughtingModel.hxx>
 #include <StepVisual_Invisibility.hxx>
-#include <StepVisual_LayeredItem.hxx>
 #include <StepVisual_PlanarBox.hxx>
 #include <StepVisual_PresentationLayerAssignment.hxx>
 #include <StepVisual_PresentationStyleByContext.hxx>
+#include <StepVisual_RepositionedTessellatedGeometricSet.hxx>
 #include <StepVisual_StyleContextSelect.hxx>
 #include <StepVisual_StyledItem.hxx>
 #include <StepVisual_ViewVolume.hxx>
@@ -211,32 +169,24 @@
 #include <TCollection_AsciiString.hxx>
 #include <TCollection_HAsciiString.hxx>
 #include <TColStd_HArray1OfReal.hxx>
-#include <TColStd_HArray1OfTransient.hxx>
 #include <TColStd_HSequenceOfTransient.hxx>
-#include <TColStd_IndexedDataMapOfTransientTransient.hxx>
-#include <TColStd_MapIteratorOfMapOfTransient.hxx>
 #include <TColStd_MapOfTransient.hxx>
 #include <TColStd_SequenceOfHAsciiString.hxx>
 #include <TDataStd_Name.hxx>
 #include <TDataStd_TreeNode.hxx>
-#include <TDataStd_UAttribute.hxx>
 #include <TDF_Label.hxx>
 #include <TDF_Tool.hxx>
 #include <TDocStd_Document.hxx>
-#include <TNaming_NamedShape.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Compound.hxx>
 #include <TopoDS_Iterator.hxx>
 #include <TopoDS_Shape.hxx>
-#include <TopTools_ListIteratorOfListOfShape.hxx>
-#include <TopTools_ListOfShape.hxx>
 #include <TopTools_MapOfShape.hxx>
 #include <Transfer_Binder.hxx>
 #include <Transfer_TransientProcess.hxx>
 #include <TransferBRep.hxx>
 #include <UnitsMethods.hxx>
-#include <XCAFDoc.hxx>
 #include <XCAFDoc_Area.hxx>
 #include <XCAFDoc_Centroid.hxx>
 #include <XCAFDoc_ClippingPlaneTool.hxx>
@@ -254,8 +204,6 @@
 #include <XCAFDoc_View.hxx>
 #include <XCAFDoc_ViewTool.hxx>
 #include <XCAFDoc_Volume.hxx>
-#include <XCAFDimTolObjects_DimensionModifiersSequence.hxx>
-#include <XCAFDimTolObjects_GeomToleranceType.hxx>
 #include <XCAFDimTolObjects_DimensionObject.hxx>
 #include <XCAFDimTolObjects_GeomToleranceObject.hxx>
 #include <XCAFDimTolObjects_DatumObject.hxx>
@@ -269,8 +217,6 @@
 #include <StepGeom_CartesianPoint.hxx>
 #include <STEPCAFControl_GDTProperty.hxx>
 #include <StepVisual_TessellatedAnnotationOccurrence.hxx>
-#include <StepVisual_TessellatedAnnotationOccurrence.hxx>
-#include <StepVisual_TessellatedItem.hxx>
 #include <StepVisual_TessellatedGeometricSet.hxx>
 #include <StepVisual_TessellatedCurveSet.hxx>
 #include <StepVisual_CoordinatesList.hxx>
@@ -278,7 +224,6 @@
 
 #include <TColgp_HArray1OfXYZ.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
-#include <BRepTools.hxx>
 #include <Transfer_ActorOfTransientProcess.hxx>
 #include <Bnd_Box.hxx>
 #include <BRepBndLib.hxx>
@@ -391,14 +336,22 @@ TCollection_ExtendedString STEPCAFControl_Reader::convertName (const TCollection
 
 //=======================================================================
 //function : ReadFile
-//purpose  : 
+//purpose  :
 //=======================================================================
-
-IFSelect_ReturnStatus STEPCAFControl_Reader::ReadFile(const Standard_CString filename)
+IFSelect_ReturnStatus STEPCAFControl_Reader::ReadFile (const Standard_CString theFileName)
 {
-  return myReader.ReadFile(filename);
+  return myReader.ReadFile (theFileName);
 }
 
+//=======================================================================
+//function : ReadStream
+//purpose  :
+//=======================================================================
+IFSelect_ReturnStatus STEPCAFControl_Reader::ReadStream (const Standard_CString theName,
+                                                         std::istream& theIStream)
+{
+  return myReader.ReadStream (theName, theIStream);
+}
 
 //=======================================================================
 //function : NbRootsForTransfer
@@ -417,7 +370,7 @@ Standard_Integer STEPCAFControl_Reader::NbRootsForTransfer()
 //=======================================================================
 
 Standard_Boolean STEPCAFControl_Reader::TransferOneRoot (const Standard_Integer num,
-                                                         Handle(TDocStd_Document) &doc,
+                                                         const Handle(TDocStd_Document) &doc,
                                                          const Message_ProgressRange& theProgress)
 {
   TDF_LabelSequence Lseq;
@@ -430,7 +383,7 @@ Standard_Boolean STEPCAFControl_Reader::TransferOneRoot (const Standard_Integer 
 //purpose  : 
 //=======================================================================
 
-Standard_Boolean STEPCAFControl_Reader::Transfer (Handle(TDocStd_Document) &doc,
+Standard_Boolean STEPCAFControl_Reader::Transfer (const Handle(TDocStd_Document) &doc,
                                                   const Message_ProgressRange& theProgress)
 {
   TDF_LabelSequence Lseq;
@@ -444,7 +397,7 @@ Standard_Boolean STEPCAFControl_Reader::Transfer (Handle(TDocStd_Document) &doc,
 //=======================================================================
 
 Standard_Boolean STEPCAFControl_Reader::Perform (const Standard_CString filename,
-                                                 Handle(TDocStd_Document) &doc,
+                                                 const Handle(TDocStd_Document) &doc,
                                                  const Message_ProgressRange& theProgress)
 {
   if (ReadFile (filename) != IFSelect_RetDone)
@@ -461,7 +414,7 @@ Standard_Boolean STEPCAFControl_Reader::Perform (const Standard_CString filename
 //=======================================================================
 
 Standard_Boolean STEPCAFControl_Reader::Perform (const TCollection_AsciiString &filename,
-                                                 Handle(TDocStd_Document) &doc,
+                                                 const Handle(TDocStd_Document) &doc,
                                                  const Message_ProgressRange& theProgress)
 {
   if ( ReadFile (filename.ToCString()) != IFSelect_RetDone)
@@ -562,7 +515,7 @@ void STEPCAFControl_Reader::prepareUnits(const Handle(StepData_StepModel)& theMo
 
 Standard_Boolean STEPCAFControl_Reader::Transfer (STEPControl_Reader &reader,
                                                   const Standard_Integer nroot,
-                                                  Handle(TDocStd_Document) &doc,
+                                                  const Handle(TDocStd_Document) &doc,
                                                   TDF_LabelSequence &Lseq,
                                                   const Standard_Boolean asOne,
                                                   const Message_ProgressRange& theProgress)
@@ -883,7 +836,7 @@ TDF_Label STEPCAFControl_Reader::AddShape(const TopoDS_Shape &S,
 
 Handle(STEPCAFControl_ExternFile) STEPCAFControl_Reader::ReadExternFile (const Standard_CString file, 
                                                                          const Standard_CString fullname,
-                                                                         Handle(TDocStd_Document)& doc,
+                                                                         const Handle(TDocStd_Document)& doc,
                                                                          const Message_ProgressRange& theProgress)
 {
   // if the file is already read, associate it with SDR
@@ -990,7 +943,7 @@ static void propagateColorToParts(const Handle(XCAFDoc_ShapeTool)& theSTool,
 //=======================================================================
 
 Standard_Boolean STEPCAFControl_Reader::ReadColors(const Handle(XSControl_WorkSession) &WS,
-  Handle(TDocStd_Document)& Doc) const
+  const Handle(TDocStd_Document)& Doc) const
 {
   STEPConstruct_Styles Styles(WS);
   if (!Styles.LoadStyles()) {
@@ -1238,8 +1191,8 @@ TDF_Label STEPCAFControl_Reader::FindInstance(const Handle(StepRepr_NextAssembly
 //=======================================================================
 
 Standard_Boolean STEPCAFControl_Reader::ReadNames(const Handle(XSControl_WorkSession) &WS,
-  Handle(TDocStd_Document)& Doc,
-  const STEPCAFControl_DataMapOfPDExternFile &PDFileMap) const
+                                                  const Handle(TDocStd_Document)& Doc,
+                                                  const STEPCAFControl_DataMapOfPDExternFile& PDFileMap) const
 {
   // get starting data
   const Handle(Interface_InterfaceModel) &Model = WS->Model();
@@ -1348,8 +1301,8 @@ static TDF_Label GetLabelFromPD(const Handle(StepBasic_ProductDefinition) &PD,
 //=======================================================================
 
 Standard_Boolean STEPCAFControl_Reader::ReadValProps(const Handle(XSControl_WorkSession) &WS,
-  Handle(TDocStd_Document)& Doc,
-  const STEPCAFControl_DataMapOfPDExternFile &PDFileMap) const
+                                                     const Handle(TDocStd_Document)& Doc,
+                                                     const STEPCAFControl_DataMapOfPDExternFile& PDFileMap) const
 {
   // get starting data
   const Handle(XSControl_TransferReader) &TR = WS->TransferReader();
@@ -1480,7 +1433,7 @@ Standard_Boolean STEPCAFControl_Reader::ReadValProps(const Handle(XSControl_Work
 //=======================================================================
 
 Standard_Boolean STEPCAFControl_Reader::ReadLayers(const Handle(XSControl_WorkSession) &WS,
-  Handle(TDocStd_Document)& Doc) const
+                                                   const Handle(TDocStd_Document)& Doc) const
 {
   const Handle(Interface_InterfaceModel) &Model = WS->Model();
   const Handle(XSControl_TransferReader) &TR = WS->TransferReader();
@@ -1651,8 +1604,8 @@ static TDF_Label setSHUOintoDoc(const Handle(XSControl_WorkSession) &WS,
 //=======================================================================
 
 Standard_Boolean STEPCAFControl_Reader::ReadSHUOs(const Handle(XSControl_WorkSession) &WS,
-  Handle(TDocStd_Document)& Doc,
-  const STEPCAFControl_DataMapOfPDExternFile &PDFileMap) const
+                                                  const Handle(TDocStd_Document)& Doc,
+                                                  const STEPCAFControl_DataMapOfPDExternFile& PDFileMap) const
 {
   // the big part code duplication from ReadColors.
   // It is possible to share this code functionality, just to decide how ???
@@ -1868,6 +1821,25 @@ Standard_Boolean readPMIPresentation(const Handle(Standard_Transient)& thePresen
       Handle(StepVisual_TessellatedGeometricSet) aTessSet = Handle(StepVisual_TessellatedGeometricSet)::DownCast(aTessItem);
       if (aTessSet.IsNull())
         continue;
+      gp_Trsf aTransf;
+      if (aTessSet->IsKind(STANDARD_TYPE(StepVisual_RepositionedTessellatedGeometricSet)))
+      {
+        Handle(StepVisual_RepositionedTessellatedGeometricSet) aRTGS =
+          Handle(StepVisual_RepositionedTessellatedGeometricSet)::DownCast(aTessSet);
+        Handle(Geom_Axis2Placement) aLocation = StepToGeom::MakeAxis2Placement(aRTGS->Location());
+        if (!aLocation.IsNull())
+        {
+          const gp_Ax3 anAx3Orig = gp::XOY();
+          const gp_Ax3 anAx3Targ(aLocation->Ax2());
+          if (anAx3Targ.Location().SquareDistance(anAx3Orig.Location()) >= Precision::SquareConfusion() ||
+            !anAx3Targ.Direction().IsEqual(anAx3Orig.Direction(), Precision::Angular()) ||
+            !anAx3Targ.XDirection().IsEqual(anAx3Orig.XDirection(), Precision::Angular()) ||
+            !anAx3Targ.YDirection().IsEqual(anAx3Orig.YDirection(), Precision::Angular()))
+          {
+            aTransf.SetTransformation(anAx3Targ, anAx3Orig);
+          }
+        }
+      }
       NCollection_Handle<StepVisual_Array1OfTessellatedItem> aListItems = aTessSet->Items();
       Standard_Integer nb = aListItems.IsNull() ? 0 : aListItems->Length();
       Handle(StepVisual_TessellatedCurveSet) aTessCurve;
@@ -1913,7 +1885,7 @@ Standard_Boolean readPMIPresentation(const Handle(Standard_Transient)& thePresen
         }
         aB.Add(aComp, aCurW);
       }
-      anAnnotationShape = aComp;
+      anAnnotationShape = aComp.Moved(aTransf);
     }
     if (!anAnnotationShape.IsNull())
     {
@@ -3401,17 +3373,17 @@ static void setDimObjectToXCAF(const Handle(Standard_Transient)& theEnt,
         if (anUnit.IsNull()) continue;
         if (!(anUnit.CaseNum(anUnit.Value()) == 1)) continue;
         Handle(StepBasic_NamedUnit) NU = anUnit.NamedUnit();
-        STEPConstruct_UnitContext anUnitCtx;
-        anUnitCtx.ComputeFactors(NU);
-        if (aMWU->IsKind(STANDARD_TYPE(StepBasic_LengthMeasureWithUnit)) ||
-          aMWU->IsKind(STANDARD_TYPE(StepRepr_ReprItemAndLengthMeasureWithUnitAndQRI)))
-        {
-          aVal = aVal * anUnitCtx.LengthFactor();
-        }
-        else if (aMWU->IsKind(STANDARD_TYPE(StepBasic_PlaneAngleMeasureWithUnit)) ||
+        STEPConstruct_UnitContext anUnitCtxUpperBound;
+        anUnitCtxUpperBound.ComputeFactors(NU);
+        if (aMWU->IsKind(STANDARD_TYPE(StepBasic_PlaneAngleMeasureWithUnit)) ||
           aMWU->IsKind(STANDARD_TYPE(StepRepr_ReprItemAndPlaneAngleMeasureWithUnitAndQRI)))
         {
-          convertAngleValue(anUnitCtx, aVal);
+          convertAngleValue(anUnitCtxUpperBound, aVal);
+        }
+        else if ((aMWU->IsKind(STANDARD_TYPE(StepBasic_MeasureWithUnit)) && anUnitCtxUpperBound.LengthFactor() > 0.) ||
+          aMWU->IsKind(STANDARD_TYPE(StepRepr_ReprItemAndLengthMeasureWithUnitAndQRI)))
+        {
+          aVal = aVal * anUnitCtxUpperBound.LengthFactor();
         }
         aDim3 = aVal;
 
@@ -3437,16 +3409,17 @@ static void setDimObjectToXCAF(const Handle(Standard_Transient)& theEnt,
         if (anUnit.IsNull()) continue;
         if (!(anUnit.CaseNum(anUnit.Value()) == 1)) continue;
         NU = anUnit.NamedUnit();
-        anUnitCtx.ComputeFactors(NU);
-        if (aMWU->IsKind(STANDARD_TYPE(StepBasic_LengthMeasureWithUnit)) ||
-          aMWU->IsKind(STANDARD_TYPE(StepRepr_ReprItemAndLengthMeasureWithUnitAndQRI)))
-        {
-          aVal = aVal * anUnitCtx.LengthFactor();
-        }
-        else if (aMWU->IsKind(STANDARD_TYPE(StepBasic_PlaneAngleMeasureWithUnit)) ||
+        STEPConstruct_UnitContext anUnitCtxLowerBound;
+        anUnitCtxLowerBound.ComputeFactors(NU);
+        if (aMWU->IsKind(STANDARD_TYPE(StepBasic_PlaneAngleMeasureWithUnit)) ||
           aMWU->IsKind(STANDARD_TYPE(StepRepr_ReprItemAndPlaneAngleMeasureWithUnitAndQRI)))
         {
-          convertAngleValue(anUnitCtx, aVal);
+          convertAngleValue(anUnitCtxLowerBound, aVal);
+        }
+        else if ((aMWU->IsKind(STANDARD_TYPE(StepBasic_MeasureWithUnit)) && anUnitCtxLowerBound.LengthFactor() > 0.) ||
+                 aMWU->IsKind(STANDARD_TYPE(StepRepr_ReprItemAndLengthMeasureWithUnitAndQRI)))
+        {
+          aVal = aVal * anUnitCtxLowerBound.LengthFactor();
         }
         aDim2 = Abs(aVal);
       }
@@ -3541,11 +3514,11 @@ static void setDimObjectToXCAF(const Handle(Standard_Transient)& theEnt,
         //get qualifier for angular value
         aType = XCAFDimTolObjects_DimensionType_Size_Angular;
         if (anAngSize->AngleSelection() == StepShape_Equal)
-          aDimObj->SetQualifier(XCAFDimTolObjects_DimensionQualifier_Avg);
+          aDimObj->SetAngularQualifier(XCAFDimTolObjects_AngularQualifier_Equal);
         else if (anAngSize->AngleSelection() == StepShape_Large)
-          aDimObj->SetQualifier(XCAFDimTolObjects_DimensionQualifier_Max);
+          aDimObj->SetAngularQualifier(XCAFDimTolObjects_AngularQualifier_Large);
         else if (anAngSize->AngleSelection() == StepShape_Small)
-          aDimObj->SetQualifier(XCAFDimTolObjects_DimensionQualifier_Min);
+          aDimObj->SetAngularQualifier(XCAFDimTolObjects_AngularQualifier_Small);
       }
     }
     else
@@ -3557,11 +3530,11 @@ static void setDimObjectToXCAF(const Handle(Standard_Transient)& theEnt,
         //get qualifier for angular value
         aType = XCAFDimTolObjects_DimensionType_Location_Angular;
         if (anAngLoc->AngleSelection() == StepShape_Equal)
-          aDimObj->SetQualifier(XCAFDimTolObjects_DimensionQualifier_Avg);
+          aDimObj->SetAngularQualifier(XCAFDimTolObjects_AngularQualifier_Equal);
         else if (anAngLoc->AngleSelection() == StepShape_Large)
-          aDimObj->SetQualifier(XCAFDimTolObjects_DimensionQualifier_Max);
+          aDimObj->SetAngularQualifier(XCAFDimTolObjects_AngularQualifier_Large);
         else if (anAngLoc->AngleSelection() == StepShape_Small)
-          aDimObj->SetQualifier(XCAFDimTolObjects_DimensionQualifier_Min);
+          aDimObj->SetAngularQualifier(XCAFDimTolObjects_AngularQualifier_Small);
       }
     }
     if (aType == XCAFDimTolObjects_DimensionType_Location_None)
@@ -3926,7 +3899,7 @@ static void setGeomTolObjectToXCAF(const Handle(Standard_Transient)& theEnt,
 //=======================================================================
 
 Standard_Boolean STEPCAFControl_Reader::ReadGDTs(const Handle(XSControl_WorkSession)& theWS,
-  Handle(TDocStd_Document)& theDoc)
+                                                 const Handle(TDocStd_Document)& theDoc)
 {
   const Handle(Interface_InterfaceModel) &aModel = theWS->Model();
   const Interface_Graph& aGraph = theWS->Graph();
@@ -4136,8 +4109,8 @@ static Handle(StepShape_SolidModel) FindSolidForPDS(const Handle(StepRepr_Produc
 //=======================================================================
 
 Standard_Boolean STEPCAFControl_Reader::ReadMaterials(const Handle(XSControl_WorkSession) &WS,
-  Handle(TDocStd_Document)& Doc,
-  const Handle(TColStd_HSequenceOfTransient) &SeqPDS) const
+                                                      const Handle(TDocStd_Document)& Doc,
+                                                      const Handle(TColStd_HSequenceOfTransient)& SeqPDS) const
 {
   const Handle(XSControl_TransferReader) &TR = WS->TransferReader();
   const Handle(Transfer_TransientProcess) &TP = TR->TransientProcess();
@@ -4359,7 +4332,7 @@ Handle(TCollection_HAsciiString) buildClippingPlanes(const Handle(StepGeom_Geome
 //function : ReadViews
 //purpose  :
 //=======================================================================
-Standard_Boolean STEPCAFControl_Reader::ReadViews(const Handle(XSControl_WorkSession)& theWS, Handle(TDocStd_Document)& theDoc) const
+Standard_Boolean STEPCAFControl_Reader::ReadViews(const Handle(XSControl_WorkSession)& theWS, const Handle(TDocStd_Document)& theDoc) const
 {
   const Handle(Interface_InterfaceModel) &aModel = theWS->Model();
   Handle(XCAFDoc_ShapeTool) aSTool = XCAFDoc_DocumentTool::ShapeTool(theDoc->Main());

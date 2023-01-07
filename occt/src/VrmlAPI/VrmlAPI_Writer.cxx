@@ -16,7 +16,6 @@
 #include <OSD_FileSystem.hxx>
 #include <OSD_Path.hxx>
 #include <Poly_Triangulation.hxx>
-#include <Quantity_HArray1OfColor.hxx>
 #include <Standard_Stream.hxx>
 #include <TColStd_HArray1OfReal.hxx>
 #include <TopAbs_ShapeEnum.hxx>
@@ -24,7 +23,6 @@
 #include <TopoDS.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Shape.hxx>
-#include <TopTools_Array1OfShape.hxx>
 #include <Vrml.hxx>
 #include <Vrml_Group.hxx>
 #include <Vrml_Instancing.hxx>
@@ -226,7 +224,7 @@ Standard_Boolean VrmlAPI_Writer::write_v1(const TopoDS_Shape& aShape,const Stand
   OSD_Path thePath(aFile);
   TCollection_AsciiString theFile;thePath.SystemName(theFile);
   const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::ostream> anOutFile = aFileSystem->OpenOStream (theFile, std::ios::out);
+  std::shared_ptr<std::ostream> anOutFile = aFileSystem->OpenOStream (theFile, std::ios::out | std::ios::binary);
   if (anOutFile.get() == NULL)
   {
     return Standard_False;
@@ -370,7 +368,7 @@ Standard_Boolean VrmlAPI_Writer::write_v2(const TopoDS_Shape& aShape,const Stand
   aConv.Convert(anExtFace, anExtEdge);
 
   const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::ostream> anOutStream = aFileSystem->OpenOStream (aFile, std::ios::out);
+  std::shared_ptr<std::ostream> anOutStream = aFileSystem->OpenOStream (aFile, std::ios::out | std::ios::binary);
   if (anOutStream.get() != NULL)
   {
     *anOutStream << aScene;
@@ -395,7 +393,7 @@ Standard_Boolean VrmlAPI_Writer::WriteDoc(
   aConv.ConvertDocument(theDoc);
 
   const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::ostream> anOutStream = aFileSystem->OpenOStream (theFile, std::ios::out);
+  std::shared_ptr<std::ostream> anOutStream = aFileSystem->OpenOStream (theFile, std::ios::out | std::ios::binary);
   if (anOutStream.get() != NULL)
   {
     *anOutStream << aScene;

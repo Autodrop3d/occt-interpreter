@@ -12,11 +12,8 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-//Jean-Claude Vauthier Novembre 1991
-//Passage sur C1 Aout 1992 et ajout transformation Bezier->BSpline
-//Modif JCV correction bug le 02/08/1993
+#include <GeomConvert.hxx>
 
-#include <BSplCLib.hxx>
 #include <Convert_ConeToBSplineSurface.hxx>
 #include <Convert_CylinderToBSplineSurface.hxx>
 #include <Convert_ElementarySurfaceToBSplineSurface.hxx>
@@ -24,7 +21,6 @@
 #include <Convert_TorusToBSplineSurface.hxx>
 #include <Geom_BezierSurface.hxx>
 #include <Geom_BSplineCurve.hxx>
-#include <Geom_BSplineSurface.hxx>
 #include <Geom_ConicalSurface.hxx>
 #include <Geom_Curve.hxx>
 #include <Geom_CylindricalSurface.hxx>
@@ -39,27 +35,22 @@
 #include <Geom_ToroidalSurface.hxx>
 #include <Geom_TrimmedCurve.hxx>
 #include <GeomAdaptor_Surface.hxx>
-#include <GeomConvert.hxx>
 #include <GeomConvert_ApproxSurface.hxx>
 #include <gp_Cone.hxx>
 #include <gp_Cylinder.hxx>
 #include <gp_GTrsf.hxx>
-#include <gp_Pln.hxx>
 #include <gp_Sphere.hxx>
 #include <gp_Torus.hxx>
 #include <gp_Trsf.hxx>
 #include <gp_Vec.hxx>
 #include <Precision.hxx>
 #include <Standard_DomainError.hxx>
-#include <Standard_NotImplemented.hxx>
 #include <TColgp_Array1OfPnt.hxx>
 #include <TColgp_Array2OfPnt.hxx>
 #include <TColStd_Array1OfInteger.hxx>
 #include <TColStd_Array1OfReal.hxx>
 #include <TColStd_Array2OfInteger.hxx>
 #include <TColStd_Array2OfReal.hxx>
-#include <TColStd_HArray1OfInteger.hxx>
-#include <TColStd_HArray1OfReal.hxx>
 
 typedef Geom_Surface                          Surface;
 typedef Geom_BSplineSurface                   BSplineSurface;
@@ -480,7 +471,13 @@ Handle(Geom_BSplineSurface) GeomConvert::SurfaceToBSplineSurface
         Handle(Geom_ToroidalSurface)::DownCast(Surf);
 
       gp_Torus Tr = TheElSurf->Torus();
-      if (isUClosed) {
+      //
+      // if isUClosed = true and U trim does not coinside with first period of torus, 
+      // method CheckAndSegment shifts position of U seam boundary of surface.
+      // probably bug? So, for this case we must build not periodic surface. 
+      Standard_Boolean isUFirstPeriod = !(UFirst < 0. || ULast > 2.*M_PI);
+      Standard_Boolean isVFirstPeriod = !(VFirst < 0. || VLast > 2.*M_PI);
+      if (isUClosed && isUFirstPeriod) {
         Convert_TorusToBSplineSurface Convert (Tr, VFirst, VLast, 
           Standard_False);
         TheSurface = BSplineSurfaceBuilder (Convert);
@@ -490,7 +487,7 @@ Handle(Geom_BSplineSurface) GeomConvert::SurfaceToBSplineSurface
           TheSurface->CheckAndSegment(UFirst, ULast, VFirst, VLast);
         }
       }
-      else if (Strim->IsVClosed()) {
+      else if (Strim->IsVClosed() && isVFirstPeriod) {
         Convert_TorusToBSplineSurface Convert (Tr, UFirst, ULast);
         TheSurface = BSplineSurfaceBuilder (Convert);
         Standard_Integer aNbK = TheSurface->NbVKnots();

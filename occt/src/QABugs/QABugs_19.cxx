@@ -32,22 +32,15 @@
 #include <gp_Ax1.hxx>
 #include <gp_Pnt2d.hxx>
 #include <gp_Quaternion.hxx>
-#include <Image_Color.hxx>
-#include <Image_PixMap.hxx>
-#include <Message.hxx>
 #include <Message_Messenger.hxx>
 #include <Message_PrinterOStream.hxx>
 #include <NCollection_Handle.hxx>
-#include <NCollection_IncAllocator.hxx>
 #include <NCollection_Map.hxx>
 #include <OSD_Parallel.hxx>
 #include <OSD_PerfMeter.hxx>
 #include <OSD_Timer.hxx>
-#include <OSD_ThreadPool.hxx>
 #include <Precision.hxx>
-#include <Prs3d_ShadingAspect.hxx>
 #include <Prs3d_Text.hxx>
-#include <SelectMgr_Filter.hxx>
 #include <Standard_Version.hxx>
 #include <StdSelect_BRepOwner.hxx>
 #include <TCollection_HAsciiString.hxx>
@@ -60,6 +53,13 @@
 #include <XmlDrivers_DocumentStorageDriver.hxx>
 #include <TDataStd_Real.hxx>
 #include <Standard_Atomic.hxx>
+#include <Draw.hxx>
+#include <GeomInt_IntSS.hxx>
+#include <BRepBuilderAPI_MakeEdge.hxx>
+#include <BRepBuilderAPI_MakeWire.hxx>
+#include <GeomAdaptor_Curve.hxx>
+#include <Extrema_FuncPSNorm.hxx>
+#include <BRepAdaptor_Curve.hxx>
 
 #ifdef HAVE_TBB
   Standard_DISABLE_DEPRECATION_WARNINGS
@@ -289,7 +289,6 @@ Standard_Integer OCC22595 (Draw_Interpretor& di, Standard_Integer /*argc*/, cons
 }
 
 #include <TopoDS_Face.hxx>
-#include <TopoDS_Face.hxx>
 #include <TopoDS.hxx>
 #include <BRepBuilderAPI_Transform.hxx>
 #include <BRepExtrema_DistShapeShape.hxx>
@@ -389,7 +388,6 @@ static Standard_Integer OCC23774(Draw_Interpretor& di, Standard_Integer n, const
 
 #include <GeomConvert_ApproxSurface.hxx>
 #include <Geom_BSplineSurface.hxx>
-#include <Draw.hxx>
 #include <OSD_Thread.hxx>
 
 struct GeomConvertTest_Data
@@ -464,8 +462,6 @@ static Standard_Integer OCC23952sweep (Draw_Interpretor& di, Standard_Integer ar
 
   return 0;
 }
-
-#include <GeomInt_IntSS.hxx>
 
 struct GeomIntSSTest_Data
 {
@@ -559,11 +555,8 @@ static Standard_Integer OCC23683 (Draw_Interpretor& di, Standard_Integer argc,co
 }
 
 #include <gp_Ax1.hxx>
-#include <gp_Ax22d.hxx>
 #include <Geom_Plane.hxx>
 #include <Geom2d_Circle.hxx>
-#include <Geom2d_TrimmedCurve.hxx>
-#include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepPrimAPI_MakeRevol.hxx>
 #include <Geom2d_OffsetCurve.hxx>
 
@@ -617,7 +610,6 @@ static int test_offset(Draw_Interpretor& di, Standard_Integer argc, const char**
 
 #include <Geom_Curve.hxx>
 #include <Geom_Surface.hxx>
-#include <Precision.hxx>
 #include <ShapeConstruct_ProjectCurveOnSurface.hxx>
 //=======================================================================
 //function : OCC24008
@@ -654,7 +646,6 @@ static Standard_Integer OCC24008 (Draw_Interpretor& di, Standard_Integer argc, c
   return 0;
 }
 
-#include <GeomAdaptor_Surface.hxx>
 #include <Draw.hxx>
 //=======================================================================
 //function : OCC23945
@@ -1316,7 +1307,6 @@ static Standard_Integer OCC24086 (Draw_Interpretor& di, Standard_Integer argc, c
 }
 
 #include <Geom_Circle.hxx>
-#include <GeomAdaptor_Curve.hxx>
 #include <Extrema_ExtPC.hxx>
 #include <gp_Cylinder.hxx>
 #include <ElSLib.hxx>
@@ -1348,7 +1338,6 @@ static Standard_Integer OCC24945 (Draw_Interpretor& di, Standard_Integer argc, c
   return 0;
 }
 
-#include <Extrema_FuncPSNorm.hxx>
 #include <math_FunctionSetRoot.hxx>
 #include <math_Vector.hxx>
 #include <BRepBuilderAPI_MakeVertex.hxx>
@@ -1368,7 +1357,7 @@ static Standard_Integer OCC24137 (Draw_Interpretor& theDI, Standard_Integer theN
   const TopoDS_Shape aShapeV = DBRep::Get (aVertName);
   const Standard_Real aUFrom = Atof (theArgv[anArgIter++]);
   const Standard_Real aVFrom = Atof (theArgv[anArgIter++]);
-  const Standard_Integer aNbIts = (anArgIter < theNArg) ? atol (theArgv[anArgIter++]) : 100;
+  const Standard_Integer aNbIts = (anArgIter < theNArg) ? Draw::Atoi (theArgv[anArgIter++]) : 100;
   if (aShapeF.IsNull() || aShapeF.ShapeType() != TopAbs_FACE)
     {
       std::cout << "Error: " << aFaceName << " shape is null / not a face" << std::endl;
@@ -1512,9 +1501,7 @@ static Standard_Integer OCC24271 (Draw_Interpretor& di,
   di << "Checking " #val1 " == Standard_True" << \
         ((val1) == Standard_True ? ": OK\n" : ": Error\n")
 
-#include <GeomInt_IntSS.hxx>
 #include <Geom_ConicalSurface.hxx>
-#include <Standard_ErrorHandler.hxx>
 
 namespace {
   static Handle(Geom_ConicalSurface) CreateCone (const gp_Pnt& theLoc,
@@ -1685,7 +1672,6 @@ struct QABugs_NHandleClass
 };
 
 #include <XCAFDoc_ColorTool.hxx>
-#include <STEPControl_StepModelType.hxx>
 #include <STEPCAFControl_Writer.hxx>
 static Standard_Integer OCC23951 (Draw_Interpretor& di, Standard_Integer argc, const char ** argv)
 {
@@ -2201,8 +2187,6 @@ static Standard_Integer OCC25004 (Draw_Interpretor& theDI,
 }
 
 #include <OSD_Environment.hxx>
-#include <Plugin.hxx>
-#include <Plugin_Macro.hxx>
 #include <Resource_Manager.hxx>
 
 #define THE_QATEST_DOC_FORMAT       "My Proprietary Format"
@@ -2758,7 +2742,7 @@ static Standard_Integer OCC29935(Draw_Interpretor& ,
   // Generate data;
   Standard_Integer aSize = Draw::Atoi (theArgv[1]);
 
-  opencascade::std::mt19937 aGen (42);
+  std::mt19937 aGen (42);
   NCollection_Array2<double> aMat1     (0, aSize - 1, 0, aSize - 1);
   NCollection_Array2<double> aMat2     (0, aSize - 1, 0, aSize - 1);
   NCollection_Array2<double> aMatResRef(0, aSize - 1, 0, aSize - 1);
@@ -2940,7 +2924,6 @@ static Standard_Integer OCC25413 (Draw_Interpretor& di, Standard_Integer narg , 
 
 #include <BOPAlgo_PaveFiller.hxx>
 //
-#include <BRepAlgoAPI_BooleanOperation.hxx>
 #include <BRepAlgoAPI_Common.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
@@ -3128,7 +3111,6 @@ static Standard_Integer OCC25545 (Draw_Interpretor& di,
 //purpose  :
 //=======================================================================
 #include <BRepMesh_GeomTool.hxx>
-#include <BRepAdaptor_Curve.hxx>
 #include <Geom_TrimmedCurve.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepAdaptor_Surface.hxx>
@@ -3855,9 +3837,7 @@ static Standard_Integer OCC25574 (Draw_Interpretor& theDI, Standard_Integer /*ar
   return 0;
 }
 
-#include <TColGeom_Array1OfBSplineCurve.hxx>
 #include <TColStd_Array1OfReal.hxx>
-#include <TColGeom_HArray1OfBSplineCurve.hxx>
 #include <GeomConvert.hxx>
 
 //=======================================================================
@@ -3934,7 +3914,6 @@ static Standard_Integer OCC26448 (Draw_Interpretor& theDI, Standard_Integer, con
 //function : OCC26407
 //purpose  :
 //=======================================================================
-#include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <TCollection_AsciiString.hxx>
@@ -4329,9 +4308,6 @@ static Standard_Integer OCC26313(Draw_Interpretor& di,Standard_Integer n,const c
 //purpose  : check number of intersection points
 //=======================================================================
 #include <BRepAdaptor_Curve.hxx>
-#include <BRepAdaptor_Surface.hxx>
-#include <BRepAdaptor_Curve.hxx>
-#include <BRepAdaptor_Surface.hxx>
 #include <IntCurveSurface_HInter.hxx>
 Standard_Integer OCC26525 (Draw_Interpretor& di, 
                            Standard_Integer n, 
@@ -5267,6 +5243,79 @@ static Standard_Integer OCC29412 (Draw_Interpretor& /*theDI*/, Standard_Integer 
   return 0;
 }
 
+#include <math_FRPR.hxx>
+#include <math_BFGS.hxx>
+//=======================================================================
+//function : OCC30492
+//purpose  : BFGS and FRPR fail if starting point is exactly the minimum.
+//=======================================================================
+// Function is:
+// f(x) = x^2
+class SquareFunction : public math_MultipleVarFunctionWithGradient
+{
+public:
+  SquareFunction()
+  {}
+
+  virtual Standard_Integer NbVariables() const
+  {
+    return 1;
+  }
+  virtual Standard_Boolean Value(const math_Vector& X,
+                                 Standard_Real&     F)
+  {
+    const Standard_Real x = X(1);
+    F = x * x;
+
+    return Standard_True;
+  }
+  virtual Standard_Boolean Gradient(const math_Vector& X,
+                                    math_Vector&       G)
+  {
+    const Standard_Real x = X(1);
+    G(1) = 2 * x;
+
+    return Standard_True;
+  }
+  virtual Standard_Boolean Values(const math_Vector& X,
+                                  Standard_Real&     F,
+                                  math_Vector&       G)
+  {
+    Value(X, F);
+    Gradient(X, G);
+
+    return Standard_True;
+  }
+
+private:
+};
+
+static Standard_Integer OCC30492(Draw_Interpretor& /*theDI*/,
+                                 Standard_Integer  /*theNArg*/,
+                                 const char**      /*theArgs*/)
+{
+  SquareFunction aFunc;
+  math_Vector aStartPnt(1, 1);
+  aStartPnt(1) = 0.0;
+
+  // BFGS and FRPR fail when if starting point is exactly the minimum.
+  math_FRPR aFRPR(aFunc, Precision::Confusion());
+  aFRPR.Perform(aFunc, aStartPnt);
+  if (!aFRPR.IsDone())
+    std::cout << "OCC30492: Error: FRPR optimization is not done." << std::endl;
+  else
+    std::cout << "OCC30492: OK: FRPR optimization is done." << std::endl;
+
+  math_BFGS aBFGS(1, Precision::Confusion());
+  aBFGS.Perform(aFunc, aStartPnt);
+  if (!aBFGS.IsDone())
+    std::cout << "OCC30492: Error: BFGS optimization is not done." << std::endl;
+  else
+    std::cout << "OCC30492: OK: BFGS optimization is done." << std::endl;
+
+  return 0;
+}
+
 //========================================================================
 //function : Commands_19
 //purpose  :
@@ -5390,5 +5439,8 @@ void QABugs::Commands_19(Draw_Interpretor& theCommands) {
                   "OCC28310: Tests validness of iterator in AIS_InteractiveContext after an removing object from it",
                   __FILE__, OCC28310, group);
   theCommands.Add("OCC29412", "OCC29412 [nb cycles]: test display / remove of many small objects", __FILE__, OCC29412, group);
+  theCommands.Add ("OCC30492",
+                   "OCC30492: Checks whether BFGS and FRPR fail when starting point is exact minimum.",
+                   __FILE__, OCC30492, group);
   return;
 }

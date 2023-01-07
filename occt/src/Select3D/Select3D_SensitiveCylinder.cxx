@@ -25,12 +25,14 @@ Select3D_SensitiveCylinder::Select3D_SensitiveCylinder (const Handle(SelectMgr_E
                                                         const Standard_Real theBottomRad,
                                                         const Standard_Real theTopRad,
                                                         const Standard_Real    theHeight,
-                                                        const gp_Trsf& theTrsf)
+                                                        const gp_Trsf& theTrsf,
+                                                        const Standard_Boolean theIsHollow)
 : Select3D_SensitiveEntity (theOwnerId),
   myTrsf (theTrsf),
   myBottomRadius (theBottomRad),
   myTopRadius (theTopRad),
-  myHeight (theHeight)
+  myHeight (theHeight),
+  myIsHollow (theIsHollow)
 {
 }
 
@@ -46,14 +48,14 @@ Standard_Boolean Select3D_SensitiveCylinder::Matches (SelectBasics_SelectingVolu
     if (!theMgr.IsOverlapAllowed())
     {
       bool isInside = true;
-      return theMgr.OverlapsCylinder (myBottomRadius, myTopRadius, myHeight, myTrsf, &isInside) && isInside;
+      return theMgr.OverlapsCylinder (myBottomRadius, myTopRadius, myHeight, myTrsf, myIsHollow, &isInside) && isInside;
     }
     else
     {
-      return theMgr.OverlapsCylinder (myBottomRadius, myTopRadius, myHeight, myTrsf, NULL);
+      return theMgr.OverlapsCylinder (myBottomRadius, myTopRadius, myHeight, myTrsf, myIsHollow, NULL);
     }
   }
-  if (!theMgr.OverlapsCylinder (myBottomRadius, myTopRadius, myHeight, myTrsf, thePickResult))
+  if (!theMgr.OverlapsCylinder (myBottomRadius, myTopRadius, myHeight, myTrsf, myIsHollow, thePickResult))
   {
     return false;
   }
@@ -81,17 +83,14 @@ Handle(Select3D_SensitiveEntity) Select3D_SensitiveCylinder::GetConnected()
 Select3D_BndBox3d Select3D_SensitiveCylinder::BoundingBox()
 {
   Standard_Real aMaxRad = Max (myBottomRadius, myTopRadius);
-  gp_Pnt aCenterBottom (0, 0, 0);
-  gp_Pnt aCenterTop (0, 0, myHeight);
-  aCenterBottom.Transform (myTrsf);
-  aCenterTop.Transform (myTrsf);
-  const SelectMgr_Vec3 aMinPnt (Min (aCenterBottom.X(), aCenterTop.X()) - aMaxRad,
-                                Min (aCenterBottom.Y(), aCenterTop.Y()) - aMaxRad,
-                                Min (aCenterBottom.Z(), aCenterTop.Z()) - aMaxRad);
-  const SelectMgr_Vec3 aMaxPnt (Max (aCenterBottom.X(), aCenterTop.X()) + aMaxRad,
-                                Max (aCenterBottom.Y(), aCenterTop.Y()) + aMaxRad,
-                                Max (aCenterBottom.Z(), aCenterTop.Z()) + aMaxRad);
-  return Select3D_BndBox3d (aMinPnt, aMaxPnt);
+  Graphic3d_Mat4d aTrsf;
+  myTrsf.GetMat4 (aTrsf);
+
+  Select3D_BndBox3d aBox (SelectMgr_Vec3 (-aMaxRad, -aMaxRad, 0),
+                          SelectMgr_Vec3 (aMaxRad, aMaxRad, myHeight));
+  aBox.Transform (aTrsf);
+
+  return aBox;
 }
 
 //==================================================

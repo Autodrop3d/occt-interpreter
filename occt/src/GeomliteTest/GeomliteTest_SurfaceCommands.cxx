@@ -19,8 +19,6 @@
 #include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
 
-#include <GeomAbs_SurfaceType.hxx>
-#include <GeomAbs_IsoType.hxx>
 #include <GeomAbs_Shape.hxx>
 
 #include <Geom_Plane.hxx>
@@ -28,8 +26,6 @@
 #include <Geom_ConicalSurface.hxx>
 #include <Geom_SphericalSurface.hxx>
 #include <Geom_ToroidalSurface.hxx>
-#include <Geom_BezierSurface.hxx>
-#include <Geom_BSplineSurface.hxx>
 #include <Geom_SurfaceOfLinearExtrusion.hxx>
 #include <Geom_SurfaceOfRevolution.hxx>
 #include <Geom_RectangularTrimmedSurface.hxx>
@@ -38,17 +34,10 @@
 
 #include <Geom_TrimmedCurve.hxx>
 #include <Geom_OffsetCurve.hxx>
-#include <Geom_BezierCurve.hxx>
-#include <Geom_BSplineCurve.hxx>
 
 #include <Geom2d_TrimmedCurve.hxx>
 #include <Geom2d_OffsetCurve.hxx>
 
-#include <GeomAdaptor_Surface.hxx>
-#include <GeomAdaptor_Curve.hxx>
-#include <Geom2dAdaptor_Curve.hxx>
-
-#include <TColGeom_Array2OfBezierSurface.hxx>
 #include <TColgp_Array1OfPnt.hxx>
 #include <TColgp_Array2OfPnt.hxx>
 #include <TColStd_Array1OfReal.hxx>
@@ -56,7 +45,6 @@
 #include <TColStd_Array1OfInteger.hxx>
 #include <TColStd_HArray1OfInteger.hxx>
 #include <TColStd_HArray1OfReal.hxx>
-#include <TColStd_HArray2OfReal.hxx>
 
 #include <ElSLib.hxx>
 #include <ElCLib.hxx>
@@ -70,10 +58,14 @@
 #include <Geom2dConvert_BSplineCurveToBezierCurve.hxx>
 #include <GeomLProp_SLProps.hxx>
 
+#include <GeomConvert_SurfToAnaSurf.hxx>
+#include <GeomConvert_CurveToAnaCurve.hxx>
+#include <GeomConvert_ConvType.hxx>
+
+#include <DrawTrSurf_BezierSurface.hxx>
+#include <DrawTrSurf_BSplineSurface.hxx>
 #include <GeomConvert_ApproxSurface.hxx>
 #include <GeomLib_Tool.hxx>
-#include <TopoDS_Shape.hxx>
-#include <DBRep.hxx>
 #include <Geom_Curve.hxx>
 #include <Message.hxx>
 
@@ -528,6 +520,111 @@ static Standard_Integer converting(Draw_Interpretor& , Standard_Integer n, const
   return 0;
 }
 
+//=======================================================================
+//function : converting to canonical
+//purpose  :
+//=======================================================================
+
+static Standard_Integer tocanon(Draw_Interpretor& di, Standard_Integer n, const char ** a)
+{
+  if (n < 3) return 1;
+
+  GeomConvert_ConvType aConvType = GeomConvert_Simplest;
+  GeomAbs_CurveType aCurv = GeomAbs_Line;
+  GeomAbs_SurfaceType aSurf = GeomAbs_Plane;
+  if (n > 4)
+  {
+    if (strcmp(a[4], "sim") == 0) {
+      aConvType = GeomConvert_Simplest;
+    }
+    else if (strcmp(a[4], "gap") == 0) {
+      aConvType = GeomConvert_MinGap;
+    }
+    else if (strcmp(a[4], "lin") == 0) {
+      aConvType = GeomConvert_Target;
+      aCurv = GeomAbs_Line;
+    }
+    else if (strcmp(a[4], "cir") == 0) {
+      aConvType = GeomConvert_Target;
+      aCurv = GeomAbs_Circle;
+    }
+    else if (strcmp(a[4], "ell") == 0) {
+      aConvType = GeomConvert_Target;
+      aCurv = GeomAbs_Ellipse;
+    }
+    else if (strcmp(a[4], "pln") == 0) {
+      aConvType = GeomConvert_Target;
+      aSurf = GeomAbs_Plane;
+    }
+    else if (strcmp(a[4], "cyl") == 0) {
+      aConvType = GeomConvert_Target;
+      aSurf = GeomAbs_Cylinder;
+    }
+    else if (strcmp(a[4], "con") == 0) {
+      aConvType = GeomConvert_Target;
+      aSurf = GeomAbs_Cone;
+    }
+    else if (strcmp(a[4], "sph") == 0) {
+      aConvType = GeomConvert_Target;
+      aSurf = GeomAbs_Sphere;
+    }
+    else if (strcmp(a[4], "tor") == 0) {
+      aConvType = GeomConvert_Target;
+      aSurf = GeomAbs_Torus;
+    }
+  }
+
+  Standard_Real tol = Precision::Confusion();
+  if (n > 3)
+  {
+    tol = Draw::Atof(a[3]);
+  }
+
+  Handle(Geom_Curve) GC = DrawTrSurf::GetCurve(a[2]);
+  if (GC.IsNull()) {
+    Handle(Geom_Surface) GS = DrawTrSurf::GetSurface(a[2]);
+    if (GS.IsNull()) {
+      return 1;
+    }
+    else {
+      GeomConvert_SurfToAnaSurf aSurfToAna(GS);
+      aSurfToAna.SetConvType(aConvType);
+      if(aConvType == GeomConvert_Target)
+        aSurfToAna.SetTarget(aSurf);
+      Handle(Geom_Surface) anAnaSurf = aSurfToAna.ConvertToAnalytical(tol);
+      if (!anAnaSurf.IsNull())
+      {
+        DrawTrSurf::Set(a[1], anAnaSurf);
+        Standard_Real aGap = aSurfToAna.Gap();
+        di << "Gap = " << aGap << "\n";
+      }
+      else
+        di << "Conversion failed" << "\n";
+    }
+  }
+  else {
+    GeomConvert_CurveToAnaCurve aCurvToAna(GC);
+    aCurvToAna.SetConvType(aConvType);
+    if (aConvType == GeomConvert_Target)
+      aCurvToAna.SetTarget(aCurv);
+
+    Handle(Geom_Curve) anAnaCurv;
+    Standard_Real tf = GC->FirstParameter(), tl = GC->LastParameter(), ntf, ntl;
+    Standard_Boolean isdone = aCurvToAna.ConvertToAnalytical(tol, anAnaCurv, tf, tl, ntf, ntl);
+    if (isdone)
+    {
+      anAnaCurv = new Geom_TrimmedCurve(anAnaCurv, ntf, ntl);
+      DrawTrSurf::Set(a[1], anAnaCurv);
+      Standard_Real aGap = aCurvToAna.Gap();
+      di << "Gap = " << aGap << "\n";
+    }
+    else
+      di << "Conversion failed" << "\n";
+  }
+
+  return 0;
+}
+
 
 //=======================================================================
 //function : tobezier
@@ -934,6 +1031,36 @@ static Standard_Integer value (Draw_Interpretor& ,
 }
 
 //=======================================================================
+//function : derivative
+//purpose  :
+//=======================================================================
+
+static Standard_Integer derivative(Draw_Interpretor&,
+                                   Standard_Integer theArgc,
+                                   const char** theArgv)
+{
+  if (theArgc != 9)
+    return 1;
+
+  Handle(Geom_Surface) aSurf = DrawTrSurf::GetSurface(theArgv[1]);
+  if (aSurf.IsNull())
+    return 1;
+
+  Standard_Real aU = Draw::Atof(theArgv[2]);
+  Standard_Real aV = Draw::Atof(theArgv[3]);
+  Standard_Integer aNu = Draw::Atoi(theArgv[4]);
+  Standard_Integer aNv = Draw::Atoi(theArgv[5]);
+
+  gp_Vec aDeriv = aSurf->DN(aU, aV, aNu, aNv);
+
+  Draw::Set(theArgv[6], aDeriv.X());
+  Draw::Set(theArgv[7], aDeriv.Y());
+  Draw::Set(theArgv[8], aDeriv.Z());
+
+  return 0;
+}
+
+//=======================================================================
 //function : movepole
 //purpose  : 
 //=======================================================================
@@ -1256,12 +1383,12 @@ static Standard_Integer sfindp (Draw_Interpretor& , Standard_Integer n, const ch
   // Draw_Display d = dout.MakeDisplay(view);
   
   // if( !BSpline) {
-  //   Handle(DrawTrSurf_BezierSurface) DBz = 
+  //   Handle(DrawTrSurf_BezierSurface) DBz =
   //     new DrawTrSurf_BezierSurface(GBz);
   //   DBz->FindPole( x, y, d, 5, UIndex,VIndex);
   // }
   // else {
-  //   Handle(DrawTrSurf_BSplineSurface) DBs = 
+  //   Handle(DrawTrSurf_BSplineSurface) DBs =
   //     new DrawTrSurf_BSplineSurface(GBs);
   //   DBs->FindPole( x, y, d, 5, UIndex,VIndex);
   // }
@@ -1690,6 +1817,11 @@ void  GeomliteTest::SurfaceCommands(Draw_Interpretor& theCommands)
 		  __FILE__,
 		  converting,g);
 
+  theCommands.Add("tocanon",
+    "tocanon result c3d/surf [tol [sim gap lin cir ell pln cyl con sph tor]]",
+    __FILE__,
+    tocanon, g);
+
   theCommands.Add("tobezier",
 		  "tobezier result c2d/c3d/surf [ufirst, ulast / ufirst, ulast, vfirst, vlast]",
 		  __FILE__,
@@ -1842,6 +1974,15 @@ void  GeomliteTest::SurfaceCommands(Draw_Interpretor& theCommands)
 		  "svalue surfname U V X Y Z [DUX DUY DUZ DVX DVY DVZ [D2UX D2UY D2UZ D2VX D2VY D2VZ D2UVX D2UVY D2UVZ]]",
 		  __FILE__,
 		  value,g);
+
+  theCommands.Add("sderivative",
+    "sderivative surfname U V NU NV X Y Z\n"
+    "    surfname : name of surface\n"
+    "    U V      : coordinates on probe point on surface\n"
+    "    NU NV    : order of derivative along U and V\n"
+    "    X Y Z    : output coordinates of the derivative",
+    __FILE__,
+    derivative, g);
 
   theCommands.Add("parameters",
 		  "parameters surf/curve X Y [Z] Tol U [V] : {X Y Z} point, {U V} output parameter(s)",

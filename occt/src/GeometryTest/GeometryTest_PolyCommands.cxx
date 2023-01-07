@@ -147,7 +147,7 @@ static Standard_Integer polygon2d(Draw_Interpretor& di, Standard_Integer n, cons
 static Standard_Integer shnodes(Draw_Interpretor& , Standard_Integer n, const char** a)
 {
   // if (n != 2) return 1;
-  // Handle(DrawTrSurf_Triangulation) T 
+  // Handle(DrawTrSurf_Triangulation) T
   //   = Handle(DrawTrSurf_Triangulation)::DownCast(Draw::Get(a[1]));
 
   // if (!T.IsNull()) {
@@ -171,7 +171,7 @@ static Standard_Integer shtriangles(Draw_Interpretor& , Standard_Integer n, cons
 {
   // if (n != 2) return 1;
   
-  // Handle(DrawTrSurf_Triangulation) T 
+  // Handle(DrawTrSurf_Triangulation) T
   //   = Handle(DrawTrSurf_Triangulation)::DownCast(Draw::Get(a[1]));
   // Standard_Boolean SHOWTRIANGLES = T->ShowTriangles();
   // T->ShowTriangles(!SHOWTRIANGLES);

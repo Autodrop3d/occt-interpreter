@@ -23,17 +23,16 @@
 #include <IntPatch_ImpImpIntersection.hxx>
 #include <IntPatch_ImpPrmIntersection.hxx>
 #include <IntPatch_PrmPrmIntersection.hxx>
-#include <IntPatch_WLine.hxx>
 #include <IntPatch_WLineTool.hxx>
 
 #include <ProjLib_ProjectOnPlane.hxx>
 #include <Geom_Plane.hxx>
 #include <GeomAdaptor_Surface.hxx>
-#include <GeomAdaptor_Curve.hxx>
 #include <ProjLib_ProjectedCurve.hxx>
 #include <Geom2dInt_GInter.hxx>
 #include <Geom2dAdaptor_Curve.hxx>
 #include <ProjLib.hxx>
+
 
 //======================================================================
 // function: SequenceOfLine
@@ -125,7 +124,7 @@ void IntPatch_Intersection::SetTolerances(const Standard_Real TolArc,
   if(myTolArc>0.5) myTolArc=0.5;
   if(myTolTang>0.5) myTolTang=0.5;  
   if(myFleche<1.0e-3) myFleche=1e-3;
-  if(myUVMaxStep<1.0e-3) myUVMaxStep=1e-3;
+  //if(myUVMaxStep<1.0e-3) myUVMaxStep=1e-3;
   if(myFleche>10) myFleche=10;
   if(myUVMaxStep>0.5) myUVMaxStep=0.5;
 }
@@ -209,26 +208,18 @@ void IntPatch_Intersection::Perform(const Handle(Adaptor3d_Surface)&  S1,
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 #include <TColgp_Array1OfXYZ.hxx>
-#include <TColgp_Array1OfPnt.hxx>
 #include <TColgp_SequenceOfPnt.hxx>
 #include <Extrema_ExtPS.hxx>
 #include <Extrema_POnSurf.hxx>
 #include <Geom2d_Curve.hxx>
 #include <Geom2dAPI_InterCurveCurve.hxx>
-#include <GeomAdaptor.hxx>
-#include <GeomAdaptor_Curve.hxx>
-#include <GeomAdaptor_Curve.hxx>
-#include <GeomAdaptor_Surface.hxx>
-#include <GeomAdaptor_Surface.hxx>
 #include <Geom_Plane.hxx>
 #include <ProjLib_ProjectOnPlane.hxx>
 #include <GeomProjLib.hxx>
 #include <ElCLib.hxx>
 #include <Geom_TrimmedCurve.hxx>
 #include <Geom_Surface.hxx>
-#include <Geom_SurfaceOfLinearExtrusion.hxx>
 #include <Geom_OffsetSurface.hxx>
-#include <Geom_SurfaceOfRevolution.hxx>
 #include <Geom_RectangularTrimmedSurface.hxx>
 
 //===============================================================
@@ -1023,7 +1014,6 @@ void IntPatch_Intersection::Perform(const Handle(Adaptor3d_Surface)&  theS1,
     myFleche = 0.01;
   if(myUVMaxStep <= Precision::PConfusion())
     myUVMaxStep = 0.01;
-    
   done = Standard_False;
   spnt.Clear();
   slin.Clear();
@@ -1254,15 +1244,16 @@ void IntPatch_Intersection::ParamParamPerfom(const Handle(Adaptor3d_Surface)&  t
                                              const GeomAbs_SurfaceType typs2)
 {
   IntPatch_PrmPrmIntersection interpp;
+  //
   if(!theD1->DomainIsInfinite() && !theD2->DomainIsInfinite())
   {
     Standard_Boolean ClearFlag = Standard_True;
     if(!ListOfPnts.IsEmpty())
     {
-      interpp.Perform(theS1,theD1,theS2,theD2,TolTang,TolArc,myFleche,myUVMaxStep, ListOfPnts);
+      interpp.Perform(theS1,theD1,theS2,theD2,TolTang,TolArc,myFleche, myUVMaxStep, ListOfPnts);
       ClearFlag = Standard_False;
     }
-    interpp.Perform(theS1,theD1,theS2,theD2,TolTang,TolArc,myFleche,myUVMaxStep,ClearFlag);
+    interpp.Perform(theS1,theD1,theS2,theD2,TolTang,TolArc,myFleche, myUVMaxStep,ClearFlag);
   }
   else if((theD1->DomainIsInfinite()) ^ (theD2->DomainIsInfinite()))
   {
@@ -1275,7 +1266,7 @@ void IntPatch_Intersection::ParamParamPerfom(const Handle(Adaptor3d_Surface)&  t
       const Standard_Real AP = Max(MU, MV);
       Handle(Adaptor3d_Surface) SS;
       FUN_TrimInfSurf(pMinXYZ, pMaxXYZ, theS1, AP, SS);
-      interpp.Perform(SS,theD1,theS2,theD2,TolTang,TolArc,myFleche,myUVMaxStep);
+      interpp.Perform(SS,theD1,theS2,theD2,TolTang,TolArc,myFleche, myUVMaxStep);
     }
     else
     {
@@ -1285,7 +1276,7 @@ void IntPatch_Intersection::ParamParamPerfom(const Handle(Adaptor3d_Surface)&  t
       const Standard_Real AP = Max(MU, MV);
       Handle(Adaptor3d_Surface) SS;
       FUN_TrimInfSurf(pMinXYZ, pMaxXYZ, theS2, AP, SS);
-      interpp.Perform(theS1, theD1, SS, theD2,TolTang, TolArc,myFleche,myUVMaxStep);
+      interpp.Perform(theS1, theD1, SS, theD2,TolTang, TolArc,myFleche, myUVMaxStep);
     }
   }//(theD1->DomainIsInfinite()) ^ (theD2->DomainIsInfinite())
   else
@@ -1324,7 +1315,7 @@ void IntPatch_Intersection::ParamParamPerfom(const Handle(Adaptor3d_Surface)&  t
       Handle(Adaptor3d_Surface) nS1 = theS1;
       Handle(Adaptor3d_Surface) nS2 = theS2;
       FUN_TrimBothSurf(theS1,typs1,theS2,typs2,1.e+8,nS1,nS2);
-      interpp.Perform(nS1,theD1,nS2,theD2,TolTang,TolArc,myFleche,myUVMaxStep);
+      interpp.Perform(nS1,theD1,nS2,theD2,TolTang,TolArc,myFleche, myUVMaxStep);
     }// 'NON - COLLINEAR LINES'
   }// both domains are infinite
 
@@ -1791,3 +1782,203 @@ void IntPatch_Intersection::Dump(const Standard_Integer /*Mode*/,
 
 #endif 
 }
+
+//=======================================================================
+//function : CheckSingularPoints
+//purpose  : 
+//=======================================================================
+Standard_Boolean IntPatch_Intersection::CheckSingularPoints(
+  const Handle(Adaptor3d_Surface)&  theS1,
+  const Handle(Adaptor3d_TopolTool)& theD1,
+  const Handle(Adaptor3d_Surface)&  theS2,
+  Standard_Real& theDist)
+{
+  theDist = Precision::Infinite();
+  Standard_Boolean isSingular = Standard_False;
+  if (theS1 == theS2)
+  {
+    return isSingular;
+  }
+  //
+  const Standard_Integer aNbBndPnts = 5;
+  const Standard_Real aTol = Precision::Confusion();
+  Standard_Integer i;
+  theD1->Init();
+  Standard_Boolean isU = Standard_True;
+  for (; theD1->More(); theD1->Next())
+  {
+    Handle(Adaptor2d_Curve2d) aBnd = theD1->Value();
+    Standard_Real pinf = aBnd->FirstParameter(), psup = aBnd->LastParameter();
+    if (Precision::IsNegativeInfinite(pinf) || Precision::IsPositiveInfinite(psup))
+    {
+      continue;
+    }
+    Standard_Real t, dt = (psup - pinf) / (aNbBndPnts - 1);
+    gp_Pnt2d aP1;
+    gp_Vec2d aDir;
+    aBnd->D1((pinf + psup) / 2., aP1, aDir);
+    if (Abs(aDir.X()) > Abs(aDir.Y()))
+      isU = Standard_True;
+    else
+      isU = Standard_False;
+    gp_Pnt aPP1;
+    gp_Vec aDU, aDV;
+    Standard_Real aD1NormMax = 0.;
+    gp_XYZ aPmid(0., 0., 0.);
+    Standard_Integer aNb = 0;
+    for (t = pinf; t <= psup; t += dt)
+    {
+      aP1 = aBnd->Value(t);
+      theS1->D1(aP1.X(), aP1.Y(), aPP1, aDU, aDV);
+      if (isU)
+        aD1NormMax = Max(aD1NormMax, aDU.Magnitude());
+      else
+        aD1NormMax = Max(aD1NormMax, aDV.Magnitude());
+
+      aPmid += aPP1.XYZ();
+      aNb++;
+
+      if (aD1NormMax > aTol)
+        break;
+    }
+
+    if (aD1NormMax <= aTol)
+    {
+      //Singular point aPP1;
+      aPmid /= aNb;
+      aPP1.SetXYZ(aPmid);
+      Standard_Real aTolU = Precision::PConfusion(), aTolV = Precision::PConfusion();
+      Extrema_ExtPS aProj(aPP1, *theS2.get(), aTolU, aTolV, Extrema_ExtFlag_MIN);
+
+      if (aProj.IsDone())
+      {
+        Standard_Integer aNbExt = aProj.NbExt();
+        for (i = 1; i <= aNbExt; ++i)
+        {
+          theDist = Min(theDist, aProj.SquareDistance(i));
+        }
+      }
+
+    }
+  }
+  if (!Precision::IsInfinite(theDist))
+  {
+    theDist = Sqrt(theDist);
+    isSingular = Standard_True;
+  }
+
+  return isSingular;
+
+}
+//=======================================================================
+//function : DefineUVMaxStep
+//purpose  : 
+//=======================================================================
+Standard_Real IntPatch_Intersection::DefineUVMaxStep(
+  const Handle(Adaptor3d_Surface)&  theS1,
+  const Handle(Adaptor3d_TopolTool)& theD1,
+  const Handle(Adaptor3d_Surface)&  theS2,
+  const Handle(Adaptor3d_TopolTool)& theD2)
+{
+  Standard_Real anUVMaxStep = 0.001;
+  Standard_Real aDistToSing1 = Precision::Infinite();
+  Standard_Real aDistToSing2 = Precision::Infinite();
+  const Standard_Real aTolMin = Precision::Confusion(), aTolMax = 1.e-5;
+  if (theS1 != theS2)
+  {
+    Standard_Boolean isSing1 = CheckSingularPoints(theS1, theD1, theS2, aDistToSing1);
+    if (isSing1)
+    {
+      if (aDistToSing1 > aTolMin && aDistToSing1 < aTolMax)
+      {
+        anUVMaxStep = 0.0001;
+      }
+      else
+      {
+        isSing1 = Standard_False;
+      }
+    }
+    if (!isSing1)
+    {
+      Standard_Boolean isSing2 = CheckSingularPoints(theS2, theD2, theS1, aDistToSing2);
+      if (isSing2)
+      {
+        if (aDistToSing2 > aTolMin && aDistToSing2 < aTolMax)
+        {
+          anUVMaxStep = 0.0001;
+        }
+      }
+    }
+  }
+  return anUVMaxStep;
+}
+
+//=======================================================================
+//function : splitCone
+//purpose  : Splits cone by the apex
+//=======================================================================
+static void splitCone(
+  const Handle(Adaptor3d_Surface)& theS,
+  const Handle(Adaptor3d_TopolTool)& theD,
+  const Standard_Real theTol,
+  NCollection_Vector< Handle(Adaptor3d_Surface)>& theVecHS)
+{
+  if (theS->GetType() != GeomAbs_Cone)
+  {
+    throw Standard_NoSuchObject("IntPatch_Intersection : Surface is not Cone");
+  }
+
+  gp_Cone aCone = theS->Cone();
+
+  Standard_Real aU0, aV0;
+  Adaptor3d_TopolTool::GetConeApexParam (aCone, aU0, aV0);
+
+  TopAbs_State aState = theD->Classify (gp_Pnt2d (aU0, aV0), theTol);
+
+  if (aState == TopAbs_IN || aState == TopAbs_ON)
+  {
+    const Handle(Adaptor3d_Surface) aHSDn = theS->VTrim (theS->FirstVParameter(), aV0, Precision::PConfusion());
+    const Handle(Adaptor3d_Surface) aHSUp = theS->VTrim (aV0, theS->LastVParameter(), Precision::PConfusion());
+
+    theVecHS.Append (aHSDn);
+    theVecHS.Append (aHSUp);
+  }
+  else
+  {
+    theVecHS.Append (theS);
+  }
+}
+
+//=======================================================================
+//function : PrepareSurfaces
+//purpose  : Prepares surfaces for intersection
+//=======================================================================
+void IntPatch_Intersection::PrepareSurfaces(
+  const Handle(Adaptor3d_Surface)& theS1,
+  const Handle(Adaptor3d_TopolTool)& theD1,
+  const Handle(Adaptor3d_Surface)& theS2,
+  const Handle(Adaptor3d_TopolTool)& theD2,
+  const Standard_Real theTol,
+  NCollection_Vector< Handle(Adaptor3d_Surface)>& theVecHS1,
+  NCollection_Vector< Handle(Adaptor3d_Surface)>& theVecHS2)
+{
+  if ((theS1->GetType() == GeomAbs_Cone) && (Abs (M_PI / 2. - Abs (theS1->Cone().SemiAngle())) < theTol))
+  {
+    splitCone (theS1, theD1, theTol, theVecHS1);
+  }
+  else
+  {
+    theVecHS1.Append (theS1);
+  }
+
+  if ((theS2->GetType() == GeomAbs_Cone) && (Abs (M_PI / 2. - Abs (theS2->Cone().SemiAngle())) < theTol))
+  {
+    splitCone (theS2, theD2, theTol, theVecHS2);
+  }
+  else
+  {
+    theVecHS2.Append (theS2);
+  }
+}
+
+

@@ -14,19 +14,13 @@
 
 #include <GeomLib_CheckCurveOnSurface.hxx>
 
-#include <Adaptor2d_Curve2d.hxx>
 #include <Adaptor3d_Curve.hxx>
 #include <Adaptor3d_CurveOnSurface.hxx>
-#include <Adaptor3d_Surface.hxx>
 #include <Geom_BSplineCurve.hxx>
-#include <Geom_TrimmedCurve.hxx>
 #include <Geom2d_BSplineCurve.hxx>
-#include <Geom2d_TrimmedCurve.hxx>
 #include <Geom2dAdaptor_Curve.hxx>
 #include <GeomAdaptor_Curve.hxx>
-#include <GeomAdaptor_Surface.hxx>
 #include <gp_Pnt.hxx>
-#include <math_Matrix.hxx>
 #include <math_MultipleVarFunctionWithHessian.hxx>
 #include <math_NewtonMinimum.hxx>
 #include <math_PSO.hxx>
@@ -319,7 +313,8 @@ GeomLib_CheckCurveOnSurface::GeomLib_CheckCurveOnSurface()
   myErrorStatus(0),
   myMaxDistance(RealLast()),
   myMaxParameter(0.),
-  myTolRange(Precision::PConfusion())
+  myTolRange(Precision::PConfusion()),
+  myIsParallel(Standard_False)
 {
 }
 
@@ -334,7 +329,8 @@ GeomLib_CheckCurveOnSurface::
   myErrorStatus(0),
   myMaxDistance(RealLast()),
   myMaxParameter(0.),
-  myTolRange(theTolRange)
+  myTolRange(theTolRange),
+  myIsParallel(Standard_False)
 {
 }
 
@@ -369,8 +365,7 @@ void GeomLib_CheckCurveOnSurface::Init( const Handle(Adaptor3d_Curve)& theCurve,
 //function : Perform
 //purpose  : 
 //=======================================================================
-void GeomLib_CheckCurveOnSurface::Perform(const Handle(Adaptor3d_CurveOnSurface)& theCurveOnSurface,
-                                          const Standard_Boolean isMultiThread)
+void GeomLib_CheckCurveOnSurface::Perform(const Handle(Adaptor3d_CurveOnSurface)& theCurveOnSurface)
 {
   if( myCurve.IsNull() ||
       theCurveOnSurface.IsNull())
@@ -415,7 +410,7 @@ void GeomLib_CheckCurveOnSurface::Perform(const Handle(Adaptor3d_CurveOnSurface)
     FillSubIntervals(myCurve, theCurveOnSurface->GetCurve(),
                      myCurve->FirstParameter(), myCurve->LastParameter(), aNbParticles, &anIntervals);
 
-    const Standard_Integer aNbThreads = isMultiThread ? Min(anIntervals.Size(), OSD_ThreadPool::DefaultPool()->NbDefaultThreadsToLaunch()) : 1;
+    const Standard_Integer aNbThreads = myIsParallel ? Min(anIntervals.Size(), OSD_ThreadPool::DefaultPool()->NbDefaultThreadsToLaunch()) : 1;
     Array1OfHCurve aCurveArray(0, aNbThreads - 1);
     Array1OfHCurve aCurveOnSurfaceArray(0, aNbThreads - 1);
     for (Standard_Integer anI = 0; anI < aNbThreads; ++anI)

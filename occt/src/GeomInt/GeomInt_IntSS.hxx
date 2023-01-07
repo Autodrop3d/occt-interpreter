@@ -18,7 +18,6 @@
 #define _GeomInt_IntSS_HeaderFile
 
 #include <IntPatch_Intersection.hxx>
-#include <GeomAdaptor_Surface.hxx>
 #include <GeomInt_LineConstructor.hxx>
 #include <Standard_Integer.hxx>
 #include <TColGeom_SequenceOfCurve.hxx>
@@ -105,7 +104,6 @@ public:
   Standard_EXPORT static Handle(Geom_Curve) MakeBSpline (const Handle(IntPatch_WLine)& WL, const Standard_Integer ideb, const Standard_Integer ifin);
 
   Standard_EXPORT static Handle(Geom2d_BSplineCurve) MakeBSpline2d(const Handle(IntPatch_WLine)& theWLine, const Standard_Integer ideb, const Standard_Integer ifin, const Standard_Boolean onFirst);
-
 
 protected:
 

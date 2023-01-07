@@ -17,17 +17,12 @@
 
 #include <Bnd_Box.hxx>
 #include <gp_Pnt.hxx>
-#include <Graphic3d_DataStructureManager.hxx>
 #include <Graphic3d_GraphicDriver.hxx>
 #include <Graphic3d_Group.hxx>
-#include <Graphic3d_MapIteratorOfMapOfStructure.hxx>
 #include <Graphic3d_MapOfStructure.hxx>
 #include <Graphic3d_PriorityDefinitionError.hxx>
 #include <Graphic3d_StructureDefinitionError.hxx>
 #include <Graphic3d_StructureManager.hxx>
-#include <Quantity_Color.hxx>
-
-#include "Graphic3d_Structure.pxx"
 
 #include <Standard_Dump.hxx>
 
@@ -85,7 +80,6 @@ void Graphic3d_Structure::clear (const Standard_Boolean theWithDestruction)
   // clean groups in graphics driver at first
   GraphicClear (theWithDestruction);
 
-  myCStructure->ContainsFacet = 0;
   myCStructure->SetGroupTransformPersistence (false);
   myStructureManager->Clear (this, theWithDestruction);
 
@@ -134,7 +128,7 @@ void Graphic3d_Structure::Remove()
   }
 
   // Destruction of me in the graphic library
-  const Standard_Integer aStructId = myCStructure->Id;
+  const Standard_Integer aStructId = myCStructure->Identification();
   myCStructure->GraphicDriver()->RemoveIdentification(aStructId);
   myCStructure->GraphicDriver()->RemoveStructure (myCStructure);
   myCStructure.Nullify();
@@ -165,25 +159,25 @@ void Graphic3d_Structure::Display()
 //function : SetDisplayPriority
 //purpose  :
 //=============================================================================
-void Graphic3d_Structure::SetDisplayPriority (const Standard_Integer thePriority)
+void Graphic3d_Structure::SetDisplayPriority (const Graphic3d_DisplayPriority thePriority)
 {
   if (IsDeleted()
-   || thePriority == myCStructure->Priority)
+   || thePriority == myCStructure->Priority())
   {
     return;
   }
 
-  myCStructure->PreviousPriority = myCStructure->Priority;
-  myCStructure->Priority         = thePriority;
+  Graphic3d_PriorityDefinitionError_Raise_if ((thePriority > Graphic3d_DisplayPriority_Topmost)
+                                           || (thePriority < Graphic3d_DisplayPriority_Bottom),
+                                              "Bad value for StructurePriority");
 
-  if (myCStructure->Priority != myCStructure->PreviousPriority)
+  myCStructure->SetPreviousPriority (myCStructure->Priority());
+  myCStructure->SetPriority (thePriority);
+  if (myCStructure->Priority() != myCStructure->PreviousPriority())
   {
-    Graphic3d_PriorityDefinitionError_Raise_if ((myCStructure->Priority > Structure_MAX_PRIORITY)
-                                             || (myCStructure->Priority < Structure_MIN_PRIORITY),
-                                                "Bad value for StructurePriority");
     if (myCStructure->stick)
     {
-      myStructureManager->ChangeDisplayPriority (this, myCStructure->PreviousPriority, myCStructure->Priority);
+      myStructureManager->ChangeDisplayPriority (this, myCStructure->PreviousPriority(), myCStructure->Priority());
     }
   }
 }
@@ -195,16 +189,16 @@ void Graphic3d_Structure::SetDisplayPriority (const Standard_Integer thePriority
 void Graphic3d_Structure::ResetDisplayPriority()
 {
   if (IsDeleted()
-   || myCStructure->Priority == myCStructure->PreviousPriority)
+   || myCStructure->Priority() == myCStructure->PreviousPriority())
   {
     return;
   }
 
-  const Standard_Integer aPriority = myCStructure->Priority;
-  myCStructure->Priority = myCStructure->PreviousPriority;
+  const Graphic3d_DisplayPriority aPriority = myCStructure->Priority();
+  myCStructure->SetPriority (myCStructure->PreviousPriority());
   if (myCStructure->stick)
   {
-    myStructureManager->ChangeDisplayPriority (this, aPriority, myCStructure->Priority);
+    myStructureManager->ChangeDisplayPriority (this, aPriority, myCStructure->Priority());
   }
 }
 
@@ -238,10 +232,8 @@ void Graphic3d_Structure::Highlight (const Handle(Graphic3d_PresentationAttribut
     return;
   }
 
-  SetDisplayPriority (Structure_MAX_PRIORITY - 1);
-
+  SetDisplayPriority (Graphic3d_DisplayPriority_Highlight);
   myCStructure->GraphicHighlight (theStyle);
-
   if (!theToUpdateMgr)
   {
     return;
@@ -295,33 +287,6 @@ void Graphic3d_Structure::UnHighlight()
 }
 
 //=============================================================================
-//function : ContainsFacet
-//purpose  :
-//=============================================================================
-Standard_Boolean Graphic3d_Structure::ContainsFacet() const
-{
-  if (IsDeleted())
-  {
-    return Standard_False;
-  }
-  else if (myCStructure->ContainsFacet > 0)
-  {
-    // if one of groups contains at least one facet, the structure contains it too
-    return Standard_True;
-  }
-
-  // stop at the first descendant containing at least one facet
-  for (NCollection_IndexedMap<Graphic3d_Structure*>::Iterator anIter (myDescendants); anIter.More(); anIter.Next())
-  {
-    if (anIter.Value()->ContainsFacet())
-    {
-      return Standard_True;
-    }
-  }
-  return Standard_False;
-}
-
-//=============================================================================
 //function : IsEmpty
 //purpose  :
 //=============================================================================
@@ -353,19 +318,6 @@ Standard_Boolean Graphic3d_Structure::IsEmpty() const
     }
   }
   return Standard_True;
-}
-
-//=============================================================================
-//function : GroupsWithFacet
-//purpose  :
-//=============================================================================
-void Graphic3d_Structure::GroupsWithFacet (const Standard_Integer theDelta)
-{
-  myCStructure->ContainsFacet = myCStructure->ContainsFacet + theDelta;
-  if (myCStructure->ContainsFacet < 0)
-  {
-    myCStructure->ContainsFacet = 0;
-  }
 }
 
 //=============================================================================

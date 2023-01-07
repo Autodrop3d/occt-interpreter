@@ -26,13 +26,8 @@
 #include <gp.hxx>
 #include <gp_Ax3.hxx>
 #include <gp_Circ.hxx>
-#include <gp_Cone.hxx>
-#include <gp_Cylinder.hxx>
 #include <gp_Lin.hxx>
-#include <gp_Pln.hxx>
 #include <gp_Pnt.hxx>
-#include <gp_Sphere.hxx>
-#include <gp_Torus.hxx>
 #include <gp_Trsf.hxx>
 #include <gp_Vec.hxx>
 #include <gp_XYZ.hxx>
@@ -181,6 +176,8 @@ gp_Vec ElSLib::ConeDN (const Standard_Real    U,
    }
    else if(Nv == 1) { 
      Xdir.Multiply(sin(SAngle));
+     if (Nu == 0)
+       Xdir.Add(Pos.Direction().XYZ() * cos(SAngle));
      return gp_Vec(Xdir);     
    }
    return gp_Vec(0.0,0.0,0.0);

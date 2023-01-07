@@ -39,6 +39,10 @@ win32 {
   DEFINES += _SCL_SECURE_NO_WARNINGS
 } else {
   CONFIG += c++11
+  clang {
+    QMAKE_CFLAGS_WARN_ON   += -Wshorten-64-to-32
+    QMAKE_CXXFLAGS_WARN_ON += -Wshorten-64-to-32
+  }
   QMAKE_CFLAGS   += -fexceptions
   QMAKE_CXXFLAGS += -fexceptions
   QMAKE_CXXFLAGS += -fvisibility=default
@@ -115,6 +119,8 @@ android-g++ {
     # VS2015, vc141
   } else:equals(aMsvcVer, 16.0){
     # VS2019, vc142
+  } else:equals(aMsvcVer, 17.0){
+    # VS2022, vc143
   } else {
     warning (Unknown msvc version. "$$MY_COMPILER" is used)
   }

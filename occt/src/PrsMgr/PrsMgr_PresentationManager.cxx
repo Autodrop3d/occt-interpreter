@@ -15,7 +15,6 @@
 #include <PrsMgr_PresentationManager.hxx>
 
 #include <TopLoc_Datum3D.hxx>
-#include <Prs3d_Drawer.hxx>
 #include <Prs3d_PresentationShadow.hxx>
 #include <PrsMgr_PresentableObject.hxx>
 #include <PrsMgr_Presentation.hxx>
@@ -210,7 +209,7 @@ void PrsMgr_PresentationManager::Unhighlight (const Handle(PrsMgr_PresentableObj
 // =======================================================================
 void PrsMgr_PresentationManager::SetDisplayPriority (const Handle(PrsMgr_PresentableObject)& thePrsObj,
                                                      const Standard_Integer                  theMode,
-                                                     const Standard_Integer                  theNewPrior) const
+                                                     const Graphic3d_DisplayPriority         theNewPrior) const
 {
   if (thePrsObj->ToPropagateVisualState())
   {
@@ -231,15 +230,15 @@ void PrsMgr_PresentationManager::SetDisplayPriority (const Handle(PrsMgr_Present
 // function : DisplayPriority
 // purpose  :
 // =======================================================================
-Standard_Integer PrsMgr_PresentationManager::DisplayPriority (const Handle(PrsMgr_PresentableObject)& thePrsObj,
-                                                              const Standard_Integer                  theMode) const
+Graphic3d_DisplayPriority PrsMgr_PresentationManager::DisplayPriority (const Handle(PrsMgr_PresentableObject)& thePrsObj,
+                                                                       const Standard_Integer theMode) const
 {
   if (thePrsObj->ToPropagateVisualState())
   {
     for (PrsMgr_ListOfPresentableObjectsIter anIter(thePrsObj->Children()); anIter.More(); anIter.Next())
     {
-      Standard_Integer aPriority = DisplayPriority(anIter.Value(), theMode);
-      if (aPriority != 0)
+      Graphic3d_DisplayPriority aPriority = DisplayPriority(anIter.Value(), theMode);
+      if (aPriority != Graphic3d_DisplayPriority_INVALID)
       {
         return aPriority;
       }
@@ -249,7 +248,7 @@ Standard_Integer PrsMgr_PresentationManager::DisplayPriority (const Handle(PrsMg
   const Handle(PrsMgr_Presentation) aPrs = Presentation (thePrsObj, theMode);
   return !aPrs.IsNull()
         ? aPrs->DisplayPriority()
-        : 0;
+        : Graphic3d_DisplayPriority_INVALID;
 }
 
 // =======================================================================
@@ -519,7 +518,7 @@ Handle(PrsMgr_Presentation) PrsMgr_PresentationManager::Presentation (const Hand
 
   Handle(PrsMgr_Presentation) aPrs = new PrsMgr_Presentation (this, thePrsObj, theMode);
   aPrs->SetZLayer (thePrsObj->ZLayer());
-  aPrs->CStructure()->ViewAffinity = myStructureManager->ObjectAffinity (!theSelObj.IsNull() ? theSelObj : thePrsObj);
+  aPrs->CStructure()->ViewAffinity = !theSelObj.IsNull() ? theSelObj->ViewAffinity() : thePrsObj->ViewAffinity();
   thePrsObj->Presentations().Append (aPrs);
   thePrsObj->Fill (this, aPrs, theMode);
 
@@ -697,7 +696,7 @@ void PrsMgr_PresentationManager::UpdateHighlightTrsf (const Handle(V3d_Viewer)& 
   }
 
   Handle(TopLoc_Datum3D) aTrsf = theObj->LocalTransformationGeom();
-  const Standard_Integer aParentId = aPrs->CStructure()->Id;
+  const Standard_Integer aParentId = aPrs->CStructure()->Identification();
   updatePrsTransformation (myImmediateList, aParentId, aTrsf);
 
   if (!myViewDependentImmediateList.IsEmpty())
@@ -709,7 +708,7 @@ void PrsMgr_PresentationManager::UpdateHighlightTrsf (const Handle(V3d_Viewer)& 
       if (aView->IsComputed (aParentId, aViewDepParentPrs))
       {
         updatePrsTransformation (myViewDependentImmediateList,
-                                 aViewDepParentPrs->CStructure()->Id,
+                                 aViewDepParentPrs->CStructure()->Identification(),
                                  aTrsf);
       }
     }

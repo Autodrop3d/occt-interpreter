@@ -20,22 +20,15 @@
 #include <Adaptor3d_CurveOnSurface.hxx>
 #include <Adaptor3d_Curve.hxx>
 #include <Adaptor3d_Surface.hxx>
-#include <AdvApprox_ApproxAFunction.hxx>
-#include <BSplCLib.hxx>
 #include <Extrema_ExtPC.hxx>
 #include <Extrema_LocateExtPC.hxx>
 #include <Geom2d_BSplineCurve.hxx>
 #include <Geom2d_Curve.hxx>
 #include <Geom2dAdaptor_Curve.hxx>
-#include <Geom2dAdaptor_Curve.hxx>
-#include <Geom_Curve.hxx>
-#include <Geom_Surface.hxx>
 #include <GeomAdaptor_Curve.hxx>
 #include <GeomAdaptor_Surface.hxx>
 #include <GeomLib_MakeCurvefromApprox.hxx>
 #include <Precision.hxx>
-#include <Standard_ConstructionError.hxx>
-#include <Standard_OutOfRange.hxx>
 #include <TColStd_Array1OfReal.hxx>
 #include <Geom2dAdaptor.hxx>
 
@@ -115,7 +108,7 @@ void Approx_SameParameter_Evaluator::Evaluate (Standard_Integer *,/*Dimension*/
 //purpose  : 
 //=======================================================================
 static void ProjectPointOnCurve(const Standard_Real      InitValue,
-                                const gp_Pnt             APoint,
+                                const gp_Pnt&            APoint,
                                 const Standard_Real      Tolerance,
                                 const Standard_Integer   NumIteration,
                                 const Adaptor3d_Curve&   Curve,
@@ -173,8 +166,17 @@ static Standard_Real ComputeTolReached(const Handle(Adaptor3d_Curve)& c3d,
   {
     Standard_Real t = IntToReal(i) / IntToReal(nbp);
     Standard_Real u = first * (1.0 - t) + last * t;
-    gp_Pnt Pc3d = c3d->Value(u);
-    gp_Pnt Pcons = cons.Value(u);
+    gp_Pnt Pc3d, Pcons;
+    try
+    {
+      Pc3d = c3d->Value(u);
+      Pcons = cons.Value(u);
+    }
+    catch (Standard_Failure const&)
+    {
+      d2 = Precision::Infinite();
+      break;
+    }
     if (Precision::IsInfinite(Pcons.X()) ||
         Precision::IsInfinite(Pcons.Y()) ||
         Precision::IsInfinite(Pcons.Z()))
@@ -524,6 +526,8 @@ void Approx_SameParameter::Build(const Standard_Real Tolerance)
     }
     myDone = Standard_True;
   }
+  
+  myCurveOnSurface = Handle(Adaptor3d_CurveOnSurface)::DownCast(aData.myCOnS.ShallowCopy());
 }
 
 //=======================================================================

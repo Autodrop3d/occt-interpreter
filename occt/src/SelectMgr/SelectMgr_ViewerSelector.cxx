@@ -20,7 +20,6 @@
 #include <gp_GTrsf.hxx>
 #include <gp_Pnt.hxx>
 #include <OSD_Environment.hxx>
-#include <Precision.hxx>
 #include <Select3D_SensitiveEntity.hxx>
 #include <SelectBasics_PickResult.hxx>
 #include <SelectMgr.hxx>
@@ -626,7 +625,7 @@ void SelectMgr_ViewerSelector::traverseObject (const Handle(SelectMgr_Selectable
 // purpose : Traverses BVH containing all added selectable objects and
 //           finds candidates for further search of overlap
 //=======================================================================
-void SelectMgr_ViewerSelector::TraverseSensitives()
+void SelectMgr_ViewerSelector::TraverseSensitives (const Standard_Integer theViewId)
 {
   SelectMgr_BVHThreadPool::Sentry aSentry (myBVHThreadPool);
 
@@ -750,14 +749,16 @@ void SelectMgr_ViewerSelector::TraverseSensitives()
       }
       else
       {
-        Standard_Integer aStartIdx = aBVHTree->BegPrimitive (aNode);
-        Standard_Integer anEndIdx  = aBVHTree->EndPrimitive (aNode);
+        const Standard_Integer aStartIdx = aBVHTree->BegPrimitive (aNode);
+        const Standard_Integer anEndIdx  = aBVHTree->EndPrimitive (aNode);
         for (Standard_Integer anIdx = aStartIdx; anIdx <= anEndIdx; ++anIdx)
         {
-          const Handle(SelectMgr_SelectableObject)& aSelectableObject =
-            mySelectableObjects.GetObjectById (aBVHSubset, anIdx);
-
-          traverseObject (aSelectableObject, aMgr, aCamera, aProjectionMat, aWorldViewMat, aWinSize);
+          const Handle(SelectMgr_SelectableObject)& aSelObj = mySelectableObjects.GetObjectById (aBVHSubset, anIdx);
+          const Handle(Graphic3d_ViewAffinity)& aViewAffinity = aSelObj->ViewAffinity();
+          if (theViewId == -1 || aViewAffinity->IsVisible (theViewId))
+          {
+            traverseObject (aSelObj, aMgr, aCamera, aProjectionMat, aWorldViewMat, aWinSize);
+          }
         }
         if (aHead < 0)
         {
@@ -1175,7 +1176,7 @@ void SelectMgr_ViewerSelector::Pick (const Standard_Integer theXPix,
   mySelectingVolumeMgr.BuildSelectingVolume();
   mySelectingVolumeMgr.SetViewClipping (theView->ClipPlanes(), Handle(Graphic3d_SequenceOfHClipPlane)(), NULL);
 
-  TraverseSensitives();
+  TraverseSensitives (theView->View()->Identification());
 }
 
 //=======================================================================
@@ -1204,7 +1205,7 @@ void SelectMgr_ViewerSelector::Pick (const Standard_Integer theXPMin,
 
   mySelectingVolumeMgr.BuildSelectingVolume();
   mySelectingVolumeMgr.SetViewClipping (theView->ClipPlanes(), Handle(Graphic3d_SequenceOfHClipPlane)(), NULL);
-  TraverseSensitives();
+  TraverseSensitives (theView->View()->Identification());
 }
 
 //=======================================================================
@@ -1224,7 +1225,7 @@ void SelectMgr_ViewerSelector::Pick (const TColgp_Array1OfPnt2d& thePolyline,
   mySelectingVolumeMgr.BuildSelectingVolume();
   mySelectingVolumeMgr.SetViewClipping (theView->ClipPlanes(), Handle(Graphic3d_SequenceOfHClipPlane)(), NULL);
 
-  TraverseSensitives();
+  TraverseSensitives (theView->View()->Identification());
 }
 
 //=======================================================================
@@ -1240,7 +1241,7 @@ void SelectMgr_ViewerSelector::Pick (const gp_Ax1& theAxis,
   mySelectingVolumeMgr.BuildSelectingVolume();
   mySelectingVolumeMgr.SetViewClipping (theView->ClipPlanes(), Handle(Graphic3d_SequenceOfHClipPlane)(), NULL);
 
-  TraverseSensitives();
+  TraverseSensitives (theView->View()->Identification());
 }
 
 //=======================================================================
@@ -1301,7 +1302,7 @@ void SelectMgr_ViewerSelector::DisplaySensitive (const Handle(V3d_View)& theView
   for (Graphic3d_SequenceOfStructure::Iterator aStructIter (myStructs); aStructIter.More(); aStructIter.Next())
   {
     Handle(Graphic3d_Structure)& aStruct = aStructIter.ChangeValue();
-    aStruct->SetDisplayPriority (10);
+    aStruct->SetDisplayPriority (Graphic3d_DisplayPriority_Topmost);
     aStruct->Display();
   }
 
@@ -1348,7 +1349,7 @@ void SelectMgr_ViewerSelector::DisplaySensitive (const Handle(SelectMgr_Selectio
   SelectMgr::ComputeSensitivePrs (aStruct, theSel, theTrsf, Handle(Graphic3d_TransformPers)());
 
   myStructs.Append (aStruct);
-  myStructs.Last()->SetDisplayPriority (10);
+  myStructs.Last()->SetDisplayPriority (Graphic3d_DisplayPriority_Topmost);
   myStructs.Last()->Display();
 
   theView->Update();

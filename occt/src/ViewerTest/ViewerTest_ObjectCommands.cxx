@@ -40,8 +40,8 @@
 #include <AIS_Shape.hxx>
 #include <AIS_DisplayMode.hxx>
 #include <AIS_PointCloud.hxx>
+#include <BRepLib_PointCloudShape.hxx>
 #include <TColStd_MapOfInteger.hxx>
-#include <AIS_MapOfInteractive.hxx>
 #include <ViewerTest_AutoUpdater.hxx>
 #include <ViewerTest_DoubleMapOfInteractiveAndName.hxx>
 #include <ViewerTest_DoubleMapIteratorOfDoubleMapOfInteractiveAndName.hxx>
@@ -132,6 +132,7 @@
 #include <Select3D_SensitiveSegment.hxx>
 #include <Select3D_SensitivePrimitiveArray.hxx>
 #include <Select3D_SensitivePoint.hxx>
+#include <Select3D_SensitivePoly.hxx>
 #include <BRepAdaptor_Curve.hxx>
 #include <StdPrs_Curve.hxx>
 
@@ -1965,8 +1966,14 @@ public:
   // CASCADE RTTI
   DEFINE_STANDARD_RTTI_INLINE(FilledCircle, AIS_InteractiveObject);
 
-  FilledCircle (gp_Pnt theCenter, Standard_Real theRadius);
-  FilledCircle (Handle(Geom_Circle) theCircle);
+  FilledCircle (const Handle(Geom_Circle)& theCircle,
+                const Standard_Real theUStart,
+                const Standard_Real theUEnd);
+
+  FilledCircle (const gp_Pnt& theCenter,
+                const Standard_Real theRadius,
+                const Standard_Real theUStart,
+                const Standard_Real theUEnd);
 
 private:
   TopoDS_Face ComputeFace();
@@ -1982,35 +1989,50 @@ private:
 protected:
 
   Handle(Geom_Circle) myCircle;
-  Standard_Boolean myFilledStatus;
+  Standard_Real       myUStart;
+  Standard_Real       myUEnd;
+  Standard_Boolean    myFilledStatus;
 
 }; 
 
+FilledCircle::FilledCircle (const Handle(Geom_Circle)& theCircle,
+                            const Standard_Real theUStart,
+                            const Standard_Real theUEnd)
+: myCircle (theCircle),
+  myUStart (theUStart),
+  myUEnd (theUEnd),
+  myFilledStatus (Standard_True)
+{ }
 
-FilledCircle::FilledCircle(gp_Pnt theCenter, Standard_Real theRadius) 
+FilledCircle::FilledCircle (const gp_Pnt& theCenter,
+                            const Standard_Real theRadius,
+                            const Standard_Real theUStart,
+                            const Standard_Real theUEnd)
+: FilledCircle (CreateCircle (theCenter, theRadius), theUStart, theUEnd)
+{ }
+
+TopoDS_Face FilledCircle::ComputeFace()
 {
-  myCircle = CreateCircle(theCenter, theRadius);
-  myFilledStatus = Standard_True;
-}
+  // Create edge from myCircle
+  BRepBuilderAPI_MakeEdge anEdgeMaker (myCircle->Circ(), myUStart, myUEnd);
+  TopoDS_Edge anEdge = anEdgeMaker.Edge();
 
-FilledCircle::FilledCircle(Handle(Geom_Circle) theCircle) 
-{
-  myCircle = theCircle;
-  myFilledStatus = Standard_True;
-}
-
-TopoDS_Face FilledCircle::ComputeFace() 
-{
-  // Create edge from myCircle 
-  BRepBuilderAPI_MakeEdge anEdgeMaker(myCircle->Circ());
-  TopoDS_Edge anEdge = anEdgeMaker.Edge(); 
-
-  // Create wire from anEdge 
-  BRepBuilderAPI_MakeWire aWireMaker(anEdge);
+  // Create wire from anEdge
+  BRepBuilderAPI_MakeWire aWireMaker;
+  if (Abs (Abs (myUEnd - myUStart) - 2.0 * M_PI) > gp::Resolution())
+  {
+    TopoDS_Edge anEndCenterEdge = BRepBuilderAPI_MakeEdge (myCircle->Value (myUEnd), myCircle->Location()).Edge();
+    TopoDS_Edge aStartCenterEdge = BRepBuilderAPI_MakeEdge (myCircle->Location(), myCircle->Value (myUStart)).Edge();
+    aWireMaker = BRepBuilderAPI_MakeWire (anEdge, anEndCenterEdge, aStartCenterEdge);
+  }
+  else
+  {
+    aWireMaker = BRepBuilderAPI_MakeWire (anEdge);
+  }
   TopoDS_Wire aWire = aWireMaker.Wire();
 
   // Create face from aWire
-  BRepBuilderAPI_MakeFace aFaceMaker(aWire);
+  BRepBuilderAPI_MakeFace aFaceMaker (aWire);
   TopoDS_Face aFace = aFaceMaker.Face();
 
   return aFace;
@@ -2030,12 +2052,22 @@ void FilledCircle::Compute (const Handle(PrsMgr_PresentationManager)& ,
   StdPrs_ShadedShape::Add (thePrs, aFace, myDrawer);
 }
 
-void FilledCircle::ComputeSelection(const Handle(SelectMgr_Selection) &theSelection, 
-                                    const Standard_Integer /*theMode*/)
+void FilledCircle::ComputeSelection (const Handle(SelectMgr_Selection) &theSelection,
+                                     const Standard_Integer /*theMode*/)
 {
   Handle(SelectMgr_EntityOwner) anEntityOwner = new SelectMgr_EntityOwner(this);
-  Handle(Select3D_SensitiveCircle) aSensitiveCircle = new Select3D_SensitiveCircle (anEntityOwner, myCircle->Circ(), myFilledStatus);
-  theSelection->Add(aSensitiveCircle);
+  Handle(Select3D_SensitiveEntity) aSensitiveCircle;
+
+  if (Abs (Abs (myUEnd - myUStart) - 2.0 * M_PI) > gp::Resolution())
+  {
+    aSensitiveCircle = new Select3D_SensitivePoly (anEntityOwner, myCircle->Circ(), myUStart, myUEnd, myFilledStatus);
+  }
+  else
+  {
+    aSensitiveCircle = new Select3D_SensitiveCircle (anEntityOwner, myCircle->Circ(), myFilledStatus);
+  }
+
+  theSelection->Add (aSensitiveCircle);
 }
 
 //==============================================================================
@@ -2046,51 +2078,63 @@ void FilledCircle::ComputeSelection(const Handle(SelectMgr_Selection) &theSelect
 //==============================================================================
 //function : VCircleBuilder
 //purpose  : Build an AIS_Circle
-//Draw arg : vcircle CircleName PlaneName PointName Radius IsFilled
-//                              PointName PointName PointName IsFilled
+//Draw arg : vcircle CircleName PlaneName PointName Radius IsFilled UStart UEnd
+//                              PointName PointName PointName IsFilled UStart UEnd
 //==============================================================================
 
-void DisplayCircle (Handle (Geom_Circle) theGeomCircle,
-                    TCollection_AsciiString theName, 
-                    Standard_Boolean isFilled) 
+void DisplayCircle (const Handle(Geom_Circle)& theGeomCircle,
+                    const TCollection_AsciiString& theName,
+                    const Standard_Boolean isFilled,
+                    const Standard_Real theUStart,
+                    const Standard_Real theUEnd)
 {
   Handle(AIS_InteractiveObject) aCircle;
-  if (isFilled) 
+  if (isFilled)
   {
-    aCircle = new FilledCircle(theGeomCircle);
+    aCircle = new FilledCircle (theGeomCircle, theUStart, theUEnd);
   }
   else
   {
-    aCircle = new AIS_Circle(theGeomCircle);
-    Handle(AIS_Circle)::DownCast (aCircle)->SetFilledCircleSens (Standard_False);
+    aCircle = new AIS_Circle (theGeomCircle, theUStart, theUEnd, Standard_False);
   }
 
   // Check if there is an object with given name
   // and remove it from context
-  if (GetMapOfAIS().IsBound2(theName)) 
+  if (GetMapOfAIS().IsBound2(theName))
   {
-    Handle(AIS_InteractiveObject) anInterObj = GetMapOfAIS().Find2(theName);
-    TheAISContext()->Remove(anInterObj, Standard_False);
-    GetMapOfAIS().UnBind2(theName);
+    Handle(AIS_InteractiveObject) anInterObj = GetMapOfAIS().Find2 (theName);
+    TheAISContext()->Remove (anInterObj, Standard_False);
+    GetMapOfAIS().UnBind2 (theName);
    }
 
    // Bind the circle to its name
-   GetMapOfAIS().Bind(aCircle, theName);
+   GetMapOfAIS().Bind (aCircle, theName);
 
    // Display the circle
    TheAISContext()->Display (aCircle, Standard_True);
-  
 }
 
-static int VCircleBuilder(Draw_Interpretor& /*di*/, Standard_Integer argc, const char** argv)
+static int VCircleBuilder (Draw_Interpretor& /*di*/, Standard_Integer argc, const char** argv)
 {
-  if (argc > 6 || argc < 2)
-  { 
+  if (argc > 8 || argc < 2)
+  {
     Message::SendFail ("Syntax error: wrong number of arguments");
     return 1;
   }
 
-  if (argc == 6) 
+  Standard_Real anUStart = 0, anUEnd = M_PI * 2.0;
+  if (argc == 8)
+  {
+    anUStart = Draw::Atof (argv[6]) * M_PI / 180.0;
+    anUEnd  = Draw::Atof (argv[7]) * M_PI / 180.0;
+  }
+  else if (argc == 4)
+  {
+    anUStart = Draw::Atof (argv[2]) * M_PI / 180.0;
+    anUEnd  = Draw::Atof (argv[3]) * M_PI / 180.0;
+  }
+
+  if (argc == 6 || argc == 8)
   {
     TCollection_AsciiString aName (argv[1]);
     Standard_Boolean isFilled = Draw::Atoi(argv[5]) != 0;
@@ -2159,7 +2203,7 @@ static int VCircleBuilder(Draw_Interpretor& /*di*/, Standard_Integer argc, const
         return 1;
       }
 
-      DisplayCircle (aGeomCircle, aName, isFilled);
+      DisplayCircle (aGeomCircle, aName, isFilled, anUStart, anUEnd);
     }
 
     // Arguments: AIS_Plane AIS_Point Real
@@ -2203,7 +2247,7 @@ static int VCircleBuilder(Draw_Interpretor& /*di*/, Standard_Integer argc, const
         return 1;
       }
 
-      DisplayCircle (aGeomCircle, aName, isFilled);
+      DisplayCircle (aGeomCircle, aName, isFilled, anUStart, anUEnd);
     }
     else
     {
@@ -2263,7 +2307,7 @@ static int VCircleBuilder(Draw_Interpretor& /*di*/, Standard_Integer argc, const
         return 1;
       }
 
-      DisplayCircle (aGeomCircle, aName, isFilled);
+      DisplayCircle (aGeomCircle, aName, isFilled, anUStart, anUEnd);
     }
     else if (aShapeA.ShapeType() == TopAbs_FACE)
     {
@@ -2307,7 +2351,7 @@ static int VCircleBuilder(Draw_Interpretor& /*di*/, Standard_Integer argc, const
         return 1;
       }
 
-      DisplayCircle (aGeomCircle, aName, isFilled);
+      DisplayCircle (aGeomCircle, aName, isFilled, anUStart, anUEnd);
     }
     else
     {
@@ -2356,7 +2400,6 @@ static int VDrawText (Draw_Interpretor& theDI,
   {
     isNewPrs = Standard_True;
     aTextPrs = new AIS_TextLabel();
-    aTextPrs->SetFont ("Courier");
   }
 
   aTextPrs->SetText (aText);
@@ -2380,15 +2423,10 @@ static int VDrawText (Draw_Interpretor& theDI,
     {
       continue;
     }
-    else if (aParam == "-pos"
-          || aParam == "-position")
+    else if ((aParam == "-pos"
+           || aParam == "-position")
+           && anArgIt + 3 < theArgsNb)
     {
-      if (anArgIt + 3 >= theArgsNb)
-      {
-        Message::SendFail() << "Error: wrong number of values for parameter '" << aParam << "'";
-        return 1;
-      }
-
       aPos.SetX (Draw::Atof (theArgVec[++anArgIt]));
       aPos.SetY (Draw::Atof (theArgVec[++anArgIt]));
       aPos.SetZ (Draw::Atof (theArgVec[++anArgIt]));
@@ -2408,59 +2446,70 @@ static int VDrawText (Draw_Interpretor& theDI,
       anArgIt += aNbParsed;
       aTextPrs->SetColor (aColor);
     }
-    else if (aParam == "-halign")
+    else if ((aParam == "-halign"
+           || aParam == "-valign"
+           || aParam == "-align")
+          && anArgIt + 1 < theArgsNb)
     {
-      if (++anArgIt >= theArgsNb)
-      {
-        Message::SendFail() << "Error: wrong number of values for parameter '" << aParam.ToCString() << "'";
-        return 1;
-      }
-
-      TCollection_AsciiString aType (theArgVec[anArgIt]);
+      TCollection_AsciiString aType (theArgVec[++anArgIt]);
       aType.LowerCase();
       if (aType == "left")
       {
         aTextPrs->SetHJustification (Graphic3d_HTA_LEFT);
+        if (aParam == "-valign")
+        {
+          Message::SendFail() << "Syntax error at '" << aParam << "'";
+          return 1;
+        }
       }
       else if (aType == "center")
       {
-        aTextPrs->SetHJustification (Graphic3d_HTA_CENTER);
+        if (aParam == "-halign"
+         || aParam == "-align")
+        {
+          aTextPrs->SetHJustification (Graphic3d_HTA_CENTER);
+        }
+        if (aParam == "-valign"
+         || aParam == "-align")
+        {
+          aTextPrs->SetVJustification (Graphic3d_VTA_CENTER);
+        }
       }
       else if (aType == "right")
       {
         aTextPrs->SetHJustification (Graphic3d_HTA_RIGHT);
+        if (aParam == "-valign")
+        {
+          Message::SendFail() << "Syntax error at '" << aParam << "'";
+          return 1;
+        }
       }
-      else
-      {
-        Message::SendFail() << "Syntax error at '" << aParam << "'";
-        return 1;
-      }
-    }
-    else if (aParam == "-valign")
-    {
-      if (++anArgIt >= theArgsNb)
-      {
-        Message::SendFail() << "Syntax error: wrong number of values for parameter '" << aParam << "'";
-        return 1;
-      }
-
-      TCollection_AsciiString aType (theArgVec[anArgIt]);
-      aType.LowerCase();
-      if (aType == "top")
+      else if (aType == "top")
       {
         aTextPrs->SetVJustification (Graphic3d_VTA_TOP);
-      }
-      else if (aType == "center")
-      {
-        aTextPrs->SetVJustification (Graphic3d_VTA_CENTER);
+        if (aParam == "-halign")
+        {
+          Message::SendFail() << "Syntax error at '" << aParam << "'";
+          return 1;
+        }
       }
       else if (aType == "bottom")
       {
         aTextPrs->SetVJustification (Graphic3d_VTA_BOTTOM);
+        if (aParam == "-halign")
+        {
+          Message::SendFail() << "Syntax error at '" << aParam << "'";
+          return 1;
+        }
       }
       else if (aType == "topfirstline")
       {
         aTextPrs->SetVJustification (Graphic3d_VTA_TOPFIRSTLINE);
+        if (aParam == "-halign")
+        {
+          Message::SendFail() << "Syntax error at '" << aParam << "'";
+          return 1;
+        }
       }
       else
       {
@@ -2468,59 +2517,42 @@ static int VDrawText (Draw_Interpretor& theDI,
         return 1;
       }
     }
-    else if (aParam == "-angle")
+    else if (aParam == "-angle"
+          && anArgIt + 1 < theArgsNb)
     {
-      if (++anArgIt >= theArgsNb)
-      {
-        Message::SendFail() << "Syntax error: wrong number of values for parameter '" << aParam << "'";
-        return 1;
-      }
-
-      aTextPrs->SetAngle (Draw::Atof (theArgVec[anArgIt]) * (M_PI / 180.0));
+      aTextPrs->SetAngle (Draw::Atof (theArgVec[++anArgIt]) * (M_PI / 180.0));
     }
-    else if (aParam == "-zoom")
+    else if (aParam == "-zoom"
+          || aParam == "-nozoom"
+          || aParam == "-zoomable"
+          || aParam == "-nonzoomable")
     {
-      if (++anArgIt >= theArgsNb)
-      {
-        Message::SendFail() << "Syntax error: wrong number of values for parameter '" << aParam << "'";
-        return 1;
-      }
-
-      aTextPrs->SetZoomable (Draw::Atoi (theArgVec[anArgIt]) == 1);
+      const bool isZoomable = Draw::ParseOnOffNoIterator (theArgsNb, theArgVec, anArgIt);
+      aTextPrs->SetZoomable (isZoomable);
     }
-    else if (aParam == "-height")
+    else if (aParam == "-height"
+          && anArgIt + 1 < theArgsNb)
     {
-      if (++anArgIt >= theArgsNb)
-      {
-        Message::SendFail() << "Syntax error: wrong number of values for parameter '" << aParam << "'";
-        return 1;
-      }
-
-      aTextPrs->SetHeight (Draw::Atof(theArgVec[anArgIt]));
+      aTextPrs->SetHeight (Draw::Atof(theArgVec[++anArgIt]));
     }
-    else if (aParam == "-wrapping")
+    else if (aParam == "-wrapping"
+          && anArgIt + 1 < theArgsNb)
     {
-      if (++anArgIt >= theArgsNb)
-      {
-        Message::SendFail() << "Syntax error: wrong number of values for parameter '" << aParam << "'";
-        return 1;
-      }
-
       if (aTextFormatter.IsNull())
       {
         aTextFormatter = new Font_TextFormatter();
       }
-      aTextFormatter->SetWrapping ((Standard_ShortReal)Draw::Atof(theArgVec[anArgIt]));
+      aTextFormatter->SetWrapping ((Standard_ShortReal)Draw::Atof(theArgVec[++anArgIt]));
     }
-    else if (aParam == "-aspect")
+    else if (aParam == "-wordwrapping")
     {
-      if (++anArgIt >= theArgsNb)
-      {
-        Message::SendFail() << "Syntax error: wrong number of values for parameter '" << aParam << "'";
-        return 1;
-      }
-
-      TCollection_AsciiString anOption (theArgVec[anArgIt]);
+      const bool isWordWrapping = Draw::ParseOnOffNoIterator(theArgsNb, theArgVec, anArgIt);
+      aTextFormatter->SetWordWrapping(isWordWrapping);
+    }
+    else if (aParam == "-aspect"
+          && anArgIt + 1 < theArgsNb)
+    {
+      TCollection_AsciiString anOption (theArgVec[++anArgIt]);
       anOption.LowerCase();
       Font_FontAspect aFontAspect = Font_FA_Undefined;
       if (!parseFontStyle (anOption, aFontAspect))
@@ -2530,71 +2562,49 @@ static int VDrawText (Draw_Interpretor& theDI,
       }
       aTextPrs->SetFontAspect (aFontAspect);
     }
-    else if (aParam == "-font")
+    else if (aParam == "-font"
+          && anArgIt + 1 < theArgsNb)
     {
-      if (++anArgIt >= theArgsNb)
-      {
-        Message::SendFail() << "Syntax error: wrong number of values for parameter '" << aParam << "'";
-        return 1;
-      }
-
-      aTextPrs->SetFont (theArgVec[anArgIt]);
+      aTextPrs->SetFont (theArgVec[++anArgIt]);
     }
-    else if (aParam == "-plane")
+    else if (aParam == "-plane"
+          && anArgIt + 6 < theArgsNb)
     {
-      if (anArgIt + 6 >= theArgsNb)
-      {
-        Message::SendFail() << "Syntax error: wrong number of values for parameter '" << aParam << "'";
-        return 1;
-      }
-
-      Standard_Real aX = Draw::Atof (theArgVec[++anArgIt]);
-      Standard_Real aY = Draw::Atof (theArgVec[++anArgIt]);
-      Standard_Real aZ = Draw::Atof (theArgVec[++anArgIt]);
-      aNormal.SetCoord (aX, aY, aZ);
-
-      aX = Draw::Atof (theArgVec[++anArgIt]);
-      aY = Draw::Atof (theArgVec[++anArgIt]);
-      aZ = Draw::Atof (theArgVec[++anArgIt]);
-      aDirection.SetCoord (aX, aY, aZ);
-
+      aNormal.SetCoord (Draw::Atof (theArgVec[anArgIt + 1]),
+                        Draw::Atof (theArgVec[anArgIt + 2]),
+                        Draw::Atof (theArgVec[anArgIt + 3]));
+      aDirection.SetCoord (Draw::Atof (theArgVec[anArgIt + 4]),
+                           Draw::Atof (theArgVec[anArgIt + 5]),
+                           Draw::Atof (theArgVec[anArgIt + 6]));
       aHasPlane = Standard_True;
+      anArgIt += 6;
     }
-    else if (aParam == "-flipping")
+    else if (aParam == "-flipping"
+          || aParam == "-noflipping"
+          || aParam == "-flip"
+          || aParam == "-noflip")
     {
-      aTextPrs->SetFlipping (Standard_True);
+      const bool toFlip = Draw::ParseOnOffNoIterator (theArgsNb, theArgVec, anArgIt);
+      aTextPrs->SetFlipping (toFlip);
     }
-    else if (aParam == "-ownanchor")
+    else if (aParam == "-ownanchor"
+          || aParam == "-noownanchor")
     {
-      if (++anArgIt >= theArgsNb)
-      {
-        std::cout << "Error: wrong number of values for parameter '" << aParam.ToCString() << "'.\n";
-        return 1;
-      }
-      aTextPrs->SetOwnAnchorPoint (Draw::Atoi (theArgVec[anArgIt]) == 1);
+      const bool isOwnAnchor = Draw::ParseOnOffNoIterator (theArgsNb, theArgVec, anArgIt);
+      aTextPrs->SetOwnAnchorPoint (isOwnAnchor);
     }
-    else if (aParam == "-disptype"
-          || aParam == "-displaytype")
+    else if ((aParam == "-disptype"
+           || aParam == "-displaytype")
+          && anArgIt + 1 < theArgsNb)
     {
-      if (++anArgIt >= theArgsNb)
-      {
-        Message::SendFail() << "Syntax error: wrong number of values for parameter '" << aParam << "'";
-        return 1;
-      }
-      TCollection_AsciiString aType (theArgVec[anArgIt]);
+      TCollection_AsciiString aType (theArgVec[++anArgIt]);
       aType.LowerCase();
-      if (aType == "subtitle")
-        aDisplayType = Aspect_TODT_SUBTITLE;
-      else if (aType == "decal")
-        aDisplayType = Aspect_TODT_DEKALE;
-      else if (aType == "blend")
-        aDisplayType = Aspect_TODT_BLEND;
-      else if (aType == "dimension")
-        aDisplayType = Aspect_TODT_DIMENSION;
-      else if (aType == "normal")
-        aDisplayType = Aspect_TODT_NORMAL;
-      else if (aType == "shadow")
-        aDisplayType = Aspect_TODT_SHADOW;
+      if      (aType == "subtitle")  { aDisplayType = Aspect_TODT_SUBTITLE; }
+      else if (aType == "decal")     { aDisplayType = Aspect_TODT_DEKALE; }
+      else if (aType == "blend")     { aDisplayType = Aspect_TODT_BLEND; }
+      else if (aType == "dimension") { aDisplayType = Aspect_TODT_DIMENSION; }
+      else if (aType == "normal")    { aDisplayType = Aspect_TODT_NORMAL; }
+      else if (aType == "shadow")    { aDisplayType = Aspect_TODT_SHADOW; }
       else
       {
         Message::SendFail() << "Syntax error: wrong display type '" << aType << "'";
@@ -5028,7 +5038,7 @@ static Standard_Integer VTriangle (Draw_Interpretor& /*di*/,
   if (!isTri)
   {
     aPrs->Attributes()->SetupOwnShadingAspect();
-    aPrs->Attributes()->ShadingAspect()->Aspect()->SetColor (aPrs->Attributes()->LineAspect()->Aspect()->Color());
+    aPrs->Attributes()->ShadingAspect()->Aspect()->SetColor (Quantity_NOC_YELLOW);
   }
   ViewerTest::Display (argv[1], aPrs);
   return 0;
@@ -6290,6 +6300,12 @@ static Standard_Integer VPointCloud (Draw_Interpretor& theDI,
                                      Standard_Integer  theArgNum,
                                      const char**      theArgs)
 {
+  if (theArgNum < 2)
+  {
+     Message::SendFail ("Syntax error: wrong number of arguments");
+     return 1;
+  }
+
   Handle(AIS_InteractiveContext) anAISContext = ViewerTest::GetAISContext();
   if (anAISContext.IsNull())
   {
@@ -6297,83 +6313,114 @@ static Standard_Integer VPointCloud (Draw_Interpretor& theDI,
     return 1;
   }
 
-  // command to execute
-  enum Command
-  {
-    CloudForShape, // generate point cloud for shape
-    CloudSphere,   // generate point cloud for generic sphere
-    Unknow
-  };
+  TCollection_AsciiString aName;
+  TopoDS_Shape aShape;
 
-  // count number of non-optional command arguments
-  Command aCmd = Unknow;
-  Standard_Integer aCmdArgs = 0;
-  for (Standard_Integer anArgIter = 1; anArgIter < theArgNum; ++anArgIter)
-  {
-    Standard_CString anArg = theArgs[anArgIter];
-    TCollection_AsciiString aFlag (anArg);
-    aFlag.LowerCase();
-    if (aFlag.IsRealValue (Standard_True) || aFlag.Search ("-") != 1)
-    {
-      aCmdArgs++;
-    }
-  }
-  switch (aCmdArgs)
-  {
-    case 2  : aCmd = CloudForShape; break;
-    case 7  : aCmd = CloudSphere; break;
-    default :
-      Message::SendFail ("Syntax error: wrong number of arguments! See usage:");
-      theDI.PrintHelp (theArgs[0]);
-      return 1;
-  }
+  TCollection_AsciiString aDistribution;
+  gp_Pnt aDistCenter;
+  Standard_Real aDistRadius = 0.0;
+  Standard_Integer aDistNbPoints = 0;
 
   // parse options
-  Standard_Boolean toRandColors = Standard_False;
-  Standard_Boolean hasNormals   = Standard_True;
-  Standard_Boolean isSetArgNorm = Standard_False;
-  Standard_Boolean hasUV        = Standard_False;
+  bool toRandColors = false;
+  bool hasNormals = true, hasUV = false;
+  bool isDensityPoints = false;
+  Standard_Real aDensity = 0.0, aDist = 0.0;
+  Standard_Real aTol = Precision::Confusion();
   for (Standard_Integer anArgIter = 1; anArgIter < theArgNum; ++anArgIter)
   {
-    Standard_CString anArg = theArgs[anArgIter];
-    TCollection_AsciiString aFlag (anArg);
+    TCollection_AsciiString aFlag (theArgs[anArgIter]);
     aFlag.LowerCase();
     if (aFlag == "-randcolors"
      || aFlag == "-randcolor")
     {
-      if (isSetArgNorm && hasNormals)
-      {
-        Message::SendFail ("Syntax error: normals can not be enabled with colors at the same time");
-        return 1;
-      }
-      toRandColors = Standard_True;
-      hasNormals   = Standard_False;
+      toRandColors = Draw::ParseOnOffIterator (theArgNum, theArgs, anArgIter);
     }
     else if (aFlag == "-normals"
           || aFlag == "-normal")
     {
-      if (toRandColors)
-      {
-        Message::SendFail ("Syntax error: normals can not be enabled with colors at the same time");
-        return 1;
-      }
-      isSetArgNorm = Standard_True;
-      hasNormals   = Standard_True;
+      hasNormals = Draw::ParseOnOffIterator (theArgNum, theArgs, anArgIter);
     }
     else if (aFlag == "-nonormals"
           || aFlag == "-nonormal")
     {
-      isSetArgNorm = Standard_True;
-      hasNormals   = Standard_False;
+      hasNormals = !Draw::ParseOnOffIterator (theArgNum, theArgs, anArgIter);
     }
     else if (aFlag == "-uv"
           || aFlag == "-texels")
     {
-      hasUV = Standard_True;
+      hasUV = Draw::ParseOnOffIterator (theArgNum, theArgs, anArgIter);
+    }
+    else if ((aFlag == "-dist"
+           || aFlag == "-distance")
+          && anArgIter + 1 < theArgNum
+          && Draw::ParseReal (theArgs[anArgIter + 1], aDist))
+    {
+      ++anArgIter;
+      if (aDist < 0.0)
+      {
+        theDI << "Syntax error: -distance value should be >= 0.0";
+        return 1;
+      }
+      aDist = Max (aDist, Precision::Confusion());
+    }
+    else if ((aFlag == "-dens"
+           || aFlag == "-density")
+          && anArgIter + 1 < theArgNum
+          && Draw::ParseReal (theArgs[anArgIter + 1], aDensity))
+    {
+      ++anArgIter;
+      isDensityPoints = Standard_True;
+      if (aDensity <= 0.0)
+      {
+        theDI << "Syntax error: -density value should be > 0.0";
+        return 1;
+      }
+    }
+    else if ((aFlag == "-tol"
+           || aFlag == "-tolerance")
+          && anArgIter + 1 < theArgNum
+          && Draw::ParseReal (theArgs[anArgIter + 1], aTol))
+    {
+      ++anArgIter;
+      if (aTol < Precision::Confusion())
+      {
+        theDI << "Syntax error: -tol value should be >= " << Precision::Confusion();
+        return 1;
+      }
+    }
+    else if ((aFlag == "-surface"
+           || aFlag == "-volume")
+            && anArgIter + 5 < theArgNum)
+    {
+      aDistribution = aFlag;
+      aDistCenter.SetCoord (Draw::Atof (theArgs[anArgIter + 1]),
+                            Draw::Atof (theArgs[anArgIter + 2]),
+                            Draw::Atof (theArgs[anArgIter + 3]));
+      aDistRadius   = Draw::Atof (theArgs[anArgIter + 4]);
+      aDistNbPoints = Draw::Atoi (theArgs[anArgIter + 5]);
+      anArgIter += 5;
+    }
+    else if (aName.IsEmpty())
+    {
+      aName = theArgs[anArgIter];
+    }
+    else if (aShape.IsNull())
+    {
+      aShape = DBRep::Get (theArgs[anArgIter]);
+      if (aShape.IsNull())
+      {
+        theDI << "Syntax error: invalid shape '" << theArgs[anArgIter] << "'";
+        return 1;
+      }
+    }
+    else
+    {
+      theDI << "Syntax error at '" << theArgs[anArgIter] << "'";
+      return 1;
     }
   }
 
-  Standard_CString aName = theArgs[1];
   Graphic3d_ArrayFlags aFlags = Graphic3d_ArrayFlags_None;
   if (hasNormals)
   {
@@ -6390,125 +6437,80 @@ static Standard_Integer VPointCloud (Draw_Interpretor& theDI,
 
   // generate arbitrary set of points
   Handle(Graphic3d_ArrayOfPoints) anArrayPoints;
-  if (aCmd == CloudForShape)
+  if (!aShape.IsNull())
   {
-    Standard_CString aShapeName = theArgs[2];
-    TopoDS_Shape     aShape     = DBRep::Get (aShapeName);
-
-    if (aShape.IsNull())
+    class PointCloudPntFiller : public BRepLib_PointCloudShape
     {
-      Message::SendFail() << "Error: no shape with name '" << aShapeName << "' found";
-      return 1;
-    }
+    public:
+      PointCloudPntFiller (Standard_Real theTol) : BRepLib_PointCloudShape (TopoDS_Shape(), theTol) {}
+      void SetPointArray (const Handle(Graphic3d_ArrayOfPoints)& thePoints) { myPoints = thePoints; }
 
-    // calculate number of points
-    TopLoc_Location  aLocation;
-    Standard_Integer aNbPoints = 0;
-    for (TopExp_Explorer aFaceIt (aShape, TopAbs_FACE); aFaceIt.More(); aFaceIt.Next())
-    {
-      const TopoDS_Face& aFace = TopoDS::Face (aFaceIt.Current());
-      Handle(Poly_Triangulation) aTriangulation = BRep_Tool::Triangulation (aFace, aLocation);
-      if (!aTriangulation.IsNull())
+    protected:
+      virtual void addPoint (const gp_Pnt& thePoint,
+                             const gp_Vec& theNorm,
+                             const gp_Pnt2d& theUV,
+                             const TopoDS_Shape& ) Standard_OVERRIDE
       {
-        aNbPoints += aTriangulation->NbNodes();
-      }
-    }
-    if (aNbPoints < 3)
-    {
-      Message::SendFail ("Error: shape should be triangulated");
-      return 1;
-    }
-
-    anArrayPoints = new Graphic3d_ArrayOfPoints (aNbPoints, aFlags);
-    for (TopExp_Explorer aFaceIt (aShape, TopAbs_FACE); aFaceIt.More(); aFaceIt.Next())
-    {
-      const TopoDS_Face& aFace = TopoDS::Face (aFaceIt.Current());
-      Handle(Poly_Triangulation) aTriangulation = BRep_Tool::Triangulation (aFace, aLocation);
-      if (aTriangulation.IsNull())
-      {
-        continue;
-      }
-
-      const gp_Trsf&            aTrsf  = aLocation.Transformation();
-
-      // extract normals from nodes
-      TColgp_Array1OfDir aNormals (1, hasNormals ? aTriangulation->NbNodes() : 1);
-      if (hasNormals)
-      {
-        Poly_Connect aPolyConnect (aTriangulation);
-        StdPrs_ToolTriangulatedShape::Normal (aFace, aPolyConnect, aNormals);
-      }
-
-      for (Standard_Integer aNodeIter = 1; aNodeIter <= aTriangulation->NbNodes(); ++aNodeIter)
-      {
-        gp_Pnt aPoint = aTriangulation->Node (aNodeIter);
-        if (!aLocation.IsIdentity())
+        const Standard_Integer aPntIndex = myPoints->AddVertex (thePoint, theUV);
+        if (theNorm.SquareMagnitude() > gp::Resolution())
         {
-          aPoint.Transform (aTrsf);
-          if (hasNormals)
-          {
-            aNormals (aNodeIter).Transform (aTrsf);
-          }
+          myPoints->SetVertexNormal (aPntIndex, theNorm);
         }
-
-        // add vertex into array of points
-        const Standard_Integer anIndexOfPoint = anArrayPoints->AddVertex (aPoint);
-        if (toRandColors)
+        if (myPoints->HasVertexColors())
         {
-          Quantity_Color aColor (360.0 * Standard_Real(anIndexOfPoint) / Standard_Real(aNbPoints),
+          Quantity_Color aColor (360.0 * Standard_Real(aPntIndex) / Standard_Real(myPoints->VertexNumberAllocated()),
                                  1.0, 0.5, Quantity_TOC_HLS);
-          anArrayPoints->SetVertexColor (anIndexOfPoint, aColor);
-        }
-
-        if (hasNormals)
-        {
-          anArrayPoints->SetVertexNormal (anIndexOfPoint, aNormals (aNodeIter));
-        }
-        if (hasUV
-         && aTriangulation->HasUVNodes())
-        {
-          anArrayPoints->SetVertexTexel (anIndexOfPoint, aTriangulation->UVNode (aNodeIter));
+          myPoints->SetVertexColor (aPntIndex, aColor);
         }
       }
+
+    private:
+      Handle(Graphic3d_ArrayOfPoints) myPoints;
+    };
+
+    PointCloudPntFiller aPoitCloudTool (aTol);
+    aPoitCloudTool.SetShape (aShape);
+    aPoitCloudTool.SetDistance (aDist);
+
+    Standard_Integer aNbPoints = isDensityPoints
+                               ? aPoitCloudTool.NbPointsByDensity (aDensity)
+                               : aPoitCloudTool.NbPointsByTriangulation();
+    theDI << "Number of the generated points : " << aNbPoints << "\n";
+    anArrayPoints = new Graphic3d_ArrayOfPoints (aNbPoints, aFlags);
+    aPoitCloudTool.SetPointArray (anArrayPoints);
+    Standard_Boolean isDone = isDensityPoints
+                            ? aPoitCloudTool.GeneratePointsByDensity (aDensity)
+                            : aPoitCloudTool.GeneratePointsByTriangulation();
+    if (!isDone)
+    {
+      Message::SendFail() << "Error: Point cloud was not generated";
+      return 1;
     }
   }
-  else if (aCmd == CloudSphere)
+  else if (!aDistribution.IsEmpty())
   {
-    Standard_Real aCenterX       = Draw::Atof (theArgs[2]);
-    Standard_Real aCenterY       = Draw::Atof (theArgs[3]);
-    Standard_Real aCenterZ       = Draw::Atof (theArgs[4]);
-    Standard_Real aRadius        = Draw::Atof (theArgs[5]);
-    Standard_Integer aNbPoints   = Draw::Atoi (theArgs[6]);
+    const bool isSurface = aDistribution == "-surface";
 
-    TCollection_AsciiString aDistribution = TCollection_AsciiString(theArgs[7]);
-    aDistribution.LowerCase();
-    if ( aDistribution != "surface" && aDistribution != "volume" )
+    anArrayPoints = new Graphic3d_ArrayOfPoints (aDistNbPoints, aFlags);
+    std::mt19937 aRandomGenerator(0);
+    std::uniform_real_distribution<> anAlphaDistrib(0.0, 2.0 * M_PI);
+    std::uniform_real_distribution<> aBetaDistrib  (0.0, 2.0 * M_PI);
+    std::uniform_real_distribution<> aRadiusDistrib(0.0, aDistRadius);
+    for (Standard_Integer aPntIt = 0; aPntIt < aDistNbPoints; ++aPntIt)
     {
-      Message::SendFail ("Syntax error: wrong arguments. See usage:");
-      theDI.PrintHelp (theArgs[0]);
-      return 1;
-    }
-    Standard_Boolean isSurface = aDistribution == "surface";
-
-    gp_Pnt aCenter(aCenterX, aCenterY, aCenterZ);
-
-    anArrayPoints = new Graphic3d_ArrayOfPoints (aNbPoints, aFlags);
-    for (Standard_Integer aPntIt = 0; aPntIt < aNbPoints; ++aPntIt)
-    {
-      Standard_Real anAlpha   = (Standard_Real (rand() % 2000) / 1000.0) * M_PI;
-      Standard_Real aBeta     = (Standard_Real (rand() % 2000) / 1000.0) * M_PI;
-      Standard_Real aDistance = isSurface ?
-        aRadius : (Standard_Real (rand() % aNbPoints) / aNbPoints) * aRadius;
+      Standard_Real anAlpha   = anAlphaDistrib(aRandomGenerator);
+      Standard_Real aBeta     = aBetaDistrib  (aRandomGenerator);
+      Standard_Real aDistance = isSurface ? aDistRadius : aRadiusDistrib (aRandomGenerator);
 
       gp_Dir aDir (Cos (anAlpha) * Sin (aBeta),
                    Sin (anAlpha),
                    Cos (anAlpha) * Cos (aBeta));
-      gp_Pnt aPoint = aCenter.Translated (aDir.XYZ() * aDistance);
+      gp_Pnt aPoint = aDistCenter.Translated (aDir.XYZ() * aDistance);
 
       const Standard_Integer anIndexOfPoint = anArrayPoints->AddVertex (aPoint);
       if (toRandColors)
       {
-        Quantity_Color aColor (360.0 * Standard_Real (anIndexOfPoint) / Standard_Real (aNbPoints),
+        Quantity_Color aColor (360.0 * Standard_Real (anIndexOfPoint) / Standard_Real (aDistNbPoints),
                                1.0, 0.5, Quantity_TOC_HLS);
         anArrayPoints->SetVertexColor (anIndexOfPoint, aColor);
       }
@@ -6524,11 +6526,16 @@ static Standard_Integer VPointCloud (Draw_Interpretor& theDI,
       }
     }
   }
+  else
+  {
+    Message::SendFail ("Error: wrong number of arguments");
+    return 1;
+  }
 
   // set array of points in point cloud object
   Handle(AIS_PointCloud) aPointCloud = new AIS_PointCloud();
   aPointCloud->SetPoints (anArrayPoints);
-  VDisplayAISObject (aName, aPointCloud);
+  ViewerTest::Display (aName, aPointCloud);
   return 0;
 }
 
@@ -6550,16 +6557,16 @@ static int VPriority (Draw_Interpretor& theDI,
   }
 
   TCollection_AsciiString aLastArg (theArgs[theArgNum - 1]);
-  Standard_Integer aPriority = -1;
+  Standard_Integer aPriority = Graphic3d_DisplayPriority_INVALID;
   Standard_Integer aNbArgs   = theArgNum;
   if (aLastArg.IsIntegerValue())
   {
     aPriority = aLastArg.IntegerValue();
     --aNbArgs;
-    if (aPriority < 0 || aPriority > 10)
+    if (aPriority < Graphic3d_DisplayPriority_Bottom || aPriority > Graphic3d_DisplayPriority_Topmost)
     {
       Message::SendFail() << "Syntax error: the specified display priority value '" << aLastArg
-                          << "' is outside the valid range [0..10]";
+                          << "' is outside the valid range [" << Graphic3d_DisplayPriority_Bottom << ".." << Graphic3d_DisplayPriority_Topmost << "]";
       return 1;
     }
   }
@@ -6591,13 +6598,13 @@ static int VPriority (Draw_Interpretor& theDI,
       return 1;
     }
 
-    if (aPriority < 1)
+    if (aPriority == Graphic3d_DisplayPriority_INVALID)
     {
       theDI << aContext->DisplayPriority (anIObj) << " ";
     }
     else
     {
-      aContext->SetDisplayPriority (anIObj, aPriority);
+      aContext->SetDisplayPriority (anIObj, (Graphic3d_DisplayPriority )aPriority);
     }
   }
   return 0;
@@ -6821,389 +6828,402 @@ static int VNormals (Draw_Interpretor& theDI,
 
 void ViewerTest::ObjectCommands(Draw_Interpretor& theCommands)
 {
-  const char *group ="AISObjects";
+  const char* aGroup = "AIS Viewer";
+  const char* aFileName = __FILE__;
+  auto addCmd = [&](const char* theName, Draw_Interpretor::CommandFunction theFunc, const char* theHelp)
+  {
+    theCommands.Add (theName, theHelp, aFileName, theFunc, aGroup);
+  };
 
-  theCommands.Add ("vtrihedron",
-                   "vtrihedron : vtrihedron name"
-                   "\n\t\t: [-dispMode {wireframe|shading} ]"
-                   "\n\t\t: [-origin x y z ]"
-                   "\n\t\t: [-zaxis u v w -xaxis u v w ]"
-                   "\n\t\t: [-drawAxes {X|Y|Z|XY|YZ|XZ|XYZ}]"
-                   "\n\t\t: [-hideLabels {on|off}]"
-                   "\n\t\t: [-hideArrows {on|off}]"
-                   "\n\t\t: [-label {XAxis|YAxis|ZAxis} value]"
-                   "\n\t\t: [-attribute {XAxisLength|YAxisLength|ZAxisLength"
-                   "\n\t\t:             |TubeRadiusPercent|ConeRadiusPercent"
-                   "\n\t\t:             |ConeLengthPercent|OriginRadiusPercent"
-                   "\n\t\t:             |ShadingNumberOfFacettes} value]"
-                   "\n\t\t: [-color {Origin|XAxis|YAxis|ZAxis|XOYAxis|YOZAxis"
-                   "\n\t\t:         |XOZAxis|Whole} {r g b | colorName}]"
-                   "\n\t\t: [-textColor  [XAxis|YAxis|ZAxis] {r g b | colorName}]"
-                   "\n\t\t: [-arrowColor [XAxis|YAxis|ZAxis] {r g b | colorName}]"
-                   "\n\t\t: [-priority {Origin|XAxis|YAxis|ZAxis|XArrow"
-                   "\n\t\t:            |YArrow|ZArrow|XOYAxis|YOZAxis"
-                   "\n\t\t:            |XOZAxis|Whole} value]"
-                   "\n\t\t:"
-                   "\n\t\t: Creates a new *AIS_Trihedron* object or changes parameters of "
-                   "\n\t\t: existing trihedron. If no argument is set,"
-                   "\n\t\t: the default trihedron (0XYZ) is created."
-                   "\n\t\t: -dispMode mode of visualization: wf - wireframe,"
-                   "\n\t\t:                                  sh - shading."
-                   "\n\t\t:               Default value is wireframe."
-                   "\n\t\t: -origin allows to set trihedron location."
-                   "\n\t\t: -zaxis/-xaxis allows to set trihedron X and Z"
-                   "\n\t\t:               directions. The directions should"
-                   "\n\t\t:               be orthogonal. Y direction is calculated."
-                   "\n\t\t: -drawAxes allows to set what axes are drawn in the"
-                   "\n\t\t:           trihedron, default state is XYZ"
-                   "\n\t\t: -hideLabels allows to show/hide trihedron labels"
-                   "\n\t\t: -hideArrows allows to show/hide trihedron arrows"
-                   "\n\t\t: -label allows to change default X/Y/Z titles of axes"
-                   "\n\t\t: -attribute sets parameters of trihedron"
-                   "\n\t\t: -color sets color properties of parts of trihedron"
-                   "\n\t\t: -textColor sets color properties of trihedron labels"
-                   "\n\t\t: -arrowColor sets color properties of trihedron arrows"
-                   "\n\t\t: -priority allows to change default selection priority"
-                   "\n\t\t: of trihedron components",
-                   __FILE__,VTrihedron,group);
+  addCmd ("vtrihedron", VTrihedron, /* [vtrihedron] */ R"(
+vtrihedron name
+           [-dispMode {wireframe|shading} ]
+           [-origin x y z ]
+           [-zaxis u v w -xaxis u v w ]
+           [-drawAxes {X|Y|Z|XY|YZ|XZ|XYZ}]
+           [-hideLabels {on|off}]
+           [-hideArrows {on|off}]
+           [-label {XAxis|YAxis|ZAxis} value]
+           [-attribute {XAxisLength|YAxisLength|ZAxisLength
+                       |TubeRadiusPercent|ConeRadiusPercent
+                       |ConeLengthPercent|OriginRadiusPercent
+                       |ShadingNumberOfFacettes} value]
+           [-color {Origin|XAxis|YAxis|ZAxis|XOYAxis|YOZAxis
+                   |XOZAxis|Whole} {r g b | colorName}]
+           [-textColor  [XAxis|YAxis|ZAxis] {r g b | colorName}]
+           [-arrowColor [XAxis|YAxis|ZAxis] {r g b | colorName}]
+           [-priority {Origin|XAxis|YAxis|ZAxis|XArrow
+                      |YArrow|ZArrow|XOYAxis|YOZAxis
+                      |XOZAxis|Whole} value]
 
-  theCommands.Add("vtri2d",
-    "vtri2d Name"
-    "\n\t\t: Creates a plane with a 2D trihedron from an interactively selected face.",
-    __FILE__,VTrihedron2D ,group);
+Creates/changes *AIS_Trihedron* object.
+ -dispMode   mode of visualization: wf - wireframe,
+                                    sh - shading;
+             default value is wireframe;
+ -origin     allows to set trihedron location;
+ -zaxis/-xaxis allows to set trihedron X and Z directions;
+             the directions should be orthogonal;
+             Y direction is calculated;
+ -drawAxes   allows to set what axes are drawn in the
+             trihedron, default state is XYZ;
+ -hideLabels allows to show/hide trihedron labels;
+ -hideArrows allows to show/hide trihedron arrows;
+ -label      allows to change default X/Y/Z titles of axes;
+ -attribute  sets parameters of trihedron;
+ -color      sets color properties of parts of trihedron;
+ -textColor  sets color properties of trihedron labels;
+ -arrowColor sets color properties of trihedron arrows;
+ -priority   allows to change default selection priority
+             of trihedron components.
+)" /* [vtrihedron] */);
 
-  theCommands.Add("vplanetri",
-    "vplanetri name"
-    "\n\t\t: Create a plane from a trihedron selection. If no arguments are set, the default",
-    __FILE__,VPlaneTrihedron ,group);
+  addCmd ("vtri2d", VTrihedron2D, /* [vtri2d] */ R"(
+vtri2d Name : Creates a plane with a 2D trihedron from an interactively selected face.
+)" /* [vtri2d] */);
 
-  theCommands.Add("vsize",
-    "vsize       : vsize [name(Default=Current)] [size(Default=100)] "
-    "\n\t\t: Changes the size of a named or selected trihedron."
-    "\n\t\t: If the name is not defined: it affects the selected trihedrons otherwise nothing is done."
-    "\n\t\t: If the value is not defined: it is set to 100 by default.",
-    __FILE__,VSize,group);
+  addCmd ("vplanetri", VPlaneTrihedron, /* [vplanetri] */ R"(
+vplanetri name
+Create a plane from a trihedron selection.
+If no arguments are set, the default plane is created.
+)" /* [vplanetri] */);
 
-  theCommands.Add("vaxis",
-    "vaxis name [Xa] [Ya] [Za] [Xb] [Yb] [Zb]"
-    "\n\t\t: Creates an axis. If  the values are not defined, an axis is created by interactive selection of two vertices or one edge",
-    __FILE__,VAxisBuilder,group);
+  addCmd ("vsize", VSize, /* [vsize] */ R"(
+vsize [name(Default=Current)] [size(Default=100)]
+Changes the size of a named or selected trihedron.
+If the name is not defined: it affects the selected trihedrons otherwise nothing is done.
+If the value is not defined: it is set to 100 by default.
+)" /* [vsize] */);
 
-  theCommands.Add("vaxispara",
-    "vaxispara name "
-    "\n\t\t: Creates an axis by interactive selection of an edge and a vertex.",
-    __FILE__,VAxisBuilder,group);
+  addCmd ("vaxis", VAxisBuilder, /* [vaxis] */ R"(
+vaxis name [Xa] [Ya] [Za] [Xb] [Yb] [Zb]
+Creates an axis. If  the values are not defined,
+an axis is created by interactive selection of two vertices or one edge.
+)" /* [vaxis] */);
 
-  theCommands.Add("vaxisortho",
-    "vaxisortho name "
-    "\n\t\t: Creates an axis by interactive selection of an edge and a vertex. The axis will be orthogonal to the selected edge.",
-    __FILE__,VAxisBuilder,group);
+  addCmd ("vaxispara", VAxisBuilder, /* [vaxispara] */ R"(
+vaxispara name
+Creates an axis by interactive selection of an edge and a vertex.
+)" /* [vaxispara] */);
 
-  theCommands.Add("vpoint",
-    "vpoint name [X Y [Z]] [-2d] [-nosel]"
-    "\n\t\t: Creates a point from coordinates."
-    "\n\t\t: If the values are not defined, a point is created from selected vertex or edge (center)."
-    "\n\t\t:  -2d    defines on-screen 2D point from top-left window corner"
-    "\n\t\t:  -nosel creates non-selectable presentation",
-    __FILE__,VPointBuilder,group);
+  addCmd ("vaxisortho", VAxisBuilder, /* [vaxisortho] */ R"(
+vaxisortho name
+Creates an axis by interactive selection of an edge and a vertex.
+The axis will be orthogonal to the selected edge.
+)" /* [vaxisortho] */);
 
-  theCommands.Add("vplane",
-    "vplane  PlaneName [AxisName/PlaneName/PointName] [PointName/PointName/PointName] [Nothing/Nothing/PointName] [TypeOfSensitivity {0|1}]"
-    "\n\t\t: Creates a plane from named or interactively selected entities."
-    "\n\t\t: TypeOfSensitivity:"
-    "\n\t\t:   0 - Interior"
-    "\n\t\t:   1 - Boundary",
-    __FILE__,VPlaneBuilder,group);
+  addCmd ("vpoint", VPointBuilder, /* [vpoint] */ R"(
+vpoint name [X Y [Z]] [-2d] [-nosel]
+Creates a point from coordinates.
+If the values are not defined, a point is created from selected vertex or edge (center).
+ -2d    defines on-screen 2D point from top-left window corner;
+ -nosel creates non-selectable presentation.
+)" /* [vpoint] */);
 
-  theCommands.Add ("vchangeplane", "vchangeplane usage: \n"
-    "   vchangeplane <plane_name>"
-    " [x=center_x y=center_y z=center_z]"
-    " [dx=dir_x dy=dir_y dz=dir_z]"
-    " [sx=size_x sy=size_y]"
-    " [minsize=value]"
-    " [noupdate]\n"
-    "   - changes parameters of the plane:\n"
-    "   - x y z     - center\n"
-    "   - dx dy dz  - normal\n"
-    "   - sx sy     - plane sizes\n"
-    "   - noupdate  - do not update/redisplay the plane in context\n"
-    "   Please enter coordinates in format \"param=value\" in arbitrary order.",
-    __FILE__, VChangePlane, group);
+  addCmd ("vplane", VPlaneBuilder, /* [vplane] */ R"(
+vplane PlaneName [AxisName/PlaneName/PointName]
+       [PointName/PointName/PointName] [Nothing/Nothing/PointName] [TypeOfSensitivity {0|1}]
+Creates a plane from named or interactively selected entities. TypeOfSensitivity:
+  0 - Interior;
+  1 - Boundary.
+)" /* [vplane] */);
 
-  theCommands.Add("vplanepara",
-    "vplanepara  PlaneName  "
-    "\n\t\t: Creates a plane from interactively selected vertex and face.",
-    __FILE__,VPlaneBuilder,group);
+  addCmd ("vchangeplane", VChangePlane, /* [vchangeplane] */ R"(
+vchangeplane plane_name
+             [x=center_x y=center_y z=center_z]
+             [dx=dir_x dy=dir_y dz=dir_z]
+             [sx=size_x sy=size_y]
+             [minsize=value]
+             [noupdate]
+Changes parameters of the plane:
+ - x y z     - center
+ - dx dy dz  - normal
+ - sx sy     - plane sizes
+ - noupdate  - do not update/redisplay the plane in context
+Please enter coordinates in format "param=value" in arbitrary order.
+)" /* [vchangeplane] */);
 
-  theCommands.Add("vplaneortho",
-    "vplaneortho  PlaneName  "
-    "\n\t\t: Creates a plane from interactive selected face and coplanar edge. ",
-    __FILE__,VPlaneBuilder,group);
+  addCmd ("vplanepara", VPlaneBuilder, /* [vplanepara] */ R"(
+vplanepara  PlaneName
+Creates a plane from interactively selected vertex and face.
+)" /* [vplanepara] */);
 
-  theCommands.Add("vline",
-    "vline LineName [Xa/PointName] [Ya/PointName] [Za] [Xb] [Yb] [Zb]  "
-    "\n\t\t: Creates a line from coordinates, named or interactively selected vertices. ",
-    __FILE__,VLineBuilder,group);
+  addCmd ("vplaneortho", VPlaneBuilder, /* [vplaneortho] */ R"(
+vplaneortho  PlaneName
+Creates a plane from interactive selected face and coplanar edge.
+)" /* [vplaneortho] */);
 
-  theCommands.Add("vcircle",
-    "vcircle CircleName [PointName PointName PointName IsFilled]\n\t\t\t\t\t[PlaneName PointName Radius IsFilled]"
-    "\n\t\t: Creates a circle from named or interactively selected entities."
-    "\n\t\t: Parameter IsFilled is defined as 0 or 1.",
-    __FILE__,VCircleBuilder,group);
+  addCmd ("vline", VLineBuilder, /* [vline] */ R"(
+vline LineName [Xa/PointName] [Ya/PointName] [Za] [Xb] [Yb] [Zb]
+Creates a line from coordinates, named or interactively selected vertices.
+)" /* [vline] */);
 
-  theCommands.Add ("vdrawtext",
-                   "vdrawtext name text"
-                   "\n\t\t: [-pos X=0 Y=0 Z=0]"
-                   "\n\t\t: [-color {R G B|name}=yellow]"
-                   "\n\t\t: [-halign {left|center|right}=left]"
-                   "\n\t\t: [-valign {top|center|bottom|topfirstline}=bottom}]"
-                   "\n\t\t: [-angle angle=0]"
-                   "\n\t\t: [-zoom {0|1}=0]"
-                   "\n\t\t: [-height height=16]"
-                   "\n\t\t: [-wrapping width=40]"
-                   "\n\t\t: [-aspect {regular|bold|italic|boldItalic}=regular]"
-                   "\n\t\t: [-font font=Times]"
-                   "\n\t\t: [-2d]"
-                   "\n\t\t: [-perspos {X Y Z}=0 0 0], where"
-                   "\n\t\t X and Y define the coordinate origin in 2d space relative to the view window"
-                   "\n\t\t Example: X=0 Y=0 is center, X=1 Y=1 is upper right corner etc..."
-                   "\n\t\t Z coordinate defines the gap from border of view window (except center position)."
-                   "\n\t\t: [-disptype {blend|decal|shadow|subtitle|dimension|normal}=normal}"
-                   "\n\t\t: [-subcolor {R G B|name}=white]"
-                   "\n\t\t: [-noupdate]"
-                   "\n\t\t: [-plane NormX NormY NormZ DirX DirY DirZ]"
-                   "\n\t\t: [-flipping]"
-                   "\n\t\t: [-ownanchor {0|1}=1]"
-                   "\n\t\t: Display text label at specified position.",
-    __FILE__, VDrawText, group);
+  addCmd ("vcircle", VCircleBuilder, /* [vcircle] */ R"(
+vcircle CircleName [PointName PointName PointName IsFilled] [UStart UEnd]
+                   [PlaneName PointName Radius IsFilled] [UStart UEnd]
+Creates a circle from named or interactively selected entities.
+Parameter IsFilled is defined as 0 or 1.
+)" /* [vcircle] */);
 
-  theCommands.Add("vdrawsphere",
-    "vdrawsphere: vdrawsphere shapeName Fineness [X=0.0 Y=0.0 Z=0.0] [Radius=100.0] [ToShowEdges=0] [ToPrintInfo=1]\n",
-    __FILE__,VDrawSphere,group);
+  addCmd ("vdrawtext", VDrawText, /* [vdrawtext] */ R"(
+vdrawtext name text
+          [-pos X Y Z]={0 0 0}
+          [-color {R G B|name}]=yellow
+          [-halign {left|center|right}]=left
+          [-valign {top|center|bottom|topfirstline}}]=bottom
+          [-angle angle]=0
+          [-zoom {0|1}]=0
+          [-height height]=16
+          [-wrapping width]=40
+          [-wordwrapping {0|1}]=1
+          [-aspect {regular|bold|italic|boldItalic}]=regular
+          [-font font]=Times
+          [-2d] [-perspos {X Y Z}]={0 0 0}
+          [-disptype {blend|decal|shadow|subtitle|dimension|normal}}=normal
+          [-subcolor {R G B|name}]=white
+          [-noupdate]
+          [-plane NormX NormY NormZ DirX DirY DirZ]
+          [-flipping] [-ownanchor {0|1}]=1
+Display text label at specified position.
+Within -perspos, X and Y define the coordinate origin in 2d space relative to the view window.
+Example: X=0 Y=0 is center, X=1 Y=1 is upper right corner etc...
+Z coordinate defines the gap from border of view window (except center position).
+)" /* [vdrawtext] */);
 
-  theCommands.Add ("vlocation",
-                "vlocation name"
-      "\n\t\t:   [-reset] [-copyFrom otherName]"
-      "\n\t\t:   [-translate    X Y [Z]] [-rotate    x y z dx dy dz angle] [-scale    [X Y Z] scale]"
-      "\n\t\t:   [-pretranslate X Y [Z]] [-prerotate x y z dx dy dz angle] [-prescale [X Y Z] scale]"
-      "\n\t\t:   [-mirror x y z dx dy dz] [-premirror x y z dx dy dz]"
-      "\n\t\t:   [-setLocation X Y [Z]] [-setRotation QX QY QZ QW] [-setScale [X Y Z] scale]"
-      "\n\t\t: Object local transformation management:"
-      "\n\t\t:   -reset        resets transformation to identity"
-      "\n\t\t:   -translate    applies translation vector"
-      "\n\t\t:   -rotate       applies rotation around axis"
-      "\n\t\t:   -scale        applies scale factor with optional anchor"
-      "\n\t\t:   -mirror       applies mirror transformation"
-      "\n\t\t:   -pretranslate pre-multiplies translation vector"
-      "\n\t\t:   -prerotate    pre-multiplies rotation around axis"
-      "\n\t\t:   -prescale     pre-multiplies scale  transformation"
-      "\n\t\t:   -premirror    pre-multiplies mirror transformation"
-      "\n\t\t:   -setLocation  overrides translation part"
-      "\n\t\t:   -setRotation  overrides rotation part with specified quaternion"
-      "\n\t\t:   -setScale     overrides scale factor",
-        __FILE__, VSetLocation, group);
-  theCommands.Add ("vsetlocation",
-                   "alias for vlocation",
-        __FILE__, VSetLocation, group);
-  theCommands.Add ("vchild",
-                   "vchild parent [-add] [-remove] [-ignoreParentTrsf {0|1}] child1 [child2] [...]"
-      "\n\t\t: Command for testing low-level presentation connections."
-      "\n\t\t: vconnect command should be used instead.",
-        __FILE__, VChild, group);
-  theCommands.Add("vparent",
-    "vparent parent [-ignoreVisu]"
-    "\n\t\t: Command for testing object properties as parent in the hierarchy."
-    "\n\t\t: Arguments:"
-    "\n\t\t:   -ignoreVisu do not propagate the visual state (display/erase/color) to children objects",
-    __FILE__, VParent, group);
-  theCommands.Add ("vcomputehlr",
-                "vcomputehlr shapeInput hlrResult [-algoType {algo|polyAlgo}=polyAlgo]"
-      "\n\t\t:   [eyeX eyeY eyeZ dirX dirY dirZ upX upY upZ]"
-      "\n\t\t:   [-showTangentEdges {on|off}=off] [-nbIsolines N=0] [-showHiddenEdges {on|off}=off]"
-      "\n\t\t: Arguments:"
-      "\n\t\t:  shapeInput - name of the initial shape"
-      "\n\t\t:  hlrResult - result HLR object from initial shape"
-      "\n\t\t:  eye, dir are eye position and look direction"
-      "\n\t\t:  up is the look up direction vector"
-      "\n\t\t:  -algoType HLR algorithm to use"
-      "\n\t\t:  -showTangentEdges include tangent edges"
-      "\n\t\t:  -nbIsolines include isolines"
-      "\n\t\t:  -showHiddenEdges include hidden edges"
-      "\n\t\t: Use vtop to see projected HLR shape.",
-    __FILE__, VComputeHLR, group);
+  addCmd ("vdrawsphere", VDrawSphere, /* [vdrawsphere] */ R"(
+vdrawsphere shapeName Fineness [X=0.0 Y=0.0 Z=0.0] [Radius=100.0] [ToShowEdges=0] [ToPrintInfo=1]
+)" /* [vdrawsphere] */);
 
-  theCommands.Add("vdrawparray",
-                "vdrawparray name TypeOfArray={points|segments|polylines|triangles"
-      "\n\t\t:                                |trianglefans|trianglestrips|quads|quadstrips|polygons}"
-      "\n\t\t:              [-deinterleaved|-mutable]"
-      "\n\t\t:              [vertex={'v' x y z [normal={'n' nx ny nz}] [color={'c' r g b}] [texel={'t' tx ty}]]"
-      "\n\t\t:              [bound= {'b' nbVertices [bound_color={'c' r g b}]]"
-      "\n\t\t:              [edge=  {'e' vertexId]"
-      "\n\t\t:              [-shape shapeName] [-patch]"
-      "\n\t\t: Commands create an Interactive Object for specified Primitive Array definition (Graphic3d_ArrayOfPrimitives)"
-      "\n\t\t: with the main purpose is covering various combinations by tests",
-    __FILE__,VDrawPArray,group);
+  addCmd ("vlocation", VSetLocation, /* [vlocation] */ R"(
+vlocation name
+    [-reset] [-copyFrom otherName]
+    [-translate    X Y [Z]] [-rotate    x y z dx dy dz angle] [-scale    [X Y Z] scale]
+    [-pretranslate X Y [Z]] [-prerotate x y z dx dy dz angle] [-prescale [X Y Z] scale]
+    [-mirror x y z dx dy dz] [-premirror x y z dx dy dz]
+    [-setLocation X Y [Z]] [-setRotation QX QY QZ QW] [-setScale [X Y Z] scale]
+Object local transformation management:
+ -reset        resets transformation to identity
+ -translate    applies translation vector
+ -rotate       applies rotation around axis
+ -scale        applies scale factor with optional anchor
+ -mirror       applies mirror transformation
+ -pretranslate pre-multiplies translation vector
+ -prerotate    pre-multiplies rotation around axis
+ -prescale     pre-multiplies scale  transformation
+ -premirror    pre-multiplies mirror transformation
+ -setLocation  overrides translation part
+ -setRotation  overrides rotation part with specified quaternion
+ -setScale     overrides scale factor
+)" /* [vlocation] */);
 
-  theCommands.Add("vconnect", 
-    "vconnect name Xo Yo Zo object1 object2 ... [color=NAME]"
-    "\n\t\t: Creates and displays AIS_ConnectedInteractive object from input object and location.",
-    __FILE__, VConnect, group);
+  addCmd ("vsetlocation", VSetLocation, /* [vsetlocation] */ R"(
+Alias for vlocation
+)" /* [vsetlocation] */);
 
-  theCommands.Add("vconnectto",
-    "vconnectto : instance_name Xo Yo Zo object [-nodisplay|-noupdate|-update]"
-    "  Makes an instance 'instance_name' of 'object' with position (Xo Yo Zo)."
-    "\n\t\t:   -nodisplay - only creates interactive object, but not displays it",
-    __FILE__, VConnectTo,group);
+  addCmd ("vchild", VChild, /* [vchild] */ R"(
+vchild parent [-add] [-remove] [-ignoreParentTrsf {0|1}] child1 [child2] [...]
+Command for testing low-level presentation connections.
+vconnect command should be used instead.
+)" /* [vchild] */);
 
-  theCommands.Add("vdisconnect",
-    "vdisconnect assembly_name (object_name | object_number | 'all')"
-    "  Disconnects all objects from assembly or disconnects object by name or number (use vlistconnected to enumerate assembly children).",
-    __FILE__,VDisconnect,group);
+  addCmd ("vparent", VParent, /* [vparent] */ R"(
+vparent parent [-ignoreVisu]
+Command for testing object properties as parent in the hierarchy.
+ -ignoreVisu do not propagate the visual state (display/erase/color) to children objects
+)" /* [vparent] */);
 
-  theCommands.Add("vaddconnected",
-    "vaddconnected assembly_name object_name"
-    "Adds object to assembly.",
-    __FILE__,VAddConnected,group);
+  addCmd ("vcomputehlr", VComputeHLR, /* [vcomputehlr] */ R"(
+vcomputehlr shapeInput hlrResult [-algoType {algo|polyAlgo}=polyAlgo]
+    [eyeX eyeY eyeZ dirX dirY dirZ upX upY upZ]
+    [-showTangentEdges {on|off}=off] [-nbIsolines N=0] [-showHiddenEdges {on|off}=off]
+Arguments:
+  shapeInput - name of the initial shape
+  hlrResult  - result HLR object from initial shape
+  eye, dir are eye position and look direction
+  up is the look up direction vector
+ -algoType HLR algorithm to use
+ -showTangentEdges include tangent edges
+ -nbIsolines include isolines
+ -showHiddenEdges include hidden edges
+Use vtop to see projected HLR shape.
+)" /* [vcomputehlr] */);
 
-  theCommands.Add("vlistconnected",
-    "vlistconnected assembly_name"
-    "Lists objects in assembly.",
-    __FILE__,VListConnected,group);
+  addCmd ("vdrawparray", VDrawPArray, /* [vdrawparray] */ R"(
+vdrawparray name TypeOfArray={points|segments|polylines|triangles
+                   |trianglefans|trianglestrips|quads|quadstrips|polygons}
+            [-deinterleaved|-mutable]
+            [vertex={'v' x y z [normal={'n' nx ny nz}] [color={'c' r g b}] [texel={'t' tx ty}]]
+            [bound= {'b' nbVertices [bound_color={'c' r g b}]]
+            [edge=  {'e' vertexId]
+            [-shape shapeName] [-patch]
+Commands create an Interactive Object for specified Primitive Array definition
+with the main purpose is covering various combinations by tests.
+)" /* [vdrawparray] */);
 
+  addCmd ("vconnect", VConnect, /* [vconnect] */ R"(
+vconnect name Xo Yo Zo object1 object2 ... [color=NAME]
+Creates and displays AIS_ConnectedInteractive object from input object and location.
+)" /* [vconnect] */);
 
-  theCommands.Add("vselmode", 
-                "vselmode [object] selectionMode {on|off}"
-      "\n\t\t:            [{-add|-set|-globalOrLocal}=-globalOrLocal]"
-      "\n\t\t: Switches selection mode for the specified object or for all objects in context."
-      "\n\t\t: Selection mode is either an integer number specific to Interactive Object,"
-      "\n\t\t: or sub-shape type in case of AIS_Shape:"
-      "\n\t\t:   Shape, Vertex, Edge, Wire, Face, Shell, Solid, CompSolid, Compound"
-      "\n\t\t: The integer mode 0 (Shape in case of AIS_Shape) is reserved for selecting object as whole."
-      "\n\t\t: Additional options:"
-      "\n\t\t:  -add           already activated selection modes will be left activated"
-      "\n\t\t:  -set           already activated selection modes will be deactivated"
-      "\n\t\t:  -globalOrLocal (default) if new mode is Global selection mode,"
-      "\n\t\t:                 then active local selection modes will be deactivated"
-      "\n\t\t:                 and the samthen active local selection modes will be deactivated",
-    __FILE__, VSetSelectionMode, group);
+  addCmd ("vconnectto", VConnectTo, /* [vconnectto] */ R"(
+vconnectto instance_name Xo Yo Zo object [-nodisplay|-noupdate|-update]
+Makes an instance 'instance_name' of 'object' with position (Xo Yo Zo).
+ -nodisplay - only creates interactive object, but not displays it.
+)" /* [vconnectto] */);
 
-  theCommands.Add("vselnext",
-    "vselnext : hilight next detected",
-    __FILE__, VSelectionNext, group);
+  addCmd ("vdisconnect", VDisconnect, /* [vdisconnect] */ R"(
+vdisconnect assembly_name {object_name|object_number|'all'}
+Disconnects all objects from assembly or disconnects object by name or number.
+Use vlistconnected to enumerate assembly children.
+)" /* [vdisconnect] */);
 
-  theCommands.Add("vselprev",
-    "vselnext : hilight previous detected",
-    __FILE__, VSelectionPrevious, group);
+  addCmd ("vaddconnected", VAddConnected, /* [vaddconnected] */ R"(
+vaddconnected assembly_name object_name
+Adds object to assembly.
+)" /* [vaddconnected] */);
 
-  theCommands.Add("vtriangle",
-    "vtriangle Name PointName PointName PointName"
-    "\n\t\t: Creates and displays a filled triangle from named points.", 
-    __FILE__, VTriangle,group);
+  addCmd ("vlistconnected", VListConnected, /* [vlistconnected] */ R"(
+vlistconnected assembly_name
+Lists objects in assembly.
+)" /* [vlistconnected] */);
 
-  theCommands.Add("vsegment",
-    "vsegment Name PointName PointName"
-    "\n\t\t: Creates and displays a segment from named points.", 
-    __FILE__, VTriangle,group);
+  addCmd ("vselmode", VSetSelectionMode, /* [vselmode] */ R"(
+vselmode [object] selectionMode {on|off}
+         [{-add|-set|-globalOrLocal}=-globalOrLocal]
+Switches selection mode for the specified object or for all objects in context.
+Selection mode is either an integer number specific to Interactive Object,
+or sub-shape type in case of AIS_Shape:
+  Shape, Vertex, Edge, Wire, Face, Shell, Solid, CompSolid, Compound
+The integer mode 0 (Shape in case of AIS_Shape) is reserved for selecting object as whole.
+Additional options:
+ -add           already activated selection modes will be left activated
+ -set           already activated selection modes will be deactivated
+ -globalOrLocal (default) if new mode is Global selection mode,
+                then active local selection modes will be deactivated
+                and the samthen active local selection modes will be deactivated
+)" /* [vselmode] */);
 
-  theCommands.Add ("vtorus",
-                   "vtorus name [R1 R2 [Angle1=0 Angle2=360] [Angle=360]]"
-                   "\n\t\t:             [-radius R1] [-pipeRadius R2]"
-                   "\n\t\t:             [-pipeAngle Angle=360] [-segmentAngle1 Angle1=0 -segmentAngle2 Angle2=360]"
-                   "\n\t\t:             [-nbSlices Number=100] [-nbStacks Number=100] [-noupdate]"
-                   "\n\t\t: Creates and displays a torus or torus segment."
-                   "\n\t\t: Parameters of the torus :"
-                   "\n\t\t: - R1     distance from the center of the pipe to the center of the torus"
-                   "\n\t\t: - R2     radius of the pipe"
-                   "\n\t\t: - Angle1 first angle to create a torus ring segment"
-                   "\n\t\t: - Angle2 second angle to create a torus ring segment"
-                   "\n\t\t: - Angle  angle to create a torus pipe segment",
-                   __FILE__, VTorus, group);
+  addCmd ("vselnext", VSelectionNext, /* [vselnext] */ R"(
+vselnext : hilight next detected
+)" /* [vselnext] */);
 
-  theCommands.Add ("vcylinder",
-                   "vcylinder name [R1 R2 Height] [-height H] [-radius R] [-bottomRadius R1 -topRadius R2]"
-                   "\n\t\t:                [-nbSlices Number=100] [-noupdate]"
-                   "\n\t\t: Creates and displays a cylinder."
-                   "\n\t\t: Parameters of the cylinder :"
-                   "\n\t\t: - R1     cylinder bottom radius"
-                   "\n\t\t: - R2     cylinder top radius"
-                   "\n\t\t: - Height cylinder height",
-                   __FILE__, VCylinder, group);
+  addCmd ("vselprev", VSelectionPrevious, /* [vselprev] */ R"(
+vselnext : hilight previous detected
+)" /* [vselprev] */);
 
-  theCommands.Add ("vsphere",
-                   "vsphere name [-radius] R"
-                   "\n\t\t:              [-nbSlices Number=100] [-nbStacks Number=100] [-noupdate]"
-                   "\n\t\t: Creates and displays a sphere.",
-                   __FILE__, VSphere, group);
+  addCmd ("vtriangle", VTriangle, /* [vtriangle] */ R"(
+vtriangle Name PointName PointName PointName
+Creates and displays a filled triangle from named points.
+)" /* [vtriangle] */);
 
-  theCommands.Add("vobjzlayer",
-    "vobjzlayer : set/get object [layerid] - set or get z layer id for the interactive object",
-    __FILE__, VObjZLayer, group);
+  addCmd ("vsegment", VTriangle, /* [vsegment] */ R"(
+vsegment Name PointName PointName
+Creates and displays a segment from named points.
+)" /* [vsegment] */);
+
+  addCmd ("vtorus", VTorus, /* [vtorus] */ R"(
+vtorus name [R1 R2 [Angle1=0 Angle2=360] [Angle=360]]
+       [-radius R1] [-pipeRadius R2]
+       [-pipeAngle Angle=360] [-segmentAngle1 Angle1=0 -segmentAngle2 Angle2=360]
+       [-nbSlices Number=100] [-nbStacks Number=100] [-noupdate]
+Creates and displays a torus or torus segment.
+Parameters of the torus:
+ - R1     distance from the center of the pipe to the center of the torus
+ - R2     radius of the pipe
+ - Angle1 first angle to create a torus ring segment
+ - Angle2 second angle to create a torus ring segment
+ - Angle  angle to create a torus pipe segment
+)" /* [vtorus] */);
+
+  addCmd ("vcylinder", VCylinder, /* [vcylinder] */ R"(
+vcylinder name [R1 R2 Height] [-height H] [-radius R] [-bottomRadius R1 -topRadius R2]
+               [-nbSlices Number=100] [-noupdate]
+Creates and displays a cylinder.
+Parameters of the cylinder:
+ - R1     cylinder bottom radius
+ - R2     cylinder top radius
+ - Height cylinder height
+)" /* [vcylinder] */);
+
+  addCmd ("vsphere", VSphere, /* [vsphere] */ R"(
+vsphere name [-radius] R
+             [-nbSlices Number=100] [-nbStacks Number=100] [-noupdate]
+Creates and displays a sphere.
+)" /* [vsphere] */);
+
+  addCmd ("vobjzlayer", VObjZLayer, /* [vobjzlayer] */ R"(
+vobjzlayer : set/get object [layerid] - set or get z layer id for the interactive object
+)" /* [vobjzlayer] */);
   
-  theCommands.Add("vpolygonoffset",
-    "vpolygonoffset : [object [mode factor units]] - sets/gets polygon offset parameters for an object, without arguments prints the default values",
-    __FILE__, VPolygonOffset, group);
+  addCmd ("vpolygonoffset", VPolygonOffset, /* [vpolygonoffset] */ R"(
+vpolygonoffset [object [mode factor units]]
+Sets/gets polygon offset parameters for an object; without arguments prints the default values
+)" /* [vpolygonoffset] */);
 
-  theCommands.Add ("vmarkerstest",
-                   "vmarkerstest: name X Y Z [PointsOnSide=10] [MarkerType=0] [Scale=1.0] [FileName=ImageFile]\n",
-                   __FILE__, VMarkersTest, group);
+  addCmd ("vmarkerstest", VMarkersTest, /* [vmarkerstest] */ R"(
+vmarkerstest: name X Y Z [PointsOnSide=10] [MarkerType=0] [Scale=1.0] [FileName=ImageFile]
+)" /* [vmarkerstest] */);
 
-  theCommands.Add ("text2brep",
-                   "text2brep: name text"
-                   "\n\t\t: [-pos X=0 Y=0 Z=0]"
-                   "\n\t\t: [-halign {left|center|right}=left]"
-                   "\n\t\t: [-valign {top|center|bottom|topfirstline}=bottom}]"
-                   "\n\t\t: [-height height=16]"
-                   "\n\t\t: [-aspect {regular|bold|italic|boldItalic}=regular]"
-                   "\n\t\t: [-font font=Courier] [-strict {strict|aliases|any}=any]"
-                   "\n\t\t: [-composite {on|off}=off]"
-                   "\n\t\t: [-plane NormX NormY NormZ DirX DirY DirZ]",
-                   __FILE__, TextToBRep, group);
-  theCommands.Add ("vfont",
-                            "vfont [-add pathToFont [fontName] [regular,bold,italic,boldItalic=undefined] [singleStroke]]"
-                   "\n\t\t:        [-strict {any|aliases|strict}] [-find fontName [regular,bold,italic,boldItalic=undefined]] [-verbose {on|off}]"
-                   "\n\t\t:        [-findAll fontNameMask] [-findInfo fontName]"
-                   "\n\t\t:        [-unicodeFallback {on|off}]"
-                   "\n\t\t:        [-clear] [-init] [-list] [-names]"
-                   "\n\t\t:        [-aliases [aliasName]] [-addAlias Alias FontName] [-removeAlias Alias FontName] [-clearAlias Alias] [-clearAliases]"
-                   "\n\t\t: Work with font registry - register font, list available fonts, find font."
-                   "\n\t\t: -findAll  is same as -find, but can print more than one font when mask is passed."
-                   "\n\t\t: -findInfo is same as -find, but prints complete font information instead of family name.",
-                   __FILE__, VFont, group);
+  addCmd ("text2brep", TextToBRep, /* [text2brep] */ R"(
+text2brep name text"
+          [-pos X=0 Y=0 Z=0]"
+          [-halign {left|center|right}=left]"
+          [-valign {top|center|bottom|topfirstline}=bottom}]"
+          [-height height=16]"
+          [-aspect {regular|bold|italic|boldItalic}=regular]"
+          [-font font=Courier] [-strict {strict|aliases|any}=any]"
+          [-composite {on|off}=off]"
+          [-plane NormX NormY NormZ DirX DirY DirZ]",
+)" /* [text2brep] */);
 
-  theCommands.Add ("vvertexmode",
-                   "vvertexmode [name | -set {isolated | all | inherited} [name1 name2 ...]]\n"
-                   "vvertexmode - prints the default vertex draw mode\n"
-                   "vvertexmode name - prints the vertex draw mode of the given object\n"
-                   "vvertexmode -set {isolated | all | inherited} - sets the default vertex draw mode and updates the mode for all displayed objects\n"
-                   "vvertexmode -set {isolated | all | inherited} name1 name2 ... - sets the vertex draw mode for the specified object(s)\n",
-                   __FILE__, VVertexMode, group);
+  addCmd ("vfont", VFont, /* [vfont] */ R"(
+vfont [-add pathToFont [fontName] [regular,bold,italic,boldItalic=undefined] [singleStroke]]
+      [-strict {any|aliases|strict}] [-find fontName [regular,bold,italic,boldItalic=undefined]]
+      [-verbose {on|off}]
+      [-findAll fontNameMask] [-findInfo fontName]
+      [-unicodeFallback {on|off}]
+      [-clear] [-init] [-list] [-names]
+      [-aliases [aliasName]] [-addAlias Alias FontName] [-removeAlias Alias FontName]
+      [-clearAlias Alias] [-clearAliases]
+Work with font registry - register font, list available fonts, find font.
+ -findAll  is same as -find, but can print more than one font when mask is passed.
+ -findInfo is same as -find, but prints complete font information instead of family name.
+)" /* [vfont] */);
 
-  theCommands.Add ("vpointcloud",
-                   "vpointcloud name shape [-randColor] [-normals] [-noNormals] [-uv]"
-                   "\n\t\t: Create an interactive object for arbitrary set of points"
-                   "\n\t\t: from triangulated shape."
-                   "\n"
-                   "vpointcloud name x y z r npts {surface|volume}\n"
-                   "            ... [-randColor] [-normals] [-noNormals] [-uv]"
-                   "\n\t\t: Create arbitrary set of points (npts) randomly distributed"
-                   "\n\t\t: on spheric surface or within spheric volume (x y z r)."
-                   "\n\t\t:"
-                   "\n\t\t: Additional options:"
-                   "\n\t\t:  -randColor - generate random color per point"
-                   "\n\t\t:  -normals   - generate normal per point (default)"
-                   "\n\t\t:  -noNormals - do not generate normal per point"
-                   "\n",
-                   __FILE__, VPointCloud, group);
+  addCmd ("vvertexmode", VVertexMode, /* [vvertexmode] */ R"(
+vvertexmode [name | -set {isolated|all|inherited} [name1 name2 ...]]
+Sets the vertex draw mode for the specified object(s)
+or sets default vertex draw mode and updates the mode for all displayed objects.
+Prints the default vertex draw mode without -set parameter.
+)" /* [vvertexmode] */);
 
-  theCommands.Add("vpriority",
-    "vpriority [-noupdate|-update] name [value]\n\t\t  prints or sets the display priority for an object",
-    __FILE__,
-    VPriority, group);
+  addCmd ("vpointcloud", VPointCloud, /* [vpointcloud] */ R"(
+vpointcloud name shape [-randColor {0|1}]=0 [-normals {0|1}]=1 [-uv {0|1}]=0
+            [-distance Value]=0.0 [-density Value] [-tolerance Value]
+Create an interactive object for arbitrary set of points from triangulated shape.
 
-  theCommands.Add ("vnormals",
-                   "vnormals usage:\n"
-                   "vnormals Shape [{on|off}=on] [-length {10}] [-nbAlongU {1}] [-nbAlongV {1}] [-nbAlong {1}]"
-                   "\n\t\t:        [-useMesh] [-oriented {0}1}=0]"
-                   "\n\t\t:  Displays/Hides normals calculated on shape geometry or retrieved from triangulation",
-                   __FILE__, VNormals, group);
+vpointcloud name {-surface|-volume} x y z r npts
+            [-randColor] [-normals] [-uv]
+Create arbitrary set of points (npts) randomly distributed
+on spheric surface or within spheric volume (x y z r).
+
+Additional options:
+ -normals   generate or not normal per point
+ -uv        generate UV (texel) coordinates per point
+ -randColor generate random color per point
+ -distance  distance from shape into the range [0, Value];
+ -density   density of points to generate randomly on surface;
+ -tolerance cloud generator's tolerance; default value is Precision::Confusion();
+
+)" /* [vpointcloud] */);
+
+  addCmd ("vpriority", VPriority, /* [vpriority] */ R"(
+vpriority [-noupdate|-update] name [value]
+Prints or sets the display priority for an object.
+)" /* [vpriority] */);
+
+  addCmd ("vnormals", VNormals, /* [vnormals] */ R"(
+vnormals Shape [{on|off}=on] [-length {10}] [-nbAlongU {1}] [-nbAlongV {1}] [-nbAlong {1}]
+               [-useMesh] [-oriented {0}1}=0]
+Displays/Hides normals calculated on shape geometry or retrieved from triangulation
+)" /* [vnormals] */);
 }

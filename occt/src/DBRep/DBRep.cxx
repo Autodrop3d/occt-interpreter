@@ -24,17 +24,13 @@
 #include <BRepTools_WireExplorer.hxx>
 #include <BinTools.hxx>
 #include <DBRep_DrawableShape.hxx>
-#include <Draw.hxx>
 #include <Draw_Appli.hxx>
 #include <Draw_ProgressIndicator.hxx>
 #include <Message_ProgressRange.hxx>
 #include <Draw_Segment3D.hxx>
-#include <gp_Ax2.hxx>
-#include <GProp.hxx>
 #include <GProp_GProps.hxx>
 #include <NCollection_Vector.hxx>
 #include <OSD_FileSystem.hxx>
-#include <Precision.hxx>
 #include <TColStd_Array1OfInteger.hxx>
 #include <TColStd_Array1OfReal.hxx>
 #include <TopAbs.hxx>
@@ -44,7 +40,6 @@
 #include <TopoDS_Compound.hxx>
 #include <TopoDS_Iterator.hxx>
 #include <TopTools_Array1OfShape.hxx>
-#include <TopTools_ListOfShape.hxx>
 #include <TopTools_MapOfShape.hxx>
 
 #include <stdio.h>
@@ -1580,7 +1575,7 @@ static Standard_Integer readbrep (Draw_Interpretor& theDI,
   {
     // probe file header to recognize format
     const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-    opencascade::std::shared_ptr<std::istream> aFile = aFileSystem->OpenIStream (aFileName, std::ios::in | std::ios::binary);
+    std::shared_ptr<std::istream> aFile = aFileSystem->OpenIStream (aFileName, std::ios::in | std::ios::binary);
     if (aFile.get() == NULL)
     {
       theDI << "Error: cannot read the file '" << aFileName << "'";
@@ -1709,8 +1704,6 @@ void  DBRep::BasicCommands(Draw_Interpretor& theCommands)
                   "setflags shape_name flag1[flag2...]\n sets flags for shape(free, modified, checked, orientable, closed, infinite, convex, locked), for example <setflags a free> or <setflags a -free> if necessary unflag ",
                   __FILE__,setFlags,g);
 
-//  theCommands.Add("dumpmmgt",
-//		  "dump le contenu du gestionnaire de memoire",__FILE__,dumpmmgt,g);
   theCommands.Add("purgemmgt",
 		  "returns the free memory from the system to the memory manager",
 		  __FILE__,purgemmgt,g);
@@ -1722,7 +1715,7 @@ void  DBRep::BasicCommands(Draw_Interpretor& theCommands)
                     "\n\t\t   +|-t :  switch on/off output to tcl of Progress Indicator"
                     "\n\t\t   +|-c :  switch on/off output to cout of Progress Indicator"
                     "\n\t\t   +|-g :  switch on/off graphical mode of Progress Indicator",
-                    XProgress,"DE: General");
+                   __FILE__, XProgress,"DE: General");
   theCommands.Add("writebrep",
                   "writebrep shape filename [-binary {0|1}]=0 [-version Version]=4"
                   "\n\t\t:                          [-triangles {0|1}]=1 [-normals {0|1}]=0"

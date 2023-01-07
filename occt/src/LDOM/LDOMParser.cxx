@@ -26,7 +26,6 @@
 #include <TCollection_ExtendedString.hxx>
 #include <OSD_FileSystem.hxx>
 
-#include <fcntl.h>
 #ifdef _MSC_VER
 #include <io.h>
 #else
@@ -148,7 +147,7 @@ Standard_Boolean LDOMParser::parse (std::istream& anInput,
 Standard_Boolean LDOMParser::parse (const char * const aFileName)
 {
   const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::istream> aFileStream = aFileSystem->OpenIStream (aFileName, std::ios::in);
+  std::shared_ptr<std::istream> aFileStream = aFileSystem->OpenIStream (aFileName, std::ios::in);
 
   if (aFileStream.get() != NULL && aFileStream->good())
   {

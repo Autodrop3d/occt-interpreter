@@ -22,7 +22,6 @@
 #include <gp_Pnt2d.hxx>
 #include <IntTools_TopolTool.hxx>
 #include <Precision.hxx>
-#include <Standard_DomainError.hxx>
 #include <Standard_NotImplemented.hxx>
 #include <Standard_Type.hxx>
 #include <TColgp_Array2OfPnt.hxx>
@@ -448,5 +447,5 @@ void IntTools_TopolTool::SamplePnts(const Standard_Real theDefl,
   myV0 = myVPars->Value(1);
 
   myDU = (myUPars->Value(myNbSmplU) - myU0)/(myNbSmplU-1);  
-  myDV = (myVPars->Value(myNbSmplV) - myU0)/(myNbSmplV-1);
+  myDV = (myVPars->Value(myNbSmplV) - myV0)/(myNbSmplV-1);
 }

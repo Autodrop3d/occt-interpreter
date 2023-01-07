@@ -25,9 +25,7 @@
 #include <Geom2d_BSplineCurve.hxx>
 #include <Geom_BezierCurve.hxx>
 #include <Geom_BSplineCurve.hxx>
-#include <Geom_BSplineSurface.hxx>
 #include <Geom_OffsetSurface.hxx>
-#include <Geom_SurfaceOfLinearExtrusion.hxx>
 #include <Geom_SurfaceOfRevolution.hxx>
 #include <gp_Ax22d.hxx>
 #include <gp_Circ.hxx>
@@ -50,7 +48,6 @@
 #include <Standard_DomainError.hxx>
 #include <Standard_NoSuchObject.hxx>
 #include <Standard_NotImplemented.hxx>
-#include <Standard_OutOfRange.hxx>
 #include <TColgp_Array1OfPnt.hxx>
 #include <TColgp_Array1OfPnt2d.hxx>
 #include <TColStd_Array1OfInteger.hxx>
@@ -102,10 +99,10 @@ static gp_Parab to3d(const gp_Pln& Pl, const gp_Parab2d& P)
   return gp_Parab(to3d(Pl,P.Axis()),P.Focal());
 }
 
-static gp_Vec SetLinearForm(const gp_Vec2d DW, const gp_Vec2d D2W,const gp_Vec2d D3W,
-			    const gp_Vec D1U,  const gp_Vec D1V,  const gp_Vec D2U,
-			    const gp_Vec D2V,  const gp_Vec D2UV, const gp_Vec D3U,
-			    const gp_Vec D3V,  const gp_Vec D3UUV,const gp_Vec D3UVV)
+static gp_Vec SetLinearForm(const gp_Vec2d& DW,  const gp_Vec2d& D2W,  const gp_Vec2d& D3W,
+                            const gp_Vec&   D1U, const gp_Vec&   D1V,  const gp_Vec&   D2U,
+                            const gp_Vec&   D2V, const gp_Vec&   D2UV, const gp_Vec&   D3U,
+                            const gp_Vec&   D3V, const gp_Vec&   D3UUV,const gp_Vec&   D3UVV)
 {gp_Vec V31, V32, V33, V34,V3 ;
  V31.SetLinearForm(DW.X(),D1U,
 		   D2W.X()*DW.X(),D2U,

@@ -27,8 +27,6 @@
 #include <Draw_Interpretor.hxx>
 #include <Geom2dGcc_Circ2d2TanRad.hxx>
 #include <Geom2dGcc_Circ2d3Tan.hxx>
-#include <Geom2dGcc_Circ2d2TanOn.hxx>
-#include <Geom2dGcc_Circ2dTanOnRad.hxx>
 #include <Geom2dGcc_Circ2dTanCen.hxx>
 #include <Geom2dGcc_Lin2d2Tan.hxx>
 #include <Geom2dGcc_Lin2dTanObl.hxx>
@@ -37,7 +35,6 @@
 #include <Geom2d_CartesianPoint.hxx>
 #include <Geom2d_Circle.hxx>
 #include <Geom2d_Line.hxx>
-#include <Precision.hxx>
 #include <GeomAPI_Interpolate.hxx>
 #include <Geom2dAPI_Interpolate.hxx>
 #include <TColgp_HArray1OfPnt.hxx>
@@ -50,13 +47,8 @@
 #include <TColgp_Array1OfPnt2d.hxx>
 #include <TColgp_HArray1OfVec.hxx>
 #include <TColgp_Array1OfVec.hxx>
-#include <TColStd_Array1OfReal.hxx>
-#include <TColStd_HArray1OfReal.hxx>
 #include <TColStd_HArray1OfBoolean.hxx>
 #include <AppParCurves_MultiBSpCurve.hxx>
-#include <AppDef_MultiLine.hxx>
-#include <AppParCurves_HArray1OfConstraintCouple.hxx>
-#include <AppParCurves_ConstraintCouple.hxx>
 #include <GC_MakeSegment.hxx>
 #include <GC_MakeArcOfCircle.hxx>
 

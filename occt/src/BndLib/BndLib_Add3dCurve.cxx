@@ -13,26 +13,17 @@
 // commercial license or contractual agreement.
 
 
-#include <Adaptor3d_Curve.hxx>
 #include <Bnd_Box.hxx>
 #include <BndLib.hxx>
 #include <BndLib_Add3dCurve.hxx>
 #include <ElCLib.hxx>
 #include <Geom_BezierCurve.hxx>
 #include <Geom_BSplineCurve.hxx>
-#include <GeomAbs_CurveType.hxx>
 #include <GeomAdaptor_Curve.hxx>
-#include <gp_Circ.hxx>
-#include <gp_Elips.hxx>
-#include <gp_Hypr.hxx>
-#include <gp_Lin.hxx>
-#include <gp_Parab.hxx>
 #include <gp_Pnt.hxx>
 #include <Precision.hxx>
 #include <TColgp_Array1OfPnt.hxx>
-#include <TColStd_Array1OfInteger.hxx>
 #include <TColStd_Array1OfReal.hxx>
-#include <math_MultipleVarFunction.hxx>
 #include <math_Function.hxx>
 #include <math_PSO.hxx>
 #include <math_BrentMinimum.hxx>
@@ -226,7 +217,7 @@ void BndLib_Add3dCurve::Add( const Adaptor3d_Curve& C,
 	  if(Bsaux->LastParameter()  < U2 ) u2  = Bsaux->LastParameter();
 	  //  modified by NIZHNY-EAP Fri Dec  3 14:29:18 1999 ___END___
 	}
-        Standard_Real aSegmentTol = Precision::PConfusion();
+        Standard_Real aSegmentTol = 2. * Precision::PConfusion();
         if (Abs(u2 - u1) < aSegmentTol)
           aSegmentTol = Abs(u2 - u1) * 0.01;
 	Bsaux->Segment(u1, u2, aSegmentTol);

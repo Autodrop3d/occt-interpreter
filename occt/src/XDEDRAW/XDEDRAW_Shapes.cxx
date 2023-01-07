@@ -18,17 +18,17 @@
 #include <DBRep.hxx>
 #include <DDocStd.hxx>
 #include <Draw.hxx>
+#include <gp_Ax1.hxx>
+#include <gp_Pnt.hxx>
 #include <gp_Trsf.hxx>
+#include <Message.hxx>
+#include <NCollection_DataMap.hxx>
 #include <TCollection_AsciiString.hxx>
-#include <TDataStd_NamedData.hxx>
-#include <TDF_AttributeSequence.hxx>
-#include <TDF_Label.hxx>
-#include <TDF_LabelSequence.hxx>
+#include <TDF_ChildIterator.hxx>
 #include <TDF_Tool.hxx>
 #include <TDocStd_Document.hxx>
 #include <TopoDS_Compound.hxx>
 #include <TopoDS_Shape.hxx>
-#include <TopTools_SequenceOfShape.hxx>
 #include <XCAFDoc_DocumentTool.hxx>
 #include <XCAFDoc_GraphNode.hxx>
 #include <XCAFDoc_Location.hxx>
@@ -939,59 +939,140 @@ static Standard_Integer updateAssemblies(Draw_Interpretor& di, Standard_Integer 
   return 0;
 }
 
-static Standard_Integer XGetProperties(Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+static Standard_Integer XGetProperties(Draw_Interpretor& theDI,
+                                       Standard_Integer theArgc,
+                                       const char** theArgv)
 {
-  if (argc != 3)
+  if (theArgc < 2)
   {
-    di << "Syntax error: wrong number of arguments\nUse: " << argv[0] << " Doc Label\n";
+    theDI.PrintHelp(theArgv[0]);
     return 1;
   }
 
   Handle(TDocStd_Document) aDoc;
-  DDocStd::GetDocument(argv[1], aDoc);
+  DDocStd::GetDocument(theArgv[1], aDoc);
   if (aDoc.IsNull())
   {
-    di << "Syntax error: " << argv[1] << " is not a document\n";
+    theDI << "Syntax error: " << theArgv[1] << " is not a document\n";
     return 1;
   }
-
-  TDF_Label aLabel;
-  TDF_Tool::Label(aDoc->GetData(), argv[2], aLabel);
-
-  // Get XDE shape tool
   Handle(XCAFDoc_ShapeTool) aShapeTool = XCAFDoc_DocumentTool::ShapeTool(aDoc->Main());
-
-  Handle(TDataStd_NamedData) aNamedData = aShapeTool->GetNamedProperties(aLabel);
-
-  if (aNamedData.IsNull())
+  NCollection_IndexedDataMap<TCollection_AsciiString, Handle(TDataStd_NamedData)> aNameDataMap;
+  for (Standard_Integer anInd = 2; anInd < theArgc; anInd++)
   {
-    di << argv[2] << " has no properties\n";
-    return 0;
-  }
-
-  aNamedData->LoadDeferredData();
-  if (aNamedData->HasIntegers())
-  {
-    TColStd_DataMapOfStringInteger anIntProperties = aNamedData->GetIntegersContainer();
-    for (TColStd_DataMapIteratorOfDataMapOfStringInteger anIter(anIntProperties); anIter.More(); anIter.Next())
+    TDF_Label aLabel;
+    const TCollection_AsciiString anEntry = theArgv[anInd];
+    TDF_Tool::Label(aDoc->GetData(), anEntry, aLabel);
+    if (aLabel.IsNull())
     {
-      di << anIter.Key() << " : " << anIter.Value() << "\n";
+      TopoDS_Shape aShape = DBRep::Get(theArgv[anInd]);
+      if (!aShape.IsNull())
+      {
+        aLabel = aShapeTool->FindShape(aShape);
+      }
+    }
+    if (!aLabel.IsNull())
+    {
+      Handle(TDataStd_NamedData) aNamedData = aShapeTool->GetNamedProperties(aLabel);
+      if (!aNamedData.IsNull())
+      {
+        aNameDataMap.Add(anEntry, aNamedData);
+      }
+    }
+    else
+    {
+      Message::SendWarning() << "Warning: incorrect argument [" << theArgv[anInd] << "]" << " is not a label";
     }
   }
-  if (aNamedData->HasReals())
+  if (theArgc == 2)
   {
-    TDataStd_DataMapOfStringReal aRealProperties = aNamedData->GetRealsContainer();
-    for (TDataStd_DataMapIteratorOfDataMapOfStringReal anIter(aRealProperties); anIter.More(); anIter.Next())
+    for (TDF_ChildIterator anIter(aShapeTool->Label(), Standard_True);
+         anIter.More(); anIter.Next())
     {
-      di << anIter.Key() << " : " << anIter.Value() << "\n";
+      const TDF_Label& aLabel = anIter.Value();
+      TCollection_AsciiString anEntry;
+      TDF_Tool::Entry(aLabel, anEntry);
+      Handle(TDataStd_NamedData) aNamedData = aShapeTool->GetNamedProperties(aLabel);
+      if (!aNamedData.IsNull())
+      {
+        aNameDataMap.Add(anEntry, aNamedData);
+      }
     }
   }
-  if (aNamedData->HasStrings())
+  for (NCollection_IndexedDataMap<TCollection_AsciiString, Handle(TDataStd_NamedData)>::Iterator aNamedDataIter(aNameDataMap);
+       aNamedDataIter.More(); aNamedDataIter.Next())
   {
-    TDataStd_DataMapOfStringString aStringProperties = aNamedData->GetStringsContainer();
-    for (TDataStd_DataMapIteratorOfDataMapOfStringString anIter(aStringProperties); anIter.More(); anIter.Next())
+    if (theArgc != 3)
     {
-      di << anIter.Key() << " : " << anIter.Value() << "\n";
+      theDI << "Property for [" << aNamedDataIter.Key() << "]:\n";
+    }
+    const Handle(TDataStd_NamedData)& aNamedData = aNamedDataIter.Value();
+    aNamedData->LoadDeferredData();
+    if (aNamedData->HasIntegers())
+    {
+      const TColStd_DataMapOfStringInteger& anIntProperties = aNamedData->GetIntegersContainer();
+      for (TColStd_DataMapIteratorOfDataMapOfStringInteger anIter(anIntProperties); anIter.More(); anIter.Next())
+      {
+        theDI << anIter.Key() << " : " << anIter.Value() << "\n";
+      }
+    }
+    if (aNamedData->HasReals())
+    {
+      const TDataStd_DataMapOfStringReal& aRealProperties = aNamedData->GetRealsContainer();
+      for (TDataStd_DataMapIteratorOfDataMapOfStringReal anIter(aRealProperties); anIter.More(); anIter.Next())
+      {
+        theDI << anIter.Key() << " : " << anIter.Value() << "\n";
+      }
+    }
+    if (aNamedData->HasStrings())
+    {
+      const TDataStd_DataMapOfStringString& aStringProperties = aNamedData->GetStringsContainer();
+      for (TDataStd_DataMapIteratorOfDataMapOfStringString anIter(aStringProperties); anIter.More(); anIter.Next())
+      {
+        theDI << anIter.Key() << " : " << anIter.Value() << "\n";
+      }
+    }
+    if (aNamedData->HasBytes())
+    {
+      const TDataStd_DataMapOfStringByte& aByteProperties = aNamedData->GetBytesContainer();
+      for (TDataStd_DataMapOfStringByte::Iterator anIter(aByteProperties); anIter.More(); anIter.Next())
+      {
+        theDI << anIter.Key() << " : " << anIter.Value() << "\n";
+      }
+    }
+    if (aNamedData->HasArraysOfIntegers())
+    {
+      const TDataStd_DataMapOfStringHArray1OfInteger& anArrayIntegerProperties =
+        aNamedData->GetArraysOfIntegersContainer();
+      for (TDataStd_DataMapOfStringHArray1OfInteger::Iterator anIter(anArrayIntegerProperties);
+           anIter.More(); anIter.Next())
+      {
+        TCollection_AsciiString aMessage(anIter.Key() + " : ");
+        for (TColStd_HArray1OfInteger::Iterator anSubIter(anIter.Value()->Array1());
+             anSubIter.More(); anSubIter.Next())
+        {
+          aMessage += " ";
+          aMessage += anSubIter.Value();
+        }
+        theDI << aMessage << "\n";
+      }
+    }
+    if (aNamedData->HasArraysOfReals())
+    {
+      const TDataStd_DataMapOfStringHArray1OfReal& anArrayRealsProperties =
+        aNamedData->GetArraysOfRealsContainer();
+      for (TDataStd_DataMapOfStringHArray1OfReal::Iterator anIter(anArrayRealsProperties);
+           anIter.More(); anIter.Next())
+      {
+        TCollection_AsciiString aMessage(anIter.Key() + " : ");
+        for (TColStd_HArray1OfReal::Iterator anSubIter(anIter.Value()->Array1());
+             anSubIter.More(); anSubIter.Next())
+        {
+          aMessage += " ";
+          aMessage += anSubIter.Value();
+        }
+        theDI << aMessage << "\n";
+      }
     }
   }
 
@@ -1031,6 +1112,127 @@ static Standard_Integer XAutoNaming (Draw_Interpretor& theDI,
   }
 
   aShapeTool->SetAutoNaming (toEnable);
+  return 0;
+}
+
+//=======================================================================
+// function : parseXYZ
+// purpose  : Converts three string arguments, to gp_XYZ with check
+//=======================================================================
+static Standard_Boolean parseXYZ (const char** theArgVec, gp_XYZ& thePnt)
+{
+  const TCollection_AsciiString aXYZ[3] = {theArgVec[0], theArgVec[1], theArgVec[2] };
+  if (!aXYZ[0].IsRealValue (Standard_True)
+  || !aXYZ[1].IsRealValue (Standard_True)
+  || !aXYZ[2].IsRealValue (Standard_True))
+  {
+    return Standard_False;
+  }
+
+  thePnt.SetCoord (aXYZ[0].RealValue(), aXYZ[1].RealValue(), aXYZ[2].RealValue());
+  return Standard_True;
+}
+
+//=======================================================================
+// function : setLocation
+// purpose  : Sets location to the shape at the label in XDE document
+//=======================================================================
+static Standard_Integer setLocation (Draw_Interpretor& , Standard_Integer theArgNb, const char** theArgVec)
+{
+  if (theArgNb < 4)
+  {
+    Message::SendFail() << "Error: not enough arguments, see help " << theArgVec[0] << " for details";
+    return 1;
+  }
+  // get and check the document
+  Handle(TDocStd_Document) aDoc;
+  DDocStd::GetDocument (theArgVec[1], aDoc);
+  if (aDoc.IsNull ())
+  {
+    Message::SendFail() << "Error: " << theArgVec[1] << " is not a document";
+    return 1;
+  }
+  // get and check the label
+  TDF_Label aShapeLabel;
+  TDF_Tool::Label (aDoc->GetData(), theArgVec[2], aShapeLabel);
+  if (aShapeLabel.IsNull ())
+  {
+    Message::SendFail() << "Error: no such Label: " << theArgVec[2];
+    return 1;
+  }
+  // get the transformation
+  gp_Trsf aTransformation;
+  for (Standard_Integer anArgIter = 3; anArgIter < theArgNb; ++anArgIter)
+  {
+    gp_Trsf aCurTransformation;
+    gp_XYZ aMoveXYZ, aRotPnt, aRotAxis, aScalePnt;
+    Standard_Real aRotAngle, aScale;
+    TCollection_AsciiString anArg = theArgVec[anArgIter];
+    anArg.LowerCase();
+
+    if (anArg == "-rotate" &&
+        anArgIter + 7 < theArgNb &&
+        parseXYZ (theArgVec + anArgIter + 1, aRotPnt) &&
+        parseXYZ (theArgVec + anArgIter + 4, aRotAxis) &&
+        Draw::ParseReal (theArgVec[anArgIter + 7], aRotAngle))
+    {
+      anArgIter += 7;
+      aCurTransformation.SetRotation (gp_Ax1 (gp_Pnt (aRotPnt), gp_Dir (aRotAxis)), aRotAngle * (M_PI / 180.0));
+    }
+    else if (anArg == "-move" &&
+             anArgIter + 3 < theArgNb &&
+             parseXYZ (theArgVec + anArgIter + 1, aMoveXYZ))
+    {
+      anArgIter += 3;
+      aCurTransformation.SetTranslation (aMoveXYZ);
+    }
+    // first check scale with base point
+    else if (anArg == "-scale" &&
+             anArgIter + 4 < theArgNb &&
+             parseXYZ (theArgVec + anArgIter + 1, aScalePnt) &&
+             Draw::ParseReal (theArgVec[anArgIter + 4], aScale))
+    {
+      anArgIter += 4;
+      aCurTransformation.SetScale (gp_Pnt (aScalePnt), aScale);
+    }
+    // second check for scale with scale factor only
+    else if (anArg == "-scale" &&
+             anArgIter + 1 < theArgNb &&
+             Draw::ParseReal (theArgVec[anArgIter + 1], aScale))
+    {
+      anArgIter += 1;
+      aCurTransformation.SetScaleFactor (aScale);
+    }
+    else
+    {
+      Message::SendFail() << "Syntax error: unknown options '" << anArg << "', or incorrect option parameters";
+      return 1;
+    }
+    aTransformation.PreMultiply (aCurTransformation);
+  }
+  TopLoc_Location aLoc(aTransformation);
+
+  // Create the ShapeTool and try to set location
+  Handle(XCAFDoc_ShapeTool) anAssembly = XCAFDoc_DocumentTool::ShapeTool (aDoc->Main());
+  TDF_Label aRefLabel;
+  if (anAssembly->SetLocation (aShapeLabel, aLoc, aRefLabel))
+  {
+    if (aShapeLabel == aRefLabel)
+    {
+      Message::SendInfo() << "New location was set";
+    }
+    else
+    {
+      TCollection_AsciiString aLabelStr;
+      TDF_Tool::Entry(aRefLabel, aLabelStr);
+      Message::SendInfo() << "Reference to the shape at label " << aLabelStr << " was created and location was set";
+    }
+  }
+  else
+  {
+    Message::SendFail() << "Error: an attempt to set the location to a shape to which there is a reference, or to not a shape at all";
+  }
+
   return 0;
 }
 
@@ -1143,11 +1345,25 @@ void XDEDRAW_Shapes::InitCommands(Draw_Interpretor& di)
 
   di.Add ("XSetInstanceSHUO","Doc shape \t: sets the SHUO structure for indicated component",
                    __FILE__, setStyledComponent, g);
+
+  di.Add ("XSetLocation", R"(
+Doc Label transformation [transformation ... ]
+Applies given complex transformation to the shape at Label from Document.
+The label may contain a reference to a shape, an assembly or simple shape.
+The assembly or simple shape should not be referred by any reference.
+Transformations:
+  '-move x y z'                     - move shape
+  '-rotate x y z dx dy dz angle'    - rotate shape
+  '-scale [x y z] factor'           - scale shape
+Transformations are applied from left to right.
+There can be more than one transformation of the same type.
+At least one transformation must be specified.
+)", __FILE__, setLocation, g);
   
   di.Add ("XUpdateAssemblies","Doc \t: updates assembly compounds",
                    __FILE__, updateAssemblies, g);
 
-  di.Add("XGetProperties", "Doc Label \t: prints named properties assigned to the Label",
+  di.Add("XGetProperties", "Doc [label1, label2, ...] [shape1, shape2, ...]\t: prints named properties assigned to the all document's shape labels or chosen labels of shapes",
          __FILE__, XGetProperties, g);
 
   di.Add ("XAutoNaming","Doc [0|1]\t: Disable/enable autonaming to Document",

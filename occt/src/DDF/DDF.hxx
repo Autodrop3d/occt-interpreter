@@ -21,7 +21,6 @@
 #include <Standard_Handle.hxx>
 
 #include <Standard_Boolean.hxx>
-#include <Standard_CString.hxx>
 #include <Draw_Interpretor.hxx>
 class TDF_Data;
 class TDF_Label;
@@ -84,30 +83,6 @@ public:
   //! Browser commands .
   Standard_EXPORT static void BrowserCommands (Draw_Interpretor& theCommands);
 
-
-
-
-protected:
-
-
-
-
-
-private:
-
-
-
-
-friend class DDF_Data;
-friend class DDF_Browser;
-friend class DDF_Transaction;
-
 };
-
-
-
-
-
-
 
 #endif // _DDF_HeaderFile

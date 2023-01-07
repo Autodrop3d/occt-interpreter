@@ -26,13 +26,6 @@
 #include <GeomAbs_Shape.hxx>
 #include <TColStd_Array1OfReal.hxx>
 
-class Standard_OutOfRange;
-class Standard_NoSuchObject;
-class Standard_DomainError;
-class Standard_ConstructionError;
-class Standard_NotImplemented;
-class gp_Ax3;
-class gp_Dir;
 class gp_Pnt;
 class gp_Vec;
 class gp_Lin;
@@ -199,9 +192,12 @@ public:
 
 protected:
 
+  void GetTrimmedResult(const Handle(Geom_Curve)& theProjCurve);
 
+  Standard_Boolean BuildParabolaByApex(Handle(Geom_Curve)& theGeomParabolaPtr);
+  Standard_Boolean BuildHyperbolaByApex(Handle(Geom_Curve)& theGeomParabolaPtr);
 
-
+  void BuildByApprox(const Standard_Real theLimitParameter);
 
 private:
 

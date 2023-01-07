@@ -37,7 +37,6 @@
 
 #include <TopTools_DataMapOfShapeShape.hxx>
 #include <TopTools_DataMapOfShapeListOfShape.hxx>
-#include <TopTools_MapOfShape.hxx>
 
 #include <IntTools_Context.hxx>
 

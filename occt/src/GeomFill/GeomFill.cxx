@@ -14,8 +14,8 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <GeomFill.hxx>
 
-#include <Geom_BSplineCurve.hxx>
 #include <Geom_Circle.hxx>
 #include <Geom_ConicalSurface.hxx>
 #include <Geom_Curve.hxx>
@@ -26,7 +26,6 @@
 #include <Geom_Surface.hxx>
 #include <Geom_TrimmedCurve.hxx>
 #include <GeomConvert.hxx>
-#include <GeomFill.hxx>
 #include <GeomFill_Generator.hxx>
 #include <GeomFill_PolynomialConvertor.hxx>
 #include <GeomFill_QuasiAngularConvertor.hxx>

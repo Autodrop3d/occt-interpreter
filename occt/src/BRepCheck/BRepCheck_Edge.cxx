@@ -18,13 +18,8 @@
 #include <Adaptor3d_CurveOnSurface.hxx>
 #include <Adaptor3d_Curve.hxx>
 #include <Adaptor3d_CurveOnSurface.hxx>
-#include <Bnd_Box.hxx>
-#include <BRep_CurveOnSurface.hxx>
-#include <BRep_CurveRepresentation.hxx>
 #include <BRep_GCurve.hxx>
 #include <BRepLib_ValidateEdge.hxx>
-#include <BRep_ListIteratorOfListOfCurveRepresentation.hxx>
-#include <BRep_ListOfCurveRepresentation.hxx>
 #include <BRep_PolygonOnTriangulation.hxx>
 #include <BRep_TEdge.hxx>
 #include <BRep_TFace.hxx>
@@ -32,7 +27,6 @@
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepCheck.hxx>
 #include <BRepCheck_Edge.hxx>
-#include <BRepCheck_ListIteratorOfListOfStatus.hxx>
 #include <BRepCheck_ListOfStatus.hxx>
 #include <Extrema_LocateExtPC.hxx>
 #include <Geom2d_Curve.hxx>
@@ -44,7 +38,6 @@
 #include <Geom_Surface.hxx>
 #include <Geom_TrimmedCurve.hxx>
 #include <Geom2d_TrimmedCurve.hxx>
-#include <GeomAdaptor_Curve.hxx>
 #include <GeomAdaptor_Curve.hxx>
 #include <GeomAdaptor_Surface.hxx>
 #include <GeomProjLib.hxx>
@@ -75,6 +68,7 @@ BRepCheck_Edge::BRepCheck_Edge(const TopoDS_Edge& E)
 {
   Init(E);
   myGctrl = Standard_True;
+  myIsExactMethod = Standard_False;
 }
 
 //=======================================================================
@@ -321,6 +315,7 @@ void BRepCheck_Edge::InContext(const TopoDS_Shape& S)
 
       BRep_ListIteratorOfListOfCurveRepresentation itcr(TE->Curves());
       Standard_Real eps = Precision::PConfusion();
+      Standard_Boolean toRunParallel = !myMutex.IsNull();
       while (itcr.More()) {
         const Handle(BRep_CurveRepresentation)& cr = itcr.Value();
         if (cr != myCref && cr->IsCurveOnSurface(Su,L)) {
@@ -385,6 +380,8 @@ void BRepCheck_Edge::InContext(const TopoDS_Shape& S)
 
             BRepLib_ValidateEdge aValidateEdge(myHCurve, ACS, SameParameter);
             aValidateEdge.SetExitIfToleranceExceeded(Tol);
+            aValidateEdge.SetExactMethod(myIsExactMethod);
+            aValidateEdge.SetParallel(toRunParallel);
             aValidateEdge.Process();
             if (!aValidateEdge.IsDone() || !aValidateEdge.CheckTolerance(Tol))
             {
@@ -407,6 +404,8 @@ void BRepCheck_Edge::InContext(const TopoDS_Shape& S)
 
               BRepLib_ValidateEdge aValidateEdgeOnClosedSurf(myHCurve, ACS, SameParameter);
               aValidateEdgeOnClosedSurf.SetExitIfToleranceExceeded(Tol);
+              aValidateEdgeOnClosedSurf.SetExactMethod(myIsExactMethod);
+              aValidateEdgeOnClosedSurf.SetParallel(toRunParallel);
               aValidateEdgeOnClosedSurf.Process();
               if (!aValidateEdgeOnClosedSurf.IsDone() || !aValidateEdgeOnClosedSurf.CheckTolerance(Tol))
               {
@@ -466,6 +465,8 @@ void BRepCheck_Edge::InContext(const TopoDS_Shape& S)
 
             BRepLib_ValidateEdge aValidateEdgeProj(myHCurve, ACS, SameParameter);
             aValidateEdgeProj.SetExitIfToleranceExceeded(Tol);
+            aValidateEdgeProj.SetExactMethod(myIsExactMethod);
+            aValidateEdgeProj.SetParallel(toRunParallel);
             aValidateEdgeProj.Process();
             if (!aValidateEdgeProj.IsDone() || !aValidateEdgeProj.CheckTolerance(Tol))
             {

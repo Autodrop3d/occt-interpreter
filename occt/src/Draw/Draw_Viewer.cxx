@@ -21,7 +21,6 @@
 #include <gp_Pnt2d.hxx>
 #include <Draw_Window.hxx>
 #include <Draw_Display.hxx>
-#include <TCollection_AsciiString.hxx>
 
 #define precpers 0.95
 #define ButtonPress 4
@@ -1084,7 +1083,7 @@ void Draw_Viewer::Select (Standard_Integer& theId,
   theId = MAXVIEW;
   while (theId >= MAXVIEW)
   {
-    Standard_Integer aWindowNumber = 0;
+    long aWindowNumber = 0;
     Draw_Window::GetNextEvent (theToWait, aWindowNumber, theX, theY, theButton);
     if (theY < 0)
     {

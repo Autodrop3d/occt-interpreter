@@ -17,17 +17,13 @@
 
 #include <Draw_Interpretor.hxx>
 #include <DBRep.hxx>
-#include <DrawTrSurf.hxx>
-#include <AIS_InteractiveContext.hxx>
 #include <ViewerTest.hxx>
 #include <AIS_Shape.hxx>
 #include <TopoDS_Shape.hxx>
 
 #include <ViewerTest_DoubleMapOfInteractiveAndName.hxx>
-#include <TColStd_ListIteratorOfListOfInteger.hxx>
 #include <TColStd_MapOfInteger.hxx>
 
-#include <TDocStd_Document.hxx>
 #include <TDocStd_Application.hxx>
 #include <DDocStd.hxx>
 #include <TDocStd_Owner.hxx>
@@ -47,7 +43,6 @@ Standard_IMPORT Draw_Viewer dout;
 
 #include <BRep_Builder.hxx>
 #include <BRepTools.hxx>
-#include <TopoDS_Wire.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <TopoDS.hxx>
 
@@ -58,9 +53,7 @@ Standard_EXPORT ViewerTest_DoubleMapOfInteractiveAndName& GetMapOfAIS();
 #endif
 
 #include <AIS_PlaneTrihedron.hxx>
-#include <TopoDS_Face.hxx>
 #include <TopExp_Explorer.hxx>
-#include <TopoDS_Edge.hxx>
 #include <BRepAdaptor_Curve.hxx>
 #include <GC_MakePlane.hxx>
 
@@ -343,7 +336,6 @@ static Standard_Integer OCC74bug_get (Draw_Interpretor& di, Standard_Integer arg
 }
 
 #include <BRepPrimAPI_MakeBox.hxx>
-#include <TDF_Data.hxx>
 #include <TNaming_Builder.hxx>
 #include <TNaming_NamedShape.hxx>
 #include <AIS_InteractiveObject.hxx>
@@ -391,7 +383,6 @@ static Standard_Integer OCC361bug (Draw_Interpretor& di, Standard_Integer nb, co
 #include <Image_AlienPixMap.hxx>
 #include <OSD_FileSystem.hxx>
 #include <Prs3d_ShadingAspect.hxx>
-#include <Standard_ArrayStreamBuffer.hxx>
 //=======================================================================
 //function : OCC30182
 //purpose  : Testing different interfaces of Image_AlienPixMap::Load()
@@ -460,7 +451,7 @@ static Standard_Integer OCC30182 (Draw_Interpretor& , Standard_Integer theNbArgs
   else
   {
     const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-    opencascade::std::shared_ptr<std::istream> aFile = aFileSystem->OpenIStream (anImgPath, std::ios::in | std::ios::binary);
+    std::shared_ptr<std::istream> aFile = aFileSystem->OpenIStream (anImgPath, std::ios::in | std::ios::binary);
     if (aFile.get() == NULL)
     {
       std::cout << "Syntax error: image file '" << anImgPath << "' cannot be found\n";
@@ -508,7 +499,7 @@ static Standard_Integer OCC30182 (Draw_Interpretor& , Standard_Integer theNbArgs
   const Handle(Graphic3d_AspectFillArea3d)& anAspect = aPrs->Attributes()->ShadingAspect()->Aspect();
   anAspect->SetShadingModel (Graphic3d_TypeOfShadingModel_Unlit);
   anAspect->SetTextureMapOn (true);
-  anAspect->SetTextureMap (new Graphic3d_Texture2Dmanual (anImage));
+  anAspect->SetTextureMap (new Graphic3d_Texture2D (anImage));
   if (anImage->IsTopDown())
   {
     anAspect->TextureMap()->GetParams()->SetTranslation(Graphic3d_Vec2 (0.0f, -1.0f));

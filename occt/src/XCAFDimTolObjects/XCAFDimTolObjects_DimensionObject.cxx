@@ -13,7 +13,6 @@
 
 #include <XCAFDimTolObjects_DimensionObject.hxx>
 
-#include <Precision.hxx>
 #include <TColgp_HArray1OfPnt.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(XCAFDimTolObjects_DimensionObject,Standard_Transient)
@@ -41,6 +40,7 @@ XCAFDimTolObjects_DimensionObject::XCAFDimTolObjects_DimensionObject(const Handl
   myType = theObj->myType;
   myVal = theObj->myVal;
   myQualifier = theObj->myQualifier;
+  myAngularQualifier = theObj->myAngularQualifier;
   myIsHole = theObj->myIsHole;
   myFormVariance = theObj->myFormVariance;
   myGrade = theObj->myGrade;
@@ -115,6 +115,33 @@ XCAFDimTolObjects_DimensionQualifier XCAFDimTolObjects_DimensionObject::GetQuali
 Standard_Boolean XCAFDimTolObjects_DimensionObject::HasQualifier()  const
 {
   return (myQualifier != XCAFDimTolObjects_DimensionQualifier_None);
+}
+
+//=======================================================================
+//function : SetAngularQualifier
+//purpose  : 
+//=======================================================================
+void XCAFDimTolObjects_DimensionObject::SetAngularQualifier(const XCAFDimTolObjects_AngularQualifier theAngularQualifier)
+{
+  myAngularQualifier = theAngularQualifier;
+}
+
+//=======================================================================
+//function : GetAngularQualifier
+//purpose  : 
+//=======================================================================
+XCAFDimTolObjects_AngularQualifier XCAFDimTolObjects_DimensionObject::GetAngularQualifier() const
+{
+  return myAngularQualifier;
+}
+
+//=======================================================================
+//function : HasAngularQualifier
+//purpose  : 
+//=======================================================================
+Standard_Boolean XCAFDimTolObjects_DimensionObject::HasAngularQualifier() const
+{
+  return (myAngularQualifier != XCAFDimTolObjects_AngularQualifier_None);
 }
 
 //=======================================================================

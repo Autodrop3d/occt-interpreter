@@ -15,8 +15,8 @@
 
 #include <Graphic3d_ArrayOfSegments.hxx>
 #include <Graphic3d_ArrayOfTriangles.hxx>
-#include <Graphic3d_Group.hxx>
 #include <Graphic3d_Texture2Dmanual.hxx>
+#include <Graphic3d_Group.hxx>
 #include <Image_Texture.hxx>
 #include <Prs3d_LineAspect.hxx>
 #include <Prs3d_ShadingAspect.hxx>
@@ -24,14 +24,14 @@
 #include <SelectMgr_EntityOwner.hxx>
 
 //! Texture holder.
-class AIS_XRTrackedDevice::XRTexture : public Graphic3d_Texture2Dmanual
+class AIS_XRTrackedDevice::XRTexture : public Graphic3d_Texture2D
 {
 public:
 
   //! Constructor.
   XRTexture (const Handle(Image_Texture)& theImageSource,
              const Graphic3d_TextureUnit theUnit = Graphic3d_TextureUnit_BaseColor)
-  : Graphic3d_Texture2Dmanual (""), myImageSource (theImageSource)
+  : Graphic3d_Texture2D (""), myImageSource (theImageSource)
   {
     if (!theImageSource->TextureId().IsEmpty())
     {

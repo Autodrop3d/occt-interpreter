@@ -17,13 +17,9 @@
 
 #include <algorithm>
 
-#include <Adaptor2d_Curve2d.hxx>
-#include <Adaptor3d_Curve.hxx>
-#include <Adaptor3d_Surface.hxx>
 #include <Approx_CurveOnSurface.hxx>
 #include <Extrema_ExtCS.hxx>
 #include <Extrema_ExtPS.hxx>
-#include <Extrema_GenLocateExtPS.hxx>
 #include <Extrema_POnCurv.hxx>
 #include <Extrema_POnSurf.hxx>
 #include <GeomAbs_CurveType.hxx>
@@ -45,16 +41,12 @@
 #include <TColgp_HSequenceOfPnt.hxx>
 #include <Adaptor3d_CurveOnSurface.hxx>
 #include <Geom_BSplineCurve.hxx>
-#include <Geom_TrimmedCurve.hxx>
 #include <Geom2d_BSplineCurve.hxx>
 #include <Geom2d_Line.hxx>
 #include <Geom2d_TrimmedCurve.hxx>
 #include <Geom2dAdaptor_Curve.hxx>
-#include <GeomAdaptor.hxx>
 #include <Extrema_ExtCC.hxx>
 #include <NCollection_Vector.hxx>
-
-#include <typeinfo>
 
 #define FuncTol 1.e-10
 
@@ -1782,6 +1774,22 @@ Standard_Real ProjLib_CompProjectedCurve::FirstParameter() const
 Standard_Real ProjLib_CompProjectedCurve::LastParameter() const
 {
   return myCurve->LastParameter();
+}
+
+//=======================================================================
+//function : Continuity
+//purpose  : 
+//=======================================================================
+
+GeomAbs_Shape ProjLib_CompProjectedCurve::Continuity() const
+{
+  GeomAbs_Shape ContC  = myCurve->Continuity();
+  GeomAbs_Shape ContSu = mySurface->UContinuity();
+  if ( ContSu < ContC) ContC = ContSu;
+  GeomAbs_Shape ContSv = mySurface->VContinuity();
+  if ( ContSv < ContC) ContC = ContSv;
+
+  return ContC;
 }
 
 //=======================================================================

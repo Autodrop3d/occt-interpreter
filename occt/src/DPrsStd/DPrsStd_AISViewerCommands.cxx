@@ -16,16 +16,12 @@
 
 #include <DPrsStd.hxx>
 
-#include <Draw.hxx>
 #include <Draw_Appli.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw_ColorKind.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <TDocStd_Document.hxx>
 #include <TDF_Label.hxx>
 #include <TDF_Data.hxx> 
-#include <TDF_Tool.hxx> 
-#include <TDF_ChildIterator.hxx>
 #include <DDF.hxx>
 #include <DDocStd.hxx>
 #include <ViewerTest.hxx>
@@ -60,7 +56,7 @@ static Standard_Integer DPrsStd_AISInitViewer (Draw_Interpretor& theDI,
   TCollection_AsciiString   aViewName = TCollection_AsciiString ("Driver1/Document_") + theArgVec[1] + "/View1";
   if (!TPrsStd_AISViewer::Find (aRoot, aDocViewer))
   {
-    ViewerTest::ViewerInit (0, 0, 0, 0, aViewName.ToCString(), "");
+    ViewerTest::ViewerInit (aViewName);
     aDocViewer = TPrsStd_AISViewer::New (aRoot, ViewerTest::GetAISContext());
   }
 

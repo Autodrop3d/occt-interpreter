@@ -14,12 +14,11 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <DrawDim.hxx>
 
 #include <BRep_Tool.hxx>
-#include <Draw.hxx>
 #include <Draw_Appli.hxx>
 #include <Draw_Text3D.hxx>
-#include <DrawDim.hxx>
 #include <ElCLib.hxx>
 #include <Geom_Circle.hxx>
 #include <Geom_Curve.hxx>
@@ -30,7 +29,6 @@
 #include <gp_Pln.hxx>
 #include <gp_Pnt.hxx>
 #include <TCollection_AsciiString.hxx>
-#include <TopAbs.hxx>
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>

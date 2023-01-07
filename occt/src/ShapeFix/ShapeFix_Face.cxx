@@ -29,14 +29,12 @@
 // skl,pdn 14.05.2002  OCC55 (correction precision for small faces)
 
 #include <Bnd_Box.hxx>
-#include <Bnd_Box2d.hxx>
 #include <BndLib_Add2dCurve.hxx>
 #include <BRep_Builder.hxx>
 #include <BRep_Tool.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_MakeVertex.hxx>
 #include <BRepBuilderAPI_MakeWire.hxx>
-#include <BRepGProp.hxx>
 #include <BRepTools.hxx>
 #include <BRepTopAdaptor_FClass2d.hxx>
 #include <Geom2d_BSplineCurve.hxx>
@@ -50,36 +48,25 @@
 #include <Geom_Curve.hxx>
 #include <Geom_RectangularTrimmedSurface.hxx>
 #include <Geom_SphericalSurface.hxx>
-#include <Geom_Surface.hxx>
 #include <Geom_ToroidalSurface.hxx>
-#include <GeomAdaptor_Surface.hxx>
+#include <Geom_Surface.hxx>
 #include <GProp_GProps.hxx>
-#include <IntRes2d_Domain.hxx>
-#include <IntRes2d_IntersectionPoint.hxx>
-#include <IntRes2d_IntersectionSegment.hxx>
-#include <IntRes2d_Transition.hxx>
 #include <Message_Msg.hxx>
 #include <NCollection_Array1.hxx>
 #include <Precision.hxx>
 #include <ShapeAnalysis.hxx>
 #include <ShapeAnalysis_Edge.hxx>
 #include <ShapeAnalysis_Surface.hxx>
-#include <ShapeAnalysis_Wire.hxx>
 #include <ShapeBuild_Edge.hxx>
 #include <ShapeBuild_ReShape.hxx>
-#include <ShapeExtend_BasicMsgRegistrator.hxx>
 #include <ShapeExtend_CompositeSurface.hxx>
-#include <ShapeExtend_WireData.hxx>
 #include <ShapeFix.hxx>
 #include <ShapeFix_ComposeShell.hxx>
-#include <ShapeFix_DataMapOfShapeBox2d.hxx>
 #include <ShapeFix_Edge.hxx>
 #include <ShapeFix_Face.hxx>
 #include <ShapeFix_IntersectionTool.hxx>
 #include <ShapeFix_SplitTool.hxx>
 #include <ShapeFix_Wire.hxx>
-#include <Standard_ErrorHandler.hxx>
-#include <Standard_Failure.hxx>
 #include <Standard_Type.hxx>
 #include <TColGeom_HArray2OfSurface.hxx>
 #include <TColgp_SequenceOfPnt2d.hxx>
@@ -91,14 +78,12 @@
 #include <TopoDS_Edge.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Iterator.hxx>
-#include <TopoDS_Shell.hxx>
 #include <TopoDS_Vertex.hxx>
 #include <TopoDS_Wire.hxx>
 #include <TopTools_DataMapOfShapeInteger.hxx>
 #include <TopTools_DataMapOfShapeListOfShape.hxx>
 #include <TopTools_DataMapOfShapeShape.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
-#include <TopTools_ListIteratorOfListOfShape.hxx>
 #include <TopTools_MapOfShape.hxx>
 #include <TopTools_SequenceOfShape.hxx>
 
@@ -662,11 +647,10 @@ Standard_Boolean ShapeFix_Face::Perform()
 
     // fix natural bounds
     Standard_Boolean NeedSplit = Standard_True;
-    if ( NeedFix ( myFixAddNaturalBoundMode ) ) {
-      if ( FixAddNaturalBound() ) {
-        NeedSplit = Standard_False;
-	myStatus |= ShapeExtend::EncodeStatus ( ShapeExtend_DONE5 );
-      }
+    if (FixAddNaturalBound())
+    {
+      NeedSplit = Standard_False;
+      myStatus |= ShapeExtend::EncodeStatus ( ShapeExtend_DONE5 );
     }
 
     // split face
@@ -855,9 +839,11 @@ Standard_Boolean ShapeFix_Face::FixAddNaturalBound()
     return Standard_True;
   }
 
-  // check if surface is double-closed and fix is needed
-  if ( !IsSurfaceUVPeriodic (mySurf->Adaptor3d()) || ShapeAnalysis::IsOuterBound (myFace) ) 
+  // check if surface doesn't need natural bounds
+  if (!isNeedAddNaturalBound(ws))
+  {
     return Standard_False;
+  }
 
   // Collect information on free intervals in U and V
   TColgp_SequenceOfPnt2d intU, intV, centers;
@@ -1017,6 +1003,50 @@ Standard_Boolean ShapeFix_Face::FixOrientation()
   return FixOrientation(MapWires);
 }
 
+//=======================================================================
+// function : isNeedAddNaturalBound
+// purpose  :
+//=======================================================================
+Standard_Boolean ShapeFix_Face::isNeedAddNaturalBound(const TopTools_SequenceOfShape& theOrientedWires)
+{
+  // if fix is not needed
+  if (!NeedFix (myFixAddNaturalBoundMode))
+  {
+    return Standard_False;
+  }
+  // if surface is not double-closed
+  if (!IsSurfaceUVPeriodic (mySurf->Adaptor3d())) 
+  {
+    return Standard_False;
+  }
+  // if face has an OUTER bound
+  if (ShapeAnalysis::IsOuterBound (myFace))
+  {
+    return Standard_False;
+  }
+  // check that not any wire has a seam edge and not any edge is degenerated.
+  // because the presence of a seam or degenerated edge indicates that this wire should be an external one,
+  // and in case of its incorrect orientation, this will be corrected.
+  Standard_Integer aNbOriented = theOrientedWires.Length();
+  for (Standard_Integer i = 1; i <= aNbOriented; i++)
+  {
+    TopoDS_Wire aWire = TopoDS::Wire(theOrientedWires.Value(i));
+    for (TopoDS_Iterator anEdgeIt(aWire); anEdgeIt.More(); anEdgeIt.Next())
+    {
+      TopoDS_Edge anEdge = TopoDS::Edge(anEdgeIt.Value());
+      if (BRep_Tool::Degenerated(anEdge))
+      {
+        return Standard_False;
+      }
+      if (BRep_Tool::IsClosed(anEdge, myFace))
+      {
+        return Standard_False;
+      }
+    }
+  }
+
+  return Standard_True;
+}
 
 //=======================================================================
 //function : FixOrientation
@@ -1086,9 +1116,8 @@ Standard_Boolean ShapeFix_Face::FixOrientation(TopTools_DataMapOfShapeListOfShap
 
   // if no wires, just do nothing
   if ( nb <= 0) return Standard_False;
-  Standard_Integer nbInternal=0;
 
-  Standard_Boolean isAddNaturalBounds = (NeedFix (myFixAddNaturalBoundMode) && IsSurfaceUVPeriodic(mySurf->Adaptor3d()));
+  Standard_Boolean isAddNaturalBounds = isNeedAddNaturalBound(ws);
   TColStd_SequenceOfInteger aSeqReversed;
   // if wire is only one, check its orientation
   if ( nb == 1 ) {
@@ -1099,9 +1128,7 @@ Standard_Boolean ShapeFix_Face::FixOrientation(TopTools_DataMapOfShapeListOfShap
     af.Orientation ( TopAbs_FORWARD );
     B.Add (af,ws.Value(1));
     
-    if ((myFixAddNaturalBoundMode != 1 ||
-      !IsSurfaceUVPeriodic(mySurf->Adaptor3d())) &&
-      !ShapeAnalysis::IsOuterBound(af))
+    if (!isAddNaturalBounds && !ShapeAnalysis::IsOuterBound(af))
     {
       Handle(ShapeExtend_WireData) sbdw =
         new ShapeExtend_WireData(TopoDS::Wire(ws.Value(1)));
@@ -1259,7 +1286,7 @@ Standard_Boolean ShapeFix_Face::FixOrientation(TopTools_DataMapOfShapeListOfShap
                 if(!(stb==ste)) {
                   sta = TopAbs_UNKNOWN;
                   SI.Bind(aw,0);
-                  j=nb;
+                  j=nbAll;
                   break;
                 }
               }
@@ -1378,11 +1405,9 @@ Standard_Boolean ShapeFix_Face::FixOrientation(TopTools_DataMapOfShapeListOfShap
 
   }
 
-  //done = (done && (nb ==1 || (isAddNaturalBounds || (!isAddNaturalBounds && nbInternal <nb))));
   if(isAddNaturalBounds && nb == aSeqReversed.Length())
     done = Standard_False;
-  else
-    done = (done && (nb ==1 || (isAddNaturalBounds || (!isAddNaturalBounds && nbInternal <nb))));
+
   //    Faut-il reconstruire ? si myRebil est mis
   if ( done ) {
     TopoDS_Shape S = myFace.EmptyCopied();
@@ -1601,6 +1626,9 @@ Standard_Boolean ShapeFix_Face::FixMissingSeam()
   }
 
   BRep_Builder B;
+  Handle(Geom_ToroidalSurface) aTorSurf = Handle(Geom_ToroidalSurface)::DownCast(mySurf->Surface());
+  Standard_Boolean anIsDegeneratedTor  = ( aTorSurf.IsNull() ? Standard_False : aTorSurf->MajorRadius() < aTorSurf->MinorRadius() );
+ 
   if ( w1.IsNull() ) return Standard_False;
   else if ( w2.IsNull()) {
     // For spheres and BSpline cone-like surfaces(bug 24055):
@@ -1611,7 +1639,18 @@ Standard_Boolean ShapeFix_Face::FixMissingSeam()
     gp_Dir2d d;
     Standard_Real aRange;
 
-    if ( ismodeu && mySurf->Surface()->IsKind(STANDARD_TYPE(Geom_SphericalSurface)) ) {
+    if( ismodeu && anIsDegeneratedTor )
+    {
+      Standard_Real aRa = aTorSurf->MajorRadius();
+      Standard_Real aRi = aTorSurf->MinorRadius();
+      Standard_Real aPhi = ACos (-aRa / aRi);
+      p.SetCoord (0.0, ( ismodeu > 0 ? M_PI + aPhi : aPhi ));
+      
+      Standard_Real aXCoord = -ismodeu;
+      d.SetCoord ( aXCoord, 0.);
+      aRange = 2.*M_PI;
+    }
+    else if ( ismodeu && mySurf->Surface()->IsKind(STANDARD_TYPE(Geom_SphericalSurface)) ) {
       p.SetCoord ( ( ismodeu < 0 ? 0. : 2.*M_PI ), ismodeu * 0.5 * M_PI );
       Standard_Real aXCoord = -ismodeu;
       d.SetCoord ( aXCoord, 0.);
@@ -1679,7 +1718,7 @@ Standard_Boolean ShapeFix_Face::FixMissingSeam()
   // validity of orientation of the open wires in parametric space. 
   // In case of U closed surface wire with minimal V coordinate should be directed in positive direction by U
   // In case of V closed surface wire with minimal U coordinate should be directed in negative direction by V
-  if (!vclosed || !uclosed)
+  if (!vclosed || !uclosed || anIsDegeneratedTor)
   {
     Standard_Real deltaOther = 0.5 * (m2[coord][0] + m2[coord][1]) - 0.5 * (m1[coord][0] + m1[coord][1]);
     if (deltaOther  * isneg < 0)
@@ -1727,7 +1766,7 @@ Standard_Boolean ShapeFix_Face::FixMissingSeam()
   // A special kind of FixShifted is necessary for torus-like
   // surfaces to adjust wires by period ALONG the missing SEAM direction
   // tr9_r0501-ug.stp #187640
-  if ( uclosed && vclosed ) {
+  if ( uclosed && vclosed && !anIsDegeneratedTor ) {
     Standard_Real shiftw2 = 
       ShapeAnalysis::AdjustByPeriod ( 0.5 * ( m2[coord][0] + m2[coord][1] ),
                                       0.5 * ( m1[coord][0] + m1[coord][1]  +

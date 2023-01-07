@@ -19,7 +19,6 @@
 #include <Font_FTFont.hxx>
 #include <Graphic3d_TextureParams.hxx>
 #include <Standard_Assert.hxx>
-#include <TCollection_ExtendedString.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(OpenGl_Font,OpenGl_Resource)
 
@@ -147,7 +146,7 @@ bool OpenGl_Font::createTexture (const Handle(OpenGl_Context)& theCtx)
 
   Image_PixMap aBlackImg;
   if (!aBlackImg.InitZero (Image_Format_Alpha, Standard_Size(aTextureSizeX), Standard_Size(aTextureSizeY))
-   || !aTexture->Init (theCtx, aBlackImg, Graphic3d_TOT_2D, true)) // myTextureFormat
+   || !aTexture->Init (theCtx, aBlackImg, Graphic3d_TypeOfTexture_2D, true)) // myTextureFormat
   {
     theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
                          TCollection_AsciiString ("New texture initialization of size ")
@@ -203,9 +202,10 @@ bool OpenGl_Font::renderGlyph (const Handle(OpenGl_Context)& theCtx,
   }
 
   aTexture->Bind (theCtx);
-#if !defined(GL_ES_VERSION_2_0)
-  theCtx->core11fwd->glPixelStorei (GL_UNPACK_LSB_FIRST,  GL_FALSE);
-#endif
+  if (theCtx->GraphicsLibrary() != Aspect_GraphicsLibrary_OpenGLES)
+  {
+    theCtx->core11fwd->glPixelStorei (GL_UNPACK_LSB_FIRST,  GL_FALSE);
+  }
   if (theCtx->hasUnpackRowLength)
   {
     theCtx->core11fwd->glPixelStorei (GL_UNPACK_ROW_LENGTH, 0);

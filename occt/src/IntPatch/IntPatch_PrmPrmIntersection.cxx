@@ -21,12 +21,7 @@
 #include <Adaptor3d_TopolTool.hxx>
 #include <gp_Dir.hxx>
 #include <gp_Pnt.hxx>
-#include <Intf_PIType.hxx>
-#include <Intf_SectionLine.hxx>
-#include <Intf_SectionPoint.hxx>
-#include <Intf_TangentZone.hxx>
 #include <IntPatch_InterferencePolyhedron.hxx>
-#include <IntPatch_Line.hxx>
 #include <IntPatch_Polyhedron.hxx>
 #include <IntPatch_PrmPrmIntersection.hxx>
 #include <IntPatch_PrmPrmIntersection_T3Bits.hxx>
@@ -40,7 +35,6 @@
 #include <Standard_OutOfRange.hxx>
 #include <StdFail_NotDone.hxx>
 #include <TColStd_Array1OfReal.hxx>
-#include <TColStd_HArray1OfReal.hxx>
 #include <TColStd_SequenceOfInteger.hxx>
 
 static void SectionPointToParameters(const Intf_SectionPoint& Sp,
@@ -2386,6 +2380,9 @@ void IntPatch_PrmPrmIntersection::Perform (const Handle(Adaptor3d_Surface)& Surf
                     //Try to extend the intersection line to the boundary,
                     //if it is possibly
                     PW.PutToBoundary(Surf1, Surf2);
+                    //
+                    if (PW.NbPoints() < 3)
+                      continue;
 
                     const Standard_Integer aMinNbPoints = 40;
                     if(PW.NbPoints() < aMinNbPoints)
@@ -3308,7 +3305,7 @@ void IntPatch_PrmPrmIntersection::PointDepart(Handle(IntSurf_LineOn2S)& LineOn2S
           for(si=-1; si<= 1 && nb<LIM; si++) { 
             for(sj=-1; sj<= 1 && nb<LIM; sj++) { 
               for(sk=-1; sk<= 1 && nb<LIM; sk++) { 
-                long unsigned lu=GrilleInteger(i+si,j+sj,k+sk);
+                Standard_Integer lu = GrilleInteger(i+si,j+sj,k+sk);
                 if(M1.Val(lu) && M2.Val(lu)) { 
                   nb++;
                 }
@@ -3320,7 +3317,7 @@ void IntPatch_PrmPrmIntersection::PointDepart(Handle(IntSurf_LineOn2S)& LineOn2S
               for(sj=-1; sj<= 1; sj++) { 
                 for(sk=-1; sk<= 1; sk++) { 
                   if(si || sj || sk) { 
-                    long unsigned lu=GrilleInteger(i+si,j+sj,k+sk);
+                    Standard_Integer lu = GrilleInteger(i+si,j+sj,k+sk);
                     M1.Raz(lu);
                   }
                 }

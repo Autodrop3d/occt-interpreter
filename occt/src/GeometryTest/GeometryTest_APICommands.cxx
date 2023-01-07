@@ -16,8 +16,6 @@
 
 #include <Geom_BSplineCurve.hxx>
 #include <Geom_BSplineSurface.hxx>
-#include <Draw.hxx>
-#include <Draw_Interpretor.hxx>
 #include <DrawTrSurf.hxx>
 #include <GeometryTest.hxx>
 #include <GeomAPI_ProjectPointOnCurve.hxx>
@@ -30,7 +28,6 @@
 #include <GeomAPI_PointsToBSplineSurface.hxx>
 #include <Geom_Line.hxx>
 #include <Geom_TrimmedCurve.hxx>
-#include <Draw_Segment3D.hxx>
 #include <Draw_Marker3D.hxx>
 #include <Draw_Color.hxx>
 #include <Draw_MarkerShape.hxx>

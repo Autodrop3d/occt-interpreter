@@ -17,9 +17,9 @@
 #include <Approx_CurveOnSurface.hxx>
 
 #include <Adaptor2d_Curve2d.hxx>
-#include <Adaptor3d_CurveOnSurface.hxx>
 #include <Adaptor3d_Curve.hxx>
 #include <Adaptor3d_CurveOnSurface.hxx>
+#include <Adaptor3d_HSurfaceTool.hxx>
 #include <Adaptor3d_Surface.hxx>
 #include <AdvApprox_ApproxAFunction.hxx>
 #include <AdvApprox_DichoCutting.hxx>
@@ -27,7 +27,6 @@
 #include <Geom2d_BezierCurve.hxx>
 #include <Geom2d_BSplineCurve.hxx>
 #include <Geom2dAdaptor_Curve.hxx>
-#include <Geom_BSplineCurve.hxx>
 #include <Geom_RectangularTrimmedSurface.hxx>
 #include <Geom_TrimmedCurve.hxx>
 #include <GeomAdaptor_Curve.hxx>
@@ -38,7 +37,6 @@
 #include <gp_Vec.hxx>
 #include <Precision.hxx>
 #include <Standard_ConstructionError.hxx>
-#include <Standard_OutOfRange.hxx>
 #include <TColgp_Array1OfPnt.hxx>
 #include <TColgp_Array1OfPnt2d.hxx>
 #include <TColStd_Array1OfReal.hxx>
@@ -373,6 +371,14 @@ void Approx_CurveOnSurface::Perform(const Standard_Integer theMaxSegments,
 
   if(theOnly3d && theOnly2d) throw Standard_ConstructionError();
 
+  GeomAbs_Shape aContinuity = theContinuity;
+  if (aContinuity == GeomAbs_G1)
+    aContinuity = GeomAbs_C1;
+  else if (aContinuity == GeomAbs_G2)
+    aContinuity = GeomAbs_C2;
+  else if (aContinuity > GeomAbs_C2)
+    aContinuity = GeomAbs_C2; //Restriction of AdvApprox_ApproxAFunction
+
   Handle( Adaptor2d_Curve2d ) TrimmedC2D = myC2D->Trim( myFirst, myLast, Precision::PConfusion() );
 
   Standard_Boolean isU, isForward;
@@ -410,8 +416,24 @@ void Approx_CurveOnSurface::Perform(const Standard_Integer theMaxSegments,
 
     Standard_Real TolU, TolV;
 
-    TolU = mySurf->UResolution(myTol)/2;
-    TolV = mySurf->VResolution(myTol)/2;
+    TolU = mySurf->UResolution(myTol) / 2.;
+    TolV = mySurf->VResolution(myTol) / 2.;
+
+    if (mySurf->UContinuity() == GeomAbs_C0)
+    {
+      if (!Adaptor3d_HSurfaceTool::IsSurfG1(mySurf, Standard_True, Precision::Angular()))
+        TolU = Min(1.e-3, 1.e3 * TolU);
+      if (!Adaptor3d_HSurfaceTool::IsSurfG1(mySurf, Standard_True, Precision::Confusion()))
+        TolU = Min(1.e-3, 1.e2 * TolU);
+    }
+
+    if (mySurf->VContinuity() == GeomAbs_C0)
+    {
+      if (!Adaptor3d_HSurfaceTool::IsSurfG1(mySurf, Standard_False, Precision::Angular()))
+        TolV = Min(1.e-3, 1.e3 * TolV);
+      if (!Adaptor3d_HSurfaceTool::IsSurfG1(mySurf, Standard_False, Precision::Confusion()))
+        TolV = Min(1.e-3, 1.e2 * TolV);
+    }
 
     OneDTol->SetValue(1,TolU);
     OneDTol->SetValue(2,TolV);
@@ -423,20 +445,44 @@ void Approx_CurveOnSurface::Perform(const Standard_Integer theMaxSegments,
     ThreeDTol->Init(myTol/2);
   }
 
+  AdvApprox_Cutting* CutTool;
 
-  Standard_Integer NbInterv_C2 = HCOnS->NbIntervals(GeomAbs_C2);
-  TColStd_Array1OfReal CutPnts_C2(1, NbInterv_C2 + 1);
-  HCOnS->Intervals(CutPnts_C2, GeomAbs_C2);
-  Standard_Integer NbInterv_C3 = HCOnS->NbIntervals(GeomAbs_C3);
-  TColStd_Array1OfReal CutPnts_C3(1, NbInterv_C3 + 1);
-  HCOnS->Intervals(CutPnts_C3, GeomAbs_C3);
-  
-  AdvApprox_PrefAndRec CutTool(CutPnts_C2,CutPnts_C3);
+  if (aContinuity <= myC2D->Continuity() &&
+      aContinuity <= mySurf->UContinuity() &&
+      aContinuity <= mySurf->VContinuity())
+  {
+    CutTool = new AdvApprox_DichoCutting();
+  }
+  else if (aContinuity == GeomAbs_C1)
+  {
+    Standard_Integer NbInterv_C1 = HCOnS->NbIntervals(GeomAbs_C1);
+    TColStd_Array1OfReal CutPnts_C1(1, NbInterv_C1 + 1);
+    HCOnS->Intervals(CutPnts_C1, GeomAbs_C1);
+    Standard_Integer NbInterv_C2 = HCOnS->NbIntervals(GeomAbs_C2);
+    TColStd_Array1OfReal CutPnts_C2(1, NbInterv_C2 + 1);
+    HCOnS->Intervals(CutPnts_C2, GeomAbs_C2);
+    
+    CutTool = new AdvApprox_PrefAndRec (CutPnts_C1, CutPnts_C2);
+  }
+  else
+  {
+    Standard_Integer NbInterv_C2 = HCOnS->NbIntervals(GeomAbs_C2);
+    TColStd_Array1OfReal CutPnts_C2(1, NbInterv_C2 + 1);
+    HCOnS->Intervals(CutPnts_C2, GeomAbs_C2);
+    Standard_Integer NbInterv_C3 = HCOnS->NbIntervals(GeomAbs_C3);
+    TColStd_Array1OfReal CutPnts_C3(1, NbInterv_C3 + 1);
+    HCOnS->Intervals(CutPnts_C3, GeomAbs_C3);
+    
+    CutTool = new AdvApprox_PrefAndRec (CutPnts_C2, CutPnts_C3);
+  }
+
   AdvApprox_ApproxAFunction aApprox (Num1DSS, Num2DSS, Num3DSS, 
 	      			     OneDTol, TwoDTolNul, ThreeDTol,
-				     myFirst, myLast, theContinuity,
+				     myFirst, myLast, aContinuity,
 				     theMaxDegree, theMaxSegments,
-				     *EvalPtr, CutTool);
+				     *EvalPtr, *CutTool);
+
+  delete CutTool;
 
   myIsDone = aApprox.IsDone();
   myHasResult = aApprox.HasResult();

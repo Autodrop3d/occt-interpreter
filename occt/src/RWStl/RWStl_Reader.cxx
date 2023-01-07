@@ -15,7 +15,6 @@
 
 #include <RWStl_Reader.hxx>
 
-#include <gp_XY.hxx>
 #include <Message.hxx>
 #include <Message_Messenger.hxx>
 #include <Message_ProgressScope.hxx>
@@ -25,7 +24,6 @@
 #include <OSD_FileSystem.hxx>
 #include <OSD_Timer.hxx>
 #include <Poly_MergeNodesTool.hxx>
-#include <Precision.hxx>
 #include <Standard_CLocaleSentry.hxx>
 
 #include <algorithm>
@@ -140,7 +138,7 @@ Standard_Boolean RWStl_Reader::Read (const char* theFile,
                                      const Message_ProgressRange& theProgress)
 {
   const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::istream> aStream = aFileSystem->OpenIStream (theFile, std::ios::in | std::ios::binary);
+  std::shared_ptr<std::istream> aStream = aFileSystem->OpenIStream (theFile, std::ios::in | std::ios::binary);
   if (aStream.get() == NULL)
   {
     Message::SendFail (TCollection_AsciiString("Error: file '") + theFile + "' is not found");
@@ -182,6 +180,7 @@ Standard_Boolean RWStl_Reader::Read (const char* theFile,
       }
     }
     *aStream >> std::ws; // skip any white spaces
+    AddSolid();
   }
   return ! aStream->fail();
 }
@@ -302,6 +301,11 @@ Standard_Boolean RWStl_Reader::ReadAscii (Standard_IStream& theStream,
 
   // skip header "solid ..."
   aLine = theBuffer.ReadLine (theStream, aLineLen);
+  // skip empty lines
+  while (aLine && !*aLine)
+  {
+    aLine = theBuffer.ReadLine (theStream, aLineLen);
+  }
   if (aLine == NULL)
   {
     Message::SendFail ("Error: premature end of file");

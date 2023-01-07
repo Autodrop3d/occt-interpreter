@@ -23,13 +23,7 @@
 #include <DrawTrSurf.hxx>
 #include <Draw_Interpretor.hxx>
 
-#include <BSplCLib.hxx>
-
 #include <gp.hxx>
-#include <gp_Pln.hxx>
-#include <gp_Parab2d.hxx>
-#include <gp_Elips2d.hxx>
-#include <gp_Hypr2d.hxx>
 
 #include <Geom_Line.hxx>
 #include <Geom_Circle.hxx>
@@ -37,11 +31,9 @@
 #include <Geom_Parabola.hxx>
 #include <Geom_Hyperbola.hxx>
 #include <Geom_BezierCurve.hxx>
-#include <Geom_BSplineCurve.hxx>
 #include <GeomAdaptor_Surface.hxx>
 
 #include <GeomLib.hxx>
-#include <GeomConvert.hxx>
 #include <Geom2dConvert.hxx>
 
 #include <Geom2d_Line.hxx>
@@ -62,26 +54,13 @@
 #include <TColStd_Array1OfReal.hxx>
 #include <TColStd_Array1OfInteger.hxx>
 
-#include <GeomAbs_SurfaceType.hxx>
-#include <GeomAbs_CurveType.hxx>
-
 #include <Precision.hxx>
 
 #include <stdio.h>
 
-#include <TColStd_HArray1OfReal.hxx>
-#include <TColStd_HArray2OfReal.hxx>
-#include <TColStd_HArray1OfInteger.hxx>
-#include <TColStd_Array1OfReal.hxx>
-#include <TColStd_Array1OfInteger.hxx>
-
-#include <TColGeom_HArray1OfBSplineCurve.hxx>
 #include <TColGeom2d_HArray1OfBSplineCurve.hxx>
-#include <Convert_CompPolynomialToPoles.hxx>
-#include <CPnts_AbscissaPoint.hxx>
 #include <GCPnts_AbscissaPoint.hxx>
 
-#include <PLib.hxx> 
 #include <GeomAbs_Shape.hxx>
 #include <Geom_Curve.hxx>
 #include <GeomConvert.hxx>
@@ -95,7 +74,6 @@
 #include <Approx_CurveOnSurface.hxx>
 #include <Geom_BSplineSurface.hxx>
 
-#include <AppCont_Function.hxx>
 #include <Adaptor3d_Curve.hxx>
 #include <Approx_FitAndDivide.hxx>
 #include <Convert_CompBezierCurvesToBSplineCurve.hxx>
@@ -1192,15 +1170,15 @@ static Standard_Integer minmaxcurandinf(Draw_Interpretor& di,
 
   Sommets.PerformCurExt (C1);
   if (Sommets.IsDone() && !Sommets.IsEmpty()) {
-    for (Standard_Integer i = 1; i <= Sommets.NbPoints(); i++){            
-      if (Sommets.Type(i) == LProp_MinCur) {	
+    for (Standard_Integer i = 1; i <= Sommets.NbPoints(); i++){
+      if (Sommets.Type(i) == LProp_MinCur) {
 	di << "  Maximum of curvature at U ="<<Sommets.Parameter(i)<<"\n";
       }
       else {
 	di << "  Minimum of curvature at U ="<<Sommets.Parameter(i)<<"\n";
       }
       gp_Pnt2d P = C1->Value(Sommets.Parameter(i));
-      // Handle(Draw_Marker2D) dr = new Draw_Marker2D(P,Draw_Plus,Couleur); 
+      // Handle(Draw_Marker2D) dr = new Draw_Marker2D(P,Draw_Plus,Couleur);
       // dout << dr;
     }
     // dout.Flush();
@@ -1212,7 +1190,7 @@ static Standard_Integer minmaxcurandinf(Draw_Interpretor& di,
   if (Sommets2.IsDone() && !Sommets2.IsEmpty()) {
     for (Standard_Integer i = 1; i <= Sommets2.NbPoints(); i++){
       gp_Pnt2d P = C1->Value(Sommets2.Parameter(i));
-      // Handle(Draw_Marker2D) dr = new Draw_Marker2D(P,Draw_Plus,Draw_bleu); 
+      // Handle(Draw_Marker2D) dr = new Draw_Marker2D(P,Draw_Plus,Draw_bleu);
       // dout << dr;
       di << "  Inflexion at U ="<<Sommets2.Parameter(i)<<"\n";
     }
@@ -1240,7 +1218,7 @@ static Standard_Integer shcurvature(Draw_Interpretor&,
 static Standard_Integer clcurvature(Draw_Interpretor&, 
 				   Standard_Integer argc, const char** argv)
 {
-  if (argc < 2) return 1; 
+  if (argc < 2) return 1;
 
   //Draw::Repaint();
   return 0;

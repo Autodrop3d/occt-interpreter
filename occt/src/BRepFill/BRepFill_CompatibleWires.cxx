@@ -34,12 +34,10 @@
 #include <Geom_Plane.hxx>
 #include <Geom_Surface.hxx>
 #include <gp.hxx>
-#include <gp_Ax2.hxx>
 #include <gp_Circ.hxx>
 #include <gp_Elips.hxx>
 #include <gp_Pln.hxx>
 #include <gp_Vec.hxx>
-#include <GProp_GProps.hxx>
 #include <GProp_PrincipalProps.hxx>
 #include <Precision.hxx>
 #include <Standard_ConstructionError.hxx>
@@ -50,18 +48,15 @@
 #include <TColStd_Array1OfReal.hxx>
 #include <TColStd_MapOfInteger.hxx>
 #include <TColStd_SequenceOfReal.hxx>
-#include <TopAbs.hxx>
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Edge.hxx>
 #include <TopoDS_Wire.hxx>
-#include <TopTools_DataMapIteratorOfDataMapOfShapeListOfShape.hxx>
 #include <TopTools_DataMapOfShapeListOfShape.hxx>
 #include <TopTools_DataMapOfShapeSequenceOfShape.hxx>
 #include <TopTools_HSequenceOfShape.hxx>
 #include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
-#include <TopTools_ListIteratorOfListOfShape.hxx>
 #include <TopTools_ListOfShape.hxx>
 #include <TopTools_SequenceOfShape.hxx>
 
@@ -1590,7 +1585,7 @@ void BRepFill_CompatibleWires::ComputeOrigin(const  Standard_Boolean /*polar*/ )
     NbSamples = 4;
   gp_Pln FirstPlane;
   PlaneOfWire(TopoDS::Wire(myWork(ideb)), FirstPlane);
-  gp_Pnt FirstBary = FirstPlane.Location();
+  gp_Pnt PrevBary = FirstPlane.Location();
   gp_Vec NormalOfFirstPlane = FirstPlane.Axis().Direction();
   for (i = ideb+1; i <= ifin; i++)
     {
@@ -1601,10 +1596,10 @@ void BRepFill_CompatibleWires::ComputeOrigin(const  Standard_Boolean /*polar*/ )
       gp_Pln CurPlane;
       PlaneOfWire(aWire, CurPlane);
       gp_Pnt CurBary = CurPlane.Location();
-      gp_Vec aVec(FirstBary, CurBary);
+      gp_Vec aVec(PrevBary, CurBary);
       gp_Vec anOffsetProj = (aVec * NormalOfFirstPlane) * NormalOfFirstPlane;
       CurBary.Translate(-anOffsetProj); //projected current bary center
-      gp_Vec Offset(CurBary, FirstBary);
+      gp_Vec Offset(CurBary, PrevBary);
       
       TopoDS_Wire newwire;
       BRep_Builder BB;
@@ -1809,6 +1804,8 @@ void BRepFill_CompatibleWires::ComputeOrigin(const  Standard_Boolean /*polar*/ )
       newwire.Closed( Standard_True );
       newwire.Orientation( TopAbs_FORWARD );
       myWork(i) = newwire;
+
+      PrevBary = CurBary;
     }
 #ifdef OCCT_DEBUG_EFV
 

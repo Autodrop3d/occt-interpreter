@@ -17,21 +17,16 @@
 #include <GeomFill_LocationGuide.hxx>
 
 #include <Adaptor3d_Curve.hxx>
-#include <Adaptor3d_Surface.hxx>
 #include <ElCLib.hxx>
 #include <Extrema_ExtCS.hxx>
 #include <Extrema_POnSurf.hxx>
 #include <Geom_BSplineCurve.hxx>
 #include <Geom_Curve.hxx>
-#include <Geom_Surface.hxx>
 #include <Geom_SurfaceOfRevolution.hxx>
 #include <Geom_TrimmedCurve.hxx>
-#include <GeomAdaptor.hxx>
-#include <GeomAdaptor_Curve.hxx>
 #include <GeomAdaptor_Surface.hxx>
 #include <GeomFill_FunctionGuide.hxx>
 #include <GeomFill_LocationLaw.hxx>
-#include <GeomFill_SectionLaw.hxx>
 #include <GeomFill_SectionPlacement.hxx>
 #include <GeomFill_TrihedronWithGuide.hxx>
 #include <GeomFill_UniformSection.hxx>
@@ -39,7 +34,6 @@
 #include <gp.hxx>
 #include <gp_Ax1.hxx>
 #include <gp_Dir.hxx>
-#include <gp_GTrsf.hxx>
 #include <gp_Mat.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Pnt2d.hxx>
@@ -54,7 +48,6 @@
 #include <Precision.hxx>
 #include <Standard_ConstructionError.hxx>
 #include <Standard_NotImplemented.hxx>
-#include <Standard_OutOfRange.hxx>
 #include <Standard_Type.hxx>
 #include <TColgp_HArray1OfPnt.hxx>
 #include <TColStd_HArray1OfInteger.hxx>
@@ -537,7 +530,7 @@ static void InGoodPeriod(const Standard_Real Prec,
 //Purpose : Calcul des poles sur la surface d'arret (intersection 
 // courbe guide / surface de revolution en myNbPts points)
 //==================================================================
- void GeomFill_LocationGuide::SetCurve(const Handle(Adaptor3d_Curve)& C) 
+Standard_Boolean GeomFill_LocationGuide::SetCurve(const Handle(Adaptor3d_Curve)& C) 
 {
   Standard_Real LastAngle;
   myCurve = C;
@@ -550,6 +543,7 @@ static void InGoodPeriod(const Standard_Real Prec,
     
     if (rotation) SetRotation(myPoles2d->Value(1,1).X(), LastAngle);
   }
+  return myStatus == GeomFill_PipeOk;
 }
 
 //==================================================================

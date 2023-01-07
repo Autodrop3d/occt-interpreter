@@ -18,18 +18,12 @@
 #include <DDocStd_DrawDocument.hxx>
 #include <Draw.hxx>
 #include <Draw_PluginMacro.hxx>
-#include <Message_MsgFile.hxx>
 #include <Standard_Type.hxx>
-#include <TCollection_ExtendedString.hxx>
-#include <TColStd_HArray1OfReal.hxx>
 #include <TDataStd_Name.hxx>
-#include <TDF_Data.hxx>
 #include <TDF_Tool.hxx>
-#include <TDocStd_Document.hxx>
 #include <TObj_Application.hxx>
 #include <TObj_Model.hxx>
 #include <TObj_Object.hxx>
-#include <TObj_ObjectIterator.hxx>
 #include <TObj_OcafObjectIterator.hxx>
 #include <TObj_TModel.hxx>
 #include <TObj_TNameContainer.hxx>
@@ -208,7 +202,7 @@ static Standard_Integer saveModel (Draw_Interpretor& di, Standard_Integer argc, 
     if (anUseStream)
     {
       const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-      opencascade::std::shared_ptr<std::ostream> aFileStream = aFileSystem->OpenOStream (argv[2], std::ios::out | std::ios::binary);
+      std::shared_ptr<std::ostream> aFileStream = aFileSystem->OpenOStream (argv[2], std::ios::out | std::ios::binary);
       isSaved = aModel->SaveAs (*aFileStream);
     }
     else
@@ -252,7 +246,7 @@ static Standard_Integer loadModel (Draw_Interpretor& di, Standard_Integer argc, 
     if (anUseStream)
     {
       const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-      opencascade::std::shared_ptr<std::istream> aFileStream = aFileSystem->OpenIStream (aPath, std::ios::in | std::ios::binary);
+      std::shared_ptr<std::istream> aFileStream = aFileSystem->OpenIStream (aPath, std::ios::in | std::ios::binary);
       isLoaded = aModel->Load (*aFileStream);
     }
     else

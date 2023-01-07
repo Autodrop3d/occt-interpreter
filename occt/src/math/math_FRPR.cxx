@@ -23,10 +23,7 @@
 #include <math_BrentMinimum.hxx>
 #include <math_FRPR.hxx>
 #include <math_Function.hxx>
-#include <math_MultipleVarFunction.hxx>
 #include <math_MultipleVarFunctionWithGradient.hxx>
-#include <Standard_DimensionError.hxx>
-#include <StdFail_NotDone.hxx>
 
 // l'utilisation de math_BrentMinumim pur trouver un minimum dans une direction
 // donnee n'est pas du tout optimale. voir peut etre interpolation cubique
@@ -170,15 +167,15 @@ void  math_FRPR::Perform(math_MultipleVarFunctionWithGradient& F,
 	 
          Standard_Boolean IsGood = MinimizeDirection(TheLocation,
                                             TheGradient, TheMinimum, F_Dir);
-         if(!IsGood) {
-           Done = Standard_False;
-           TheStatus = math_DirectionSearchError;
-           return;
-         }
-         if(IsSolutionReached(F)) {
+         if (IsSolutionReached(F)) {
            Done = Standard_True;
            State = F.GetStateNumber();
            TheStatus = math_OK;
+           return;
+         }
+         if(!IsGood) {
+           Done = Standard_False;
+           TheStatus = math_DirectionSearchError;
            return;
          }
          Good = F.Values(TheLocation, PreviousMinimum, TheGradient);

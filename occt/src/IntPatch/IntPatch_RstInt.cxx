@@ -26,15 +26,10 @@
 //--      Chercher(Nbvtx++). 
 
 #include <Adaptor2d_Curve2d.hxx>
-#include <Adaptor3d_Surface.hxx>
 #include <Adaptor3d_TopolTool.hxx>
 #include <gp_Pnt2d.hxx>
-#include <Intf_SectionPoint.hxx>
-#include <Intf_TangentZone.hxx>
-#include <IntPatch_CSFunction.hxx>
 #include <IntPatch_CurvIntSurf.hxx>
 #include <IntPatch_HInterTool.hxx>
-#include <IntPatch_Line.hxx>
 #include <IntPatch_PolyArc.hxx>
 #include <IntPatch_PolyLine.hxx>
 #include <IntPatch_RLine.hxx>
@@ -649,8 +644,11 @@ void IntPatch_RstInt::PutVertexOnLine (const Handle(IntPatch_Line)& L,
             IntCS.ParameterOnSurface(U2,V2);
             gp_Pnt anOldPnt, aNewPnt;
             OtherSurf->D0(U,V, anOldPnt);
-            OtherSurf->D0(U2,V2, aNewPnt);
-            if (anOldPnt.SquareDistance(aNewPnt) < Precision::SquareConfusion())
+            OtherSurf->D0(U2,V2, aNewPnt);          
+            //if (anOldPnt.SquareDistance(aNewPnt) < Precision::SquareConfusion())
+            Standard_Real aTolConf = Max(Precision::Confusion(), edgeTol);
+
+            if (anOldPnt.SquareDistance(aNewPnt) < aTolConf * aTolConf)
             {
               U2 = U;
               V2 = V;

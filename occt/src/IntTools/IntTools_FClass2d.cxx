@@ -30,7 +30,6 @@
 #include <gp_Pnt.hxx>
 #include <gp_Pnt2d.hxx>
 #include <IntTools_FClass2d.hxx>
-#include <IntTools_Tools.hxx>
 #include <Precision.hxx>
 #include <TColgp_Array1OfPnt2d.hxx>
 #include <TColgp_SequenceOfPnt2d.hxx>
@@ -43,7 +42,6 @@
 #include <TopoDS_Edge.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Wire.hxx>
-#include <GeomLib.hxx>
 #include <Poly.hxx>
 
 #include <stdio.h>
@@ -823,19 +821,20 @@ TopAbs_State IntTools_FClass2d::TestOnRestriction
       }
   } //for (;;)
 }
+
 //=======================================================================
-//function : Destroy
-//purpose  : 
+//function : ~IntTools_FClass2d
+//purpose  :
 //=======================================================================
-void IntTools_FClass2d::Destroy() 
-{ 
-  Standard_Integer nbtabclass = TabClass.Length(); 
-  for(Standard_Integer d=1; d<=nbtabclass;d++) {
-    if(TabClass(d)) { 
+IntTools_FClass2d::~IntTools_FClass2d()
+{
+  Standard_Integer nbtabclass = TabClass.Length();
+  for (Standard_Integer d = 1; d <= nbtabclass; d++)
+  {
+    if (TabClass(d))
+    {
       delete ((CSLib_Class2d *)TabClass(d));
       TabClass(d)=NULL;
     }
   }
 }
-
-

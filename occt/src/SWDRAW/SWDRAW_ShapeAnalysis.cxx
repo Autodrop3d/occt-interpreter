@@ -36,7 +36,6 @@
 #include <ShapeAnalysis.hxx>
 #include <ShapeAnalysis_Curve.hxx>
 #include <ShapeAnalysis_Edge.hxx>
-#include <ShapeAnalysis_FreeBoundData.hxx>
 #include <ShapeAnalysis_FreeBounds.hxx>
 #include <ShapeAnalysis_FreeBoundsProperties.hxx>
 #include <ShapeAnalysis_ShapeContents.hxx>
@@ -53,7 +52,6 @@
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Compound.hxx>
-#include <TopoDS_Edge.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Iterator.hxx>
 #include <TopoDS_Shape.hxx>
@@ -63,6 +61,14 @@
 #include <Adaptor3d_CurveOnSurface.hxx>
 #include <BRepAdaptor_Curve2d.hxx>
 #include <BRepAdaptor_Surface.hxx>
+#include <Geom_Plane.hxx>
+#include <Geom_CylindricalSurface.hxx>
+#include <Geom_ConicalSurface.hxx>
+#include <Geom_SphericalSurface.hxx>
+#include <Geom_Line.hxx>
+#include <Geom_Circle.hxx>
+#include <Geom_Ellipse.hxx>
+#include <ShapeAnalysis_CanonicalRecognition.hxx>
 
 #include <stdio.h>
 static Standard_Integer tolerance
@@ -135,13 +141,18 @@ static Standard_Integer tolerance
 static Standard_Integer projface
   (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
 {
-  if (argc < 4) { di<<"Give FACE name and X Y [Z]\n"; return 1 /* Error */; }
+  if (argc < 4)
+  {
+    di << "Give FACE name and X Y [Z]\n";
+    return 1;
+  }
   Standard_CString arg1 = argv[1];
   TopoDS_Shape Shape = DBRep::Get(arg1);
   if (Shape.IsNull()) { di<<"Shape unknown : "<<arg1<<"\n"; return 1 /* Error */; }
   if (Shape.ShapeType() != TopAbs_FACE) { di<<"Not a face\n"; return 1 /* Error */; }
   TopoDS_Face F = TopoDS::Face (Shape);
   Handle(Geom_Surface) thesurf = BRep_Tool::Surface (F);  // pas locface
+  BRepTopAdaptor_FClass2d aClassifier (F, Precision::Confusion());
 //  On y va
   Standard_Real X,Y,Z,U,V;
   X = U = Draw::Atof (argv[2]);
@@ -161,28 +172,52 @@ static Standard_Integer projface
 
     GeomAPI_ProjectPointOnSurf proj(P3D, thesurf, uf-du, ul+du, vf-dv, vl+dv);
     Standard_Integer sol, nPSurf = proj.NbPoints();
-    di<<" Found "<<nPSurf<<" Points\n";
+    Standard_Integer anIndSol = 0, anIndMin = 0;
+    Standard_Real aMinDist = RealLast();
     for (sol = 1; sol <= nPSurf; sol ++) {
-      di<<"n0 "<<sol<<" Distance "<<proj.Distance(sol);
+      
       proj.Parameters(sol, U,V);
-      di<<"  U = "<<U<<"  V = "<<V<<"\n";
+      TopAbs_State aStatus = aClassifier.Perform (gp_Pnt2d (U,V));
+      if (aStatus == TopAbs_OUT)
+        continue;
+
+      anIndSol++;
+      Standard_Real aDist = proj.Distance(sol);
+      di << "n0 " << anIndSol << " Distance " << aDist;
+      di << "  U = " << U << "  V = " << V << "\n";
+
+      if (aDist < aMinDist)
+      {
+        aMinDist = aDist;
+        anIndMin = sol;
+      }
+      
 //  reprojection
       P3D = thesurf->Value (U,V);
       di<<"  => reproj  X = "<<P3D.X()<<"  Y = "<<P3D.Y()<<"  Z = "<<P3D.Z()<<"\n";
     }
-//    Que donne ShapeTool ?
-    P3D.SetCoord (X,Y,Z);
-    Handle(ShapeAnalysis_Surface) su = new ShapeAnalysis_Surface(thesurf);
-    gp_Pnt2d suval = su->ValueOfUV (P3D,BRep_Tool::Tolerance(F));
-    suval.Coord(U,V);
-    di<<"**  ShapeAnalysis_Surface gives  U = "<<U<<"  V = "<<V<<"\n";
-    P3D = thesurf->Value(U,V);
-      di<<"  => reproj  X = "<<P3D.X()<<"  Y = "<<P3D.Y()<<"  Z = "<<P3D.Z()<<"\n";
+    di<<" Found "<<anIndSol<<" Points\n";
 
-  } else {
-    di<<" Point UV  U = "<<U<<"  V = "<<V<<"\n";
-    gp_Pnt P3D = thesurf->Value(U,V);
-      di<<"  =>   proj  X = "<<P3D.X()<<"  Y = "<<P3D.Y()<<"  Z = "<<P3D.Z()<<"\n";
+    if (anIndMin != 0) //there is at least one suitable solution
+    {
+      di << "** Minimal distance to face = " << aMinDist << "\n";
+      proj.Parameters(anIndMin, U,V);
+      di << "**  Solution of minimal distance:  U = " << U << "  V = " << V << "\n";
+      P3D = thesurf->Value(U,V);
+      di<<"  => reproj  X = "<<P3D.X()<<"  Y = "<<P3D.Y()<<"  Z = "<<P3D.Z()<<"\n";
+    }
+  }
+  else //Check 2D point
+  {
+    di << " Point UV  U = " << U << "  V = " << V << "\n";
+    TopAbs_State aStatus = aClassifier.Perform (gp_Pnt2d (U,V));
+    if (aStatus == TopAbs_OUT)
+      di << "does not belong to the face" << "\n";
+    else
+    {
+      gp_Pnt P3D = thesurf->Value(U,V);
+      di << " => proj  X = " << P3D.X() << "  Y = " << P3D.Y() << "  Z = " << P3D.Z() << "\n";
+    }
   }
   return 0;
 }
@@ -978,6 +1013,203 @@ static Standard_Integer checkedge(Draw_Interpretor& di, Standard_Integer argc, c
 
   return 0;
 }
+//=======================================================================
+// getanasurf
+//=======================================================================
+static Standard_Integer getanasurf(Draw_Interpretor& di,
+  Standard_Integer n, const char** a)
+
+{
+  if (n < 3) {
+    di << "Usage: \n";
+    di << "getanasurf res shape [target [tol [sample]]] \n";
+    di << "target is reqired type of surface and can be: pln, cyl, con sph \n";
+    di << "sample is surface of required type, which parameters are used as starting \n";
+    di << "point for seaching parametrs of surface by Least Square method when input shape \n";
+    di << "is edge or wire \n";
+      return 1;
+  }
+  TopoDS_Shape sh = DBRep::Get(a[2]);
+  if (sh.IsNull()) return 1;
+  TopAbs_ShapeEnum aShType = sh.ShapeType();
+  if (!(aShType == TopAbs_SHELL || aShType == TopAbs_FACE || aShType == TopAbs_EDGE || aShType == TopAbs_WIRE))
+  {
+    di << "Wrong shape type, shape can be shell or face or edge or wire\n";
+    return 1;
+  }
+
+  GeomAbs_SurfaceType aTargets[] = { GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Cone, GeomAbs_Sphere };
+  Standard_Integer isurf = 0;
+  if (n > 3)
+  {
+    if (strcmp(a[3], "pln") == 0)
+      isurf = 0;
+    else if (strcmp(a[3], "cyl") == 0)
+      isurf = 1;
+    else if (strcmp(a[3], "con") == 0)
+      isurf = 2;
+    else if (strcmp(a[3], "sph") == 0)
+      isurf = 3;
+  }
+
+  Standard_Real tol = 1.e-7;
+  if (n > 4)
+    tol = Draw::Atof(a[4]);
+
+  // get sample  target for edge and wire
+  GeomAdaptor_Surface aSampleSurf;
+  if (n > 5 && (sh.ShapeType() == TopAbs_EDGE || sh.ShapeType() == TopAbs_WIRE ))
+  {
+    Handle(Geom_Surface) aGSurf = DrawTrSurf::GetSurface(a[5]);
+    if (aGSurf.IsNull())
+    {
+      di << "Sample surface is null" << "\n";
+      return 1;
+    }
+    aSampleSurf.Load(aGSurf);
+    GeomAbs_SurfaceType aSType = aSampleSurf.GetType();
+    if (aSType != aTargets[isurf])
+    {
+      di << "Sample surface has wrong type" << "\n";
+      return 1;
+    }
+  }
+
+  ShapeAnalysis_CanonicalRecognition aCanonRec(sh);
+  Handle(Geom_Surface) aRes;
+  switch (aTargets[isurf])
+  {
+  case GeomAbs_Plane:
+  {
+    gp_Pln aPln;
+    if (aSampleSurf.GetType() == GeomAbs_Plane)
+      aPln = aSampleSurf.Plane();
+    if (aCanonRec.IsPlane(tol, aPln))
+      aRes = new Geom_Plane(aPln);
+    break;
+  }
+  case GeomAbs_Cylinder:
+  {
+    gp_Cylinder aCyl;
+    if (aSampleSurf.GetType() == GeomAbs_Cylinder)
+      aCyl = aSampleSurf.Cylinder();
+    if (aCanonRec.IsCylinder(tol, aCyl))
+      aRes = new Geom_CylindricalSurface(aCyl);
+    break;
+  }
+  case GeomAbs_Cone:
+  {
+    gp_Cone aCon;
+    if (aSampleSurf.GetType() == GeomAbs_Cone)
+      aCon = aSampleSurf.Cone();
+    if (aCanonRec.IsCone(tol, aCon))
+      aRes = new Geom_ConicalSurface(aCon);
+    break;
+  }
+  case GeomAbs_Sphere:
+  {
+    gp_Sphere aSph;
+    if (aSampleSurf.GetType() == GeomAbs_Sphere)
+      aSph = aSampleSurf.Sphere();
+    if (aCanonRec.IsSphere(tol, aSph))
+      aRes = new Geom_SphericalSurface(aSph);
+    break;
+  }
+  default:
+    break;
+  }
+
+  if (!aRes.IsNull())
+  {
+    DrawTrSurf::Set(a[1], aRes);
+    di << "Gap = " << aCanonRec.GetGap() << "\n";
+  }
+  else
+  {
+    di << "Cannot get required surface" << "\n";
+  }
+  return 0;
+}
+//=======================================================================
+//function : getanacurve
+//purpose  : 
+//=======================================================================
+
+Standard_Integer getanacurve(Draw_Interpretor& di,
+  Standard_Integer n, const char** a)
+{
+  if (n < 3) {
+    di << "Usage: \n";
+    di << "getanacurve res shape [target [tol]] \n";
+    di << "target is reqired type of curve and can be: lin, cir, ell  \n";
+    return 1;
+  }
+  TopoDS_Shape sh = DBRep::Get(a[2]);
+  if (sh.IsNull()) return 1;
+  TopAbs_ShapeEnum aShType = sh.ShapeType();
+  if (!(aShType == TopAbs_WIRE || aShType == TopAbs_EDGE))
+  {
+    di << "Wrong shape type, shape can be wire or or edge \n";
+    return 1;
+  }
+
+  GeomAbs_CurveType aTargets[] = { GeomAbs_Line, GeomAbs_Circle, GeomAbs_Ellipse };
+  Standard_Integer icurv = 0;
+  if (n > 3)
+  {
+    if (strcmp(a[3],"lin") == 0)
+      icurv = 0;
+    else if (strcmp(a[3], "cir") == 0)
+      icurv = 1;
+    else if (strcmp(a[3], "ell") == 0)
+      icurv = 2;
+  }
+
+  Standard_Real tol = Precision::Confusion();
+  if (n > 4)
+      tol = Draw::Atof(a[4]);
+
+  ShapeAnalysis_CanonicalRecognition aCanonRec(sh);
+  Handle(Geom_Curve) aRes;
+  switch (aTargets[icurv])
+  {
+  case GeomAbs_Line:
+  {
+    gp_Lin aLin;
+    if (aCanonRec.IsLine(tol, aLin))
+      aRes = new Geom_Line(aLin);
+    break;
+  }
+  case GeomAbs_Circle:
+  {
+    gp_Circ aCirc;
+    if (aCanonRec.IsCircle(tol, aCirc))
+      aRes = new Geom_Circle(aCirc);
+    break;
+  }
+  case GeomAbs_Ellipse:
+  {
+    gp_Elips anElips;
+    if (aCanonRec.IsEllipse(tol, anElips))
+      aRes = new Geom_Ellipse(anElips);
+    break;
+  }
+  default:
+    break;
+  }
+
+  if (!aRes.IsNull())
+  {
+    DrawTrSurf::Set(a[1], aRes);
+    di << "Gap = " << aCanonRec.GetGap() << "\n";
+  }
+  else
+  {
+    di << "Cannot get required curve" << "\n";
+  }
+  return 0;
+
+}
 
 //=======================================================================
 //function : InitCommands
@@ -996,7 +1228,7 @@ static Standard_Integer checkedge(Draw_Interpretor& di, Standard_Integer argc, c
   Standard_CString g = SWDRAW::GroupName();
 
   theCommands.Add ("tolerance","shape [tolmin tolmax:real]", __FILE__,tolerance,g);
-  theCommands.Add ("projface","nom_face X Y [Z]", __FILE__,projface,g);
+  theCommands.Add ("projface","nom_face X Y [Z] - returns the closest orthogonal projection if exists", __FILE__,projface,g);
   theCommands.Add ("projcurve","nom_edge | curve3d | curve3d first last + X Y Z",
 		   __FILE__,projcurve,g);
   theCommands.Add("projpcurve", "edge face tol x y z [start_param]",
@@ -1020,4 +1252,8 @@ static Standard_Integer checkedge(Draw_Interpretor& di, Standard_Integer argc, c
   theCommands.Add("getareacontour","wire ",__FILE__, getareacontour, groupold);
   theCommands.Add ("checkselfintersection","wire [face]", __FILE__,checkselfintersection,g);
   theCommands.Add ("checkedge","edge [face]", __FILE__,checkedge,g);
+  theCommands.Add("getanasurf", "getanasurf res shape [target [tol [sample]]] ", __FILE__, getanasurf, g);
+  theCommands.Add("getanacurve", "getanacurve res shape [target [tol]]", __FILE__, getanacurve, g);
+
+
 }

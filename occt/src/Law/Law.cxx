@@ -14,16 +14,15 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <Law.hxx>
 
 #include <Adaptor3d_Curve.hxx>
 #include <BSplCLib.hxx>
 #include <gp_Pnt.hxx>
-#include <Law.hxx>
 #include <Law_BSpFunc.hxx>
 #include <Law_BSpline.hxx>
 #include <Law_Interpolate.hxx>
 #include <Law_Linear.hxx>
-#include <TColStd_Array1OfBoolean.hxx>
 #include <TColStd_Array1OfReal.hxx>
 #include <TColStd_HArray1OfBoolean.hxx>
 #include <TColStd_HArray1OfReal.hxx>

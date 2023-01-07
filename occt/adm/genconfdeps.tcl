@@ -780,14 +780,14 @@ proc wokdep:SearchTBB {theErrInc theErrLib32 theErrLib64 theErrBin32 theErrBin64
       }
     }
     if { "$::tcl_platform(platform)" == "windows" } {
-      set aTbbDllPath [wokdep:SearchBin "tbb.dll" "$anArchIter"]
+      set aTbbDllPath [wokdep:SearchBin "tbb12.dll" "$anArchIter"]
       if { "$aTbbDllPath" == "" } {
         set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{tbb}*] $aVcLib "$anArchIter" ]
-        set aTbbDllPath [wokdep:SearchBin "tbb.dll" "$anArchIter" "$aPath/bin/$aSubDir/$aVcLib"]
+        set aTbbDllPath [wokdep:SearchBin "tbb12.dll" "$anArchIter" "$aPath/bin/$aSubDir/$aVcLib"]
         if { "$aTbbDllPath" != "" } {
           lappend ::CSF_OPT_BIN$anArchIter "$aPath/bin/$aSubDir/$aVcLib"
         } else {
-          lappend anErrBin$anArchIter "Error: 'tbb.dll' not found (Intel TBB)"
+          lappend anErrBin$anArchIter "Error: 'tbb12.dll' not found (Intel TBB)"
           if { "$::ARCH" == "$anArchIter"} { set isFound "false" }
         }
       }
@@ -1251,13 +1251,13 @@ proc wokdep:SearchX11 {theErrInc theErrLib32 theErrLib64 theErrBin32 theErrBin64
     return "$isFound"
   }
 
-  set aXmuLibPath [wokdep:SearchLib "Xmu" "$::ARCH"]
-  if { "$aXmuLibPath" == "" } {
-    set aXmuLibPath [wokdep:SearchLib "Xmu" "$::ARCH" "/usr/X11/lib"]
-    if { "$aXmuLibPath" != "" } {
+  set aX11LibPath [wokdep:SearchLib "X11" "$::ARCH"]
+  if { "$aX11LibPath" == "" } {
+    set aX11LibPath [wokdep:SearchLib "X11" "$::ARCH" "/usr/X11/lib"]
+    if { "$aX11LibPath" != "" } {
       #lappend ::CSF_OPT_LIB$::ARCH "/usr/X11/lib"
     } else {
-      lappend anErrLib$::ARCH "Error: '${::SYS_LIB_PREFIX}Xmu.${::SYS_LIB_SUFFIX}' not found (X11)"
+      lappend anErrLib$::ARCH "Error: '${::SYS_LIB_PREFIX}X11.${::SYS_LIB_SUFFIX}' not found (X11)"
       set isFound "false"
     }
   }

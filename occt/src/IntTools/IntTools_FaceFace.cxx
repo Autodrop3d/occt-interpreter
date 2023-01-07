@@ -15,7 +15,6 @@
 
 #include <IntTools_FaceFace.hxx>
 
-#include <BRepAdaptor_Surface.hxx>
 #include <BRepTools.hxx>
 #include <BRep_Tool.hxx>
 #include <ElCLib.hxx>
@@ -43,7 +42,6 @@
 #include <IntAna_QuadQuadGeo.hxx>
 #include <IntPatch_GLine.hxx>
 #include <IntPatch_RLine.hxx>
-#include <IntPatch_WLine.hxx>
 #include <IntRes2d_Domain.hxx>
 #include <IntSurf_Quadric.hxx>
 #include <IntTools_Context.hxx>
@@ -55,6 +53,7 @@
 #include <TopoDS.hxx>
 #include <TopoDS_Edge.hxx>
 #include <gp_Elips.hxx>
+#include <ApproxInt_KnotTools.hxx>
 
 static 
   void Parameters(const Handle(GeomAdaptor_Surface)&,
@@ -502,8 +501,12 @@ void IntTools_FaceFace::Perform (const TopoDS_Face& aF1,
   Tolerances(myHS1, myHS2, TolTang);
 
   {
-    const Standard_Real UVMaxStep = 0.001;
-    const Standard_Real Deflection = 0.1;
+    const Standard_Real UVMaxStep = IntPatch_Intersection::DefineUVMaxStep(myHS1, dom1, myHS2, dom2);
+    Standard_Real Deflection = 0.1;
+    if (aType1 == GeomAbs_BSplineSurface && aType2 == GeomAbs_BSplineSurface)
+    {
+      Deflection /= 10.;
+    }
     myIntersector.SetTolerances(TolArc, TolTang, UVMaxStep, Deflection); 
   }
   
@@ -1164,23 +1167,6 @@ void IntTools_FaceFace::MakeCurve(const Standard_Integer Index,
         tol2d = myTolApprox;
       }
         
-      if(myHS1 == myHS2) { 
-        theapp3d.SetParameters(myTolApprox, tol2d, 4, 8, 0, 30, Standard_False, aParType);
-        rejectSurface = Standard_True;
-      }
-      else { 
-        if(reApprox && !rejectSurface)
-          theapp3d.SetParameters(myTolApprox, tol2d, 4, 8, 0, 30, Standard_False, aParType);
-        else {
-          Standard_Integer iDegMax, iDegMin, iNbIter;
-          //
-          ApproxParameters(myHS1, myHS2, iDegMin, iDegMax, iNbIter);
-          theapp3d.SetParameters(myTolApprox, tol2d, iDegMin, iDegMax,
-                                                  iNbIter, 30, Standard_True, aParType);
-        }
-      }
-      //
-      Standard_Real aReachedTol = Precision::Confusion();
       bIsDecomposited = IntTools_WLineTool::
         DecompositionOfWLine(WL,
                              myHS1, 
@@ -1191,7 +1177,6 @@ void IntTools_FaceFace::MakeCurve(const Standard_Integer Index,
                              bAvoidLineConstructor, 
                              myTol,
                              aSeqOfL, 
-                             aReachedTol,
                              myContext);
       //
       aNbSeqOfL=aSeqOfL.Length();
@@ -1199,7 +1184,7 @@ void IntTools_FaceFace::MakeCurve(const Standard_Integer Index,
       Standard_Real aTolC = 0.;
       if (bIsDecomposited) {
         nbiter=aNbSeqOfL;
-        aTolC = aReachedTol;
+        aTolC = Precision::Confusion();
       }
       else {
         nbiter=1;
@@ -1227,6 +1212,35 @@ void IntTools_FaceFace::MakeCurve(const Standard_Integer Index,
             ilprm = (Standard_Integer)lprm;
           }
         }
+
+        Standard_Boolean anApprox = myApprox;
+        if (typs1 == GeomAbs_Plane) {
+          anApprox = Standard_False;
+          anApprox1 = Standard_True;
+        }
+        else if (typs2 == GeomAbs_Plane) {
+          anApprox = Standard_False;
+          anApprox2 = Standard_True;
+        }
+
+        aParType = ApproxInt_KnotTools::DefineParType(WL, ifprm, ilprm, 
+                                                   anApprox, anApprox1, anApprox2);
+        if (myHS1 == myHS2) {
+          theapp3d.SetParameters(myTolApprox, tol2d, 4, 8, 0, 30, Standard_False, aParType);
+          rejectSurface = Standard_True;
+        }
+        else {
+          if (reApprox && !rejectSurface)
+            theapp3d.SetParameters(myTolApprox, tol2d, 4, 8, 0, 30, Standard_False, aParType);
+          else {
+            Standard_Integer iDegMax, iDegMin, iNbIter;
+            //
+            ApproxParameters(myHS1, myHS2, iDegMin, iDegMax, iNbIter);
+            theapp3d.SetParameters(myTolApprox, tol2d, iDegMin, iDegMax,
+              iNbIter, 30, Standard_True, aParType);
+          }
+        }
+
         //-- lbr : 
         //-- Si une des surfaces est un plan , on approxime en 2d
         //-- sur cette surface et on remonte les points 2d en 3d.
@@ -1892,6 +1906,7 @@ Handle(Geom_Curve) MakeBSpline  (const Handle(IntPatch_WLine)& WL,
     enlarge=Standard_True;
   }
   //
+
   if(!isuperiodic && enlarge) {
 
     if(!Precision::IsInfinite(theumin) &&
@@ -1907,6 +1922,7 @@ Handle(Geom_Curve) MakeBSpline  (const Handle(IntPatch_WLine)& WL,
     else
       theumax = usup;
   }
+
   //
   if(!isvperiodic && enlarge) {
     if(!Precision::IsInfinite(thevmin) &&
@@ -1924,6 +1940,7 @@ Handle(Geom_Curve) MakeBSpline  (const Handle(IntPatch_WLine)& WL,
       thevmax = vsup;
     }
   }
+
   //
   if(isuperiodic || isvperiodic) {
     Standard_Boolean correct = Standard_False;

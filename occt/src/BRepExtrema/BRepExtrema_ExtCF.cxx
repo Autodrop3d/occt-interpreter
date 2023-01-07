@@ -18,7 +18,6 @@
 
 #include <BRep_Tool.hxx>
 #include <BRepTools.hxx>
-#include <Geom_Curve.hxx>
 #include <BRepTopAdaptor_FClass2d.hxx>
 #include <gp_Pnt2d.hxx>
 #include <BRepAdaptor_Surface.hxx>
@@ -82,7 +81,7 @@ void BRepExtrema_ExtCF::Perform(const TopoDS_Edge& E, const TopoDS_Face& F2)
 
   BRepAdaptor_Curve Curv(E);
   Handle(BRepAdaptor_Curve) HC = new BRepAdaptor_Curve(Curv);
-  myExtCS.Perform(HC->Curve(), U1, U2);
+  myExtCS.Perform(*HC, U1, U2);
 
   if(!myExtCS.IsDone())
     return;

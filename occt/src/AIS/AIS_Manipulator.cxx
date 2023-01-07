@@ -15,6 +15,7 @@
 
 #include <AIS_Manipulator.hxx>
 
+#include <AIS_DisplayMode.hxx>
 #include <AIS_InteractiveContext.hxx>
 #include <AIS_ManipulatorOwner.hxx>
 #include <Extrema_ExtElC.hxx>
@@ -83,9 +84,8 @@ namespace
   public:
     //! Main constructor.
     ManipSensCircle (const Handle(SelectMgr_EntityOwner)& theOwnerId,
-                     const gp_Circ& theCircle,
-                     const Standard_Integer theNbPnts)
-    : Select3D_SensitiveCircle (theOwnerId, theCircle, Standard_False, theNbPnts),
+                     const gp_Circ& theCircle)
+    : Select3D_SensitiveCircle (theOwnerId, theCircle, Standard_False),
       ManipSensRotation (theCircle.Position().Direction()) {}
 
     //! Checks whether the circle overlaps current selecting volume
@@ -1070,7 +1070,7 @@ void AIS_Manipulator::HilightOwnerWithColor (const Handle(PrsMgr_PresentationMan
     return;
   }
 
-  aPresentation->CStructure()->ViewAffinity = thePM->StructureManager()->ObjectAffinity (Handle(Standard_Transient) (this));
+  aPresentation->CStructure()->ViewAffinity = myViewAffinity;
 
   if (anOwner->Mode() == AIS_MM_TranslationPlane)
   {
@@ -1167,7 +1167,7 @@ void AIS_Manipulator::ComputeSelection (const Handle(SelectMgr_Selection)& theSe
       }
       // define sensitivity by circle
       const gp_Circ aGeomCircle (gp_Ax2 (gp::Origin(), anAxis.ReferenceAxis().Direction()), anAxis.RotatorDiskRadius());
-      Handle(Select3D_SensitiveCircle) aCircle = new ManipSensCircle (anOwner, aGeomCircle, anAxis.FacettesNumber());
+      Handle(Select3D_SensitiveCircle) aCircle = new ManipSensCircle (anOwner, aGeomCircle);
       aCircle->SetSensitivityFactor (15);
       theSelection->Add (aCircle);
       // enlarge sensitivity by triangulation

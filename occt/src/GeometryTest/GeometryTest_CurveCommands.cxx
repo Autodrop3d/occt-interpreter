@@ -31,15 +31,9 @@
 
 #include <gp.hxx>
 #include <gp_Pln.hxx>
-#include <gp_Parab2d.hxx>
-#include <gp_Elips2d.hxx>
-#include <gp_Hypr2d.hxx>
 
 #include <Geom_Line.hxx>
-#include <Geom_Circle.hxx>
 #include <Geom_Ellipse.hxx>
-#include <Geom_Parabola.hxx>
-#include <Geom_Hyperbola.hxx>
 #include <Geom2d_Line.hxx>
 #include <Geom2d_Circle.hxx>
 #include <Geom2d_Ellipse.hxx>
@@ -59,9 +53,6 @@
 
 #include <Geom_Plane.hxx>
 #include <Geom_Curve.hxx>
-#include <Geom2d_Curve.hxx>
-#include <Geom2d_TrimmedCurve.hxx>
-#include <Geom_TrimmedCurve.hxx>
 
 #include <Law_BSpline.hxx>
 
@@ -71,40 +62,21 @@
 #include <TColStd_Array1OfInteger.hxx>
 
 #include <Adaptor3d_Curve.hxx>
-#include <Adaptor3d_Surface.hxx>
-#include <Adaptor3d_CurveOnSurface.hxx>
 
-#include <GeomAdaptor_Curve.hxx>
 #include <GeomAdaptor_Surface.hxx>
-#include <GeomAdaptor.hxx>
-#include <Geom2dAdaptor_Curve.hxx>
 
-#include <GeomAbs_SurfaceType.hxx>
-#include <GeomAbs_CurveType.hxx>
-
-#include <ProjLib_CompProjectedCurve.hxx>
 #include <ProjLib_HCompProjectedCurve.hxx>
-#include <Approx_CurveOnSurface.hxx>
 #include <Precision.hxx>
-#include <Geom2dAdaptor.hxx>
 #include <Message.hxx>
 
-#include <Precision.hxx>
-
 #include <Geom_Surface.hxx>
-#include <Adaptor2d_Curve2d.hxx>
 #include <stdio.h>
-#include <BSplCLib.hxx>
-#include <Geom_BSplineSurface.hxx>
 #include <Geom_BSplineCurve.hxx>
 #include <GCPnts_QuasiUniformDeflection.hxx>
-#include <GCPnts_UniformDeflection.hxx>
 #include <GCPnts_TangentialDeflection.hxx>
 #include <GCPnts_DistFunction.hxx>
-#include <GeomAPI_ExtremaCurveCurve.hxx>
 #include <gce_MakeLin.hxx>
 #include <TColStd_Array1OfBoolean.hxx>
-#include <GeomAdaptor_Surface.hxx>
 #include <Adaptor3d_TopolTool.hxx>
 #include <TColgp_Array2OfPnt.hxx>
 #include <Geom_BSplineSurface.hxx>
@@ -113,8 +85,6 @@
 //epa test
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <TopoDS.hxx>
-#include <TopoDS_Edge.hxx>
-#include <TopoDS_Wire.hxx>
 #include <BRepAdaptor_CompCurve.hxx>
 #include <GeomLProp_CLProps.hxx>
 #include <GCPnts_AbscissaPoint.hxx>
@@ -1804,7 +1774,8 @@ void  GeometryTest::CurveCommands(Draw_Interpretor& theCommands)
   
   theCommands.Add("projonplane",
 		  "projonplane r C3d Plane [dx dy dz] [0/1]",
-		  projonplane);
+		  __FILE__,
+		  projonplane, g);
 
   theCommands.Add("bisec",
 		  "bisec result line/circle/point line/circle/point",

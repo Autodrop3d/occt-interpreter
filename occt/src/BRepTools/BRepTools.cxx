@@ -14,21 +14,15 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <BRepTools.hxx>
 
 #include <Adaptor3d_CurveOnSurface.hxx>
 #include <Bnd_Box2d.hxx>
 #include <BndLib_Add2dCurve.hxx>
-#include <BRep_Builder.hxx>
-#include <BRep_CurveRepresentation.hxx>
 #include <BRep_GCurve.hxx>
-#include <BRep_ListOfCurveRepresentation.hxx>
 #include <BRep_TEdge.hxx>
-#include <BRep_Tool.hxx>
-#include <BRepTools.hxx>
-#include <BRepTools_MapOfVertexPnt2d.hxx>
 #include <BRepTools_ShapeSet.hxx>
 #include <BRepAdaptor_Surface.hxx>
-#include <ElCLib.hxx>
 #include <Geom2d_Curve.hxx>
 #include <Geom2dAdaptor_Curve.hxx>
 #include <GeomAdaptor_Curve.hxx>
@@ -36,38 +30,27 @@
 #include <Geom_Curve.hxx>
 #include <Geom_RectangularTrimmedSurface.hxx>
 #include <Geom_Surface.hxx>
-#include <gp_Lin2d.hxx>
-#include <gp_Vec2d.hxx>
 #include <Message.hxx>
 #include <OSD_FileSystem.hxx>
 #include <Poly_PolygonOnTriangulation.hxx>
 #include <Poly_Triangulation.hxx>
 #include <Precision.hxx>
-#include <Standard_ErrorHandler.hxx>
 #include <Standard_Failure.hxx>
 #include <Standard_Stream.hxx>
-#include <TColGeom2d_SequenceOfCurve.hxx>
-#include <TColgp_SequenceOfPnt2d.hxx>
-#include <TColStd_Array1OfReal.hxx>
-#include <TColStd_HArray1OfInteger.hxx>
 #include <TColStd_MapOfTransient.hxx>
-#include <TColStd_SequenceOfReal.hxx>
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Compound.hxx>
 #include <TopoDS_CompSolid.hxx>
-#include <TopoDS_Edge.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Shape.hxx>
 #include <TopoDS_Shell.hxx>
 #include <TopoDS_Solid.hxx>
 #include <TopoDS_Vertex.hxx>
 #include <TopoDS_Wire.hxx>
-#include <TopTools_SequenceOfShape.hxx>
 #include <GeomLib_CheckCurveOnSurface.hxx>
 #include <errno.h>
-#include <BRepTools_TrsfModification.hxx>
 #include <BRepTools_Modifier.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
 
@@ -712,7 +695,7 @@ Standard_Boolean  BRepTools::Write (const TopoDS_Shape& theShape,
                                     const Message_ProgressRange& theProgress)
 {
   const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::ostream> aStream = aFileSystem->OpenOStream (theFile, std::ios::out);
+  std::shared_ptr<std::ostream> aStream = aFileSystem->OpenOStream (theFile, std::ios::out | std::ios::binary);
   if (aStream.get() == NULL || !aStream->good())
   {
     return Standard_False;
@@ -754,7 +737,7 @@ Standard_Boolean BRepTools::Read(TopoDS_Shape& Sh,
                                  const Message_ProgressRange& theProgress)
 {
   const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::istream> aStream = aFileSystem->OpenIStream (File, std::ios::in);
+  std::shared_ptr<std::istream> aStream = aFileSystem->OpenIStream (File, std::ios::in);
   if (aStream.get() == NULL)
   {
     return Standard_False;
@@ -910,6 +893,8 @@ void BRepTools::CleanGeometry(const TopoDS_Shape& theShape)
     aBuilder.UpdateEdge(anEdge, Handle(Geom_Curve)(),
       TopLoc_Location(), BRep_Tool::Tolerance(anEdge));
   }
+
+  RemoveUnusedPCurves(theShape);
 }
 
 

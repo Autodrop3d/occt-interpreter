@@ -411,6 +411,15 @@ static Standard_Integer VShaderProg (Draw_Interpretor& ,
       }
       aProgram->SetHeader (aHeader);
     }
+    else if (!aProgram.IsNull()
+          && (anArg == "-defaultsampler"
+           || anArg == "-defampler"
+           || anArg == "-nodefaultsampler"
+           || anArg == "-nodefsampler"))
+    {
+      bool toUseDefSampler = Draw::ParseOnOffNoIterator (theArgNb, theArgVec, anArgIter);
+      aProgram->SetDefaultSampler (toUseDefSampler);
+    }
     else if (!anArg.StartsWith ("-")
           && GetMapOfAIS().IsBound2 (theArgVec[anArgIter]))
     {
@@ -638,7 +647,7 @@ static Standard_Integer VListMaterials (Draw_Interpretor& theDI,
   };
 
   const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::ostream> aMatFile, anObjFile, aHtmlFile;
+  std::shared_ptr<std::ostream> aMatFile, anObjFile, aHtmlFile;
   if (aDumpFile.EndsWith (".obj")
    || aDumpFile.EndsWith (".mtl"))
   {
@@ -894,7 +903,7 @@ static Standard_Integer VListColors (Draw_Interpretor& theDI,
   }
 
   const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::ostream> aHtmlFile;
+  std::shared_ptr<std::ostream> aHtmlFile;
   TCollection_AsciiString aFileNameBase, aFolder;
   if (aDumpFile.EndsWith (".htm")
    || aDumpFile.EndsWith (".html"))
@@ -923,7 +932,10 @@ static Standard_Integer VListColors (Draw_Interpretor& theDI,
   Handle(V3d_View) aView;
   if (!aDumpFile.IsEmpty())
   {
-    ViewerTest::ViewerInit (0, 0, anImgParams.Width, anImgParams.Height, "TmpDriver/TmpViewer/TmpView");
+    ViewerTest_VinitParams aParams;
+    aParams.Size.SetValues ((float )anImgParams.Width, (float)anImgParams.Height);
+    aParams.ViewName = "TmpDriver/TmpViewer/TmpView";
+    ViewerTest::ViewerInit (aParams);
     aView = ViewerTest::CurrentView();
     aView->SetImmediateUpdate (false);
     aView->SetBgGradientStyle (Aspect_GradientFillMethod_None, false);
@@ -1088,7 +1100,7 @@ static Standard_Integer VGenEnvLUT (Draw_Interpretor&,
   }
 
   const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::ostream> aFile = aFileSystem->OpenOStream (aFilePath, std::ios::out | std::ios::trunc);
+  std::shared_ptr<std::ostream> aFile = aFileSystem->OpenOStream (aFilePath, std::ios::out | std::ios::trunc);
 
   if (aFile.get() == NULL || !aFile->good())
   {
@@ -1161,48 +1173,62 @@ static Standard_Integer VGenEnvLUT (Draw_Interpretor&,
 
 void ViewerTest::OpenGlCommands(Draw_Interpretor& theCommands)
 {
-  const char* aGroup ="Commands for low-level TKOpenGl features";
+  const char* aGroup = "AIS Viewer";
+  const char* aFileName = __FILE__;
+  auto addCmd = [&](const char* theName, Draw_Interpretor::CommandFunction theFunc, const char* theHelp)
+  {
+    theCommands.Add (theName, theHelp, aFileName, theFunc, aGroup);
+  };
 
-  theCommands.Add("vimmediatefront",
-    "vimmediatefront : render immediate mode to front buffer or to back buffer",
-    __FILE__, VImmediateFront, aGroup);
-  theCommands.Add("vglinfo",
-                "vglinfo [-short|-basic|-complete] [-lineWidth Value=80]"
-        "\n\t\t:         [GL_VENDOR] [GL_RENDERER] [GL_VERSION]"
-        "\n\t\t:         [GL_SHADING_LANGUAGE_VERSION] [GL_EXTENSIONS]"
-        "\n\t\t: print OpenGL info."
-        "\n\t\t:  -lineWidth split values longer than specified value into multiple lines;"
-        "\n\t\t:             -1 disables splitting.",
-    __FILE__, VGlInfo, aGroup);
-  theCommands.Add("vshader",
-                  "vshader name -vert VertexShader -frag FragmentShader [-geom GeometryShader]"
-                  "\n\t\t:   [-off] [-phong] [-aspect {shading|line|point|text}=shading]"
-                  "\n\t\t:   [-header VersionHeader]"
-                  "\n\t\t:   [-tessControl TessControlShader -tesseval TessEvaluationShader]"
-                  "\n\t\t:   [-uniform Name FloatValue]"
-                  "\n\t\t: Assign custom GLSL program to presentation aspects.",
-    __FILE__, VShaderProg, aGroup);
-  theCommands.Add("vshaderprog", "Alias for vshader", __FILE__, VShaderProg, aGroup);
-  theCommands.Add("vlistmaterials",
-                  "vlistmaterials [*] [MaterialName1 [MaterialName2 [...]]] [dump.obj|dump.html]"
-                  "\n\t\t: Without arguments, command prints the list of standard materials."
-                  "\n\t\t: Otherwise, properties of specified materials will be printed"
-                  "\n\t\t: or dumped into specified file."
-                  "\n\t\t: * can be used to refer to complete list of standard materials.",
-                  __FILE__, VListMaterials, aGroup);
-  theCommands.Add("vlistcolors",
-                  "vlistcolors [*] [ColorName1 [ColorName2 [...]]] [dump.html]"
-                  "\n\t\t: Without arguments, command prints the list of standard colors."
-                  "\n\t\t: Otherwise, properties of specified colors will be printed"
-                  "\n\t\t: or dumped into specified file."
-                  "\n\t\t: * can be used to refer to complete list of standard colors.",
-                  __FILE__, VListColors, aGroup);
-  theCommands.Add("vgenenvlut",
-                  "vgenenvlut [-size size = 128] [-nbsamples nbsamples = 1024]"
-                  "\n\t\t: Generates PBR environment look up table."
-                  "\n\t\t: Saves it as C++ source file which is expected to be included in code."
-                  "\n\t\t: The path where result will be located is 'Graphic3d_TextureRoot::TexturesFolder()'."
-                  "\n\t\t:  -size size of one side of resulted square table"
-                  "\n\t\t:  -nbsamples number of samples used in Monte-Carlo integration",
-                  __FILE__, VGenEnvLUT, aGroup);
+  addCmd ("vimmediatefront", VImmediateFront, /* [vimmediatefront] */ R"(
+vimmediatefront : render immediate mode to front buffer or to back buffer
+)" /* [vimmediatefront] */);
+
+  addCmd ("vglinfo", VGlInfo, /* [vglinfo] */ R"(
+vglinfo [-short|-basic|-complete] [-lineWidth Value=80]
+        [GL_VENDOR] [GL_RENDERER] [GL_VERSION]
+        [GL_SHADING_LANGUAGE_VERSION] [GL_EXTENSIONS]
+Print OpenGL info.
+ -lineWidth split values longer than specified value into multiple lines;
+            -1 disables splitting.
+)" /* [vglinfo] */);
+
+  addCmd ("vshader", VShaderProg, /* [vshader] */ R"(
+vshader name -vert VertexShader -frag FragmentShader [-geom GeometryShader]
+        [-off] [-phong] [-aspect {shading|line|point|text}=shading]
+        [-header VersionHeader]
+        [-tessControl TessControlShader -tessEval TessEvaluationShader]
+        [-uniform Name FloatValue]
+        [-defaultSampler {0|1}]=1
+Assign custom GLSL program to presentation aspects.
+)" /* [vshader] */);
+
+  addCmd ("vshaderprog", VShaderProg, /* [vshaderprog] */ R"(
+Alias for vshader
+)" /* [vshaderprog] */);
+
+  addCmd ("vlistmaterials", VListMaterials, /* [vlistmaterials] */ R"(
+vlistmaterials [*] [MaterialName1 [MaterialName2 [...]]] [dump.obj|dump.html]
+Without arguments, command prints the list of standard materials.
+Otherwise, properties of specified materials will be printed
+or dumped into specified file.
+* can be used to refer to complete list of standard materials.
+)" /* [vlistmaterials] */);
+
+  addCmd ("vlistcolors", VListColors, /* [vlistcolors] */ R"(
+vlistcolors [*] [ColorName1 [ColorName2 [...]]] [dump.html]
+Without arguments, command prints the list of standard colors.
+Otherwise, properties of specified colors will be printed
+or dumped into specified file.
+* can be used to refer to complete list of standard colors.
+)" /* [vlistcolors] */);
+
+  addCmd ("vgenenvlut", VGenEnvLUT, /* [vgenenvlut] */ R"(
+vgenenvlut [-size size = 128] [-nbsamples nbsamples = 1024]
+Generates PBR environment look up table.
+Saves it as C++ source file which is expected to be included in code.
+The path where result will be located is 'Graphic3d_TextureRoot::TexturesFolder()'.
+ -size size of one side of resulted square table
+ -nbsamples number of samples used in Monte-Carlo integration
+)" /* [vgenenvlut] */);
 }

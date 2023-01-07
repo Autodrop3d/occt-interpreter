@@ -19,9 +19,7 @@
 #include <Adaptor3d_Curve.hxx>
 #include <Adaptor3d_Surface.hxx>
 #include <Geom_Line.hxx>
-#include <Geom_Surface.hxx>
 #include <GeomAdaptor_Curve.hxx>
-#include <GeomAdaptor_Surface.hxx>
 #include <GeomFill_DraftTrihedron.hxx>
 #include <GeomFill_FunctionDraft.hxx>
 #include <GeomFill_LocationLaw.hxx>
@@ -40,7 +38,6 @@
 #include <math_NewtonFunctionSetRoot.hxx>
 #include <math_Vector.hxx>
 #include <Standard_NotImplemented.hxx>
-#include <Standard_OutOfRange.hxx>
 #include <Standard_Type.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(GeomFill_LocationDraft,GeomFill_LocationLaw)
@@ -105,13 +102,14 @@ GeomFill_LocationDraft::GeomFill_LocationDraft
 //Purpose : Calcul des poles sur la surfaces d'arret (intersection 
 // entre la generatrice et la surface en myNbPts points de la section)
 //==================================================================
- void GeomFill_LocationDraft::SetCurve(const Handle(Adaptor3d_Curve)& C) 
+ Standard_Boolean GeomFill_LocationDraft::SetCurve(const Handle(Adaptor3d_Curve)& C) 
 {
   myCurve = C;
   myTrimmed = C;
-  myLaw->SetCurve(C);
+  Standard_Boolean isOK = myLaw->SetCurve(C);
 
   Prepare(); 
+  return isOK;
 }
 
 //==================================================================

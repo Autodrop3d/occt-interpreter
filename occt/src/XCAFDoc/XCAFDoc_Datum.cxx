@@ -13,9 +13,7 @@
 
 #include <XCAFDoc_Datum.hxx>
 
-#include <Standard_GUID.hxx>
 #include <Standard_Type.hxx>
-#include <TCollection_HAsciiString.hxx>
 #include <TDF_Attribute.hxx>
 #include <TDF_Label.hxx>
 #include <TDF_ChildIterator.hxx>
@@ -25,7 +23,6 @@
 #include <TDataStd_RealArray.hxx>
 #include <TDataStd_Integer.hxx>
 #include <TDataStd_Real.hxx>
-#include <TNaming_NamedShape.hxx>
 #include <TNaming_Builder.hxx>
 #include <TNaming_Tool.hxx>
 #include <TDataStd_Name.hxx>
@@ -36,7 +33,8 @@ IMPLEMENT_STANDARD_RTTIEXT(XCAFDoc_Datum,TDF_Attribute)
 
 enum ChildLab
 {
-  ChildLab_Name = 1,
+  ChildLab_Begin = 1,
+  ChildLab_Name = ChildLab_Begin,
   ChildLab_Position,
   ChildLab_Modifiers,
   ChildLab_ModifierWithValue,
@@ -54,7 +52,8 @@ enum ChildLab
   ChildLab_PlaneRef,
   ChildLab_Pnt,
   ChildLab_PntText,
-  ChildLab_Presentation
+  ChildLab_Presentation,
+  ChildLab_End
 };
 
 //=======================================================================
@@ -179,10 +178,9 @@ void XCAFDoc_Datum::SetObject(const Handle(XCAFDimTolObjects_DatumObject)& theOb
     TDataStd_Name::Set(Label(), str);
   }
 
-  TDF_ChildIterator anIter(Label());
-  for(;anIter.More(); anIter.Next())
+  for (int aChild = ChildLab_Begin; aChild < ChildLab_End; aChild++)
   {
-    anIter.Value().ForgetAllAttributes();
+    Label().FindChild(aChild).ForgetAllAttributes();
   }
   if (!theObject->GetName().IsNull() && !theObject->GetName()->IsEmpty())
     Handle(TDataStd_AsciiString) anAttName = TDataStd_AsciiString::Set(Label().FindChild(ChildLab_Name),

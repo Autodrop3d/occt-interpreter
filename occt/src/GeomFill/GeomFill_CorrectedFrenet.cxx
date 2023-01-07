@@ -27,7 +27,6 @@
 #include <GeomFill_SnglrFunc.hxx>
 #include <GeomFill_TrihedronLaw.hxx>
 #include <GeomLib.hxx>
-#include <gp_Trsf.hxx>
 #include <gp_Vec.hxx>
 #include <gp_Vec2d.hxx>
 #include <Law_BSpFunc.hxx>
@@ -37,8 +36,6 @@
 #include <Law_Function.hxx>
 #include <Law_Interpolate.hxx>
 #include <Precision.hxx>
-#include <Standard_ConstructionError.hxx>
-#include <Standard_OutOfRange.hxx>
 #include <Standard_Type.hxx>
 #include <TColgp_HArray1OfPnt.hxx>
 #include <TColStd_HArray1OfReal.hxx>
@@ -337,34 +334,36 @@ Handle(GeomFill_TrihedronLaw) GeomFill_CorrectedFrenet::Copy() const
   return copy;
 }
 
- void GeomFill_CorrectedFrenet::SetCurve(const Handle(Adaptor3d_Curve)& C) 
+Standard_Boolean GeomFill_CorrectedFrenet::SetCurve(const Handle(Adaptor3d_Curve)& C) 
 {
- 
   GeomFill_TrihedronLaw::SetCurve(C);
-  if (! C.IsNull()) { 
+  if (! C.IsNull())
+  {
     frenet->SetCurve(C);
  
     GeomAbs_CurveType type;
     type = C->GetType();
-    switch  (type) {
+    switch  (type) 
+    {
     case GeomAbs_Circle:
     case GeomAbs_Ellipse:
     case GeomAbs_Hyperbola:
     case GeomAbs_Parabola:
     case GeomAbs_Line:
-      {
-	// No probleme isFrenet
-	isFrenet = Standard_True;
-        break;
-      }
-     default :
-       { 
-	 // We have to search singularities
-	 isFrenet = Standard_True;
-	 Init(); 
-       }
+    {
+      // No probleme isFrenet
+      isFrenet = Standard_True;
+      break;
+    }
+    default :
+    { 
+      // We have to search singularities
+      isFrenet = Standard_True;
+      Init(); 
+    }
     }
   }
+  return isFrenet;
 }
 
 
@@ -438,16 +437,20 @@ Handle(GeomFill_TrihedronLaw) GeomFill_CorrectedFrenet::Copy() const
   TLaw = EvolAroundT;
   //OCC78
   Standard_Integer iEnd = SeqPoles.Length();
-  HArrPoles = new TColStd_HArray1OfReal(1, iEnd);
-  HArrAngle = new TColStd_HArray1OfReal(1, iEnd);
-  HArrTangent = new TColgp_HArray1OfVec(1, iEnd);
-  HArrNormal = new TColgp_HArray1OfVec(1, iEnd);
-  for(i = 1; i <= iEnd; i++){
-    HArrPoles->ChangeValue(i) = SeqPoles(i); 
-    HArrAngle->ChangeValue(i) = SeqAngle(i); 
-    HArrTangent->ChangeValue(i) = SeqTangent(i); 
-    HArrNormal->ChangeValue(i) = SeqNormal(i); 
-  };
+  if (iEnd != 0)
+  {
+    HArrPoles = new TColStd_HArray1OfReal(1, iEnd);
+    HArrAngle = new TColStd_HArray1OfReal(1, iEnd);
+    HArrTangent = new TColgp_HArray1OfVec(1, iEnd);
+    HArrNormal = new TColgp_HArray1OfVec(1, iEnd);
+    for (i = 1; i <= iEnd; i++) {
+      HArrPoles->ChangeValue(i) = SeqPoles(i);
+      HArrAngle->ChangeValue(i) = SeqAngle(i);
+      HArrTangent->ChangeValue(i) = SeqTangent(i);
+      HArrNormal->ChangeValue(i) = SeqNormal(i);
+    };
+  }
+
   
 #ifdef DRAW
   if (Affich) {
@@ -612,7 +615,7 @@ Standard_Real GeomFill_CorrectedFrenet::CalcAngleAT(const gp_Vec& Tangent, const
   Standard_Real angle;
   gp_Vec Normal_rot, cross;
   angle = Tangent.Angle(prevTangent);
-  if (Abs(angle) > Precision::Angular()) {
+  if (Abs(angle) > Precision::Angular() && Abs(angle) < M_PI - Precision::Angular()) {
     cross = Tangent.Crossed(prevTangent).Normalized();
     Normal_rot = Normal + sin(angle)*cross.Crossed(Normal) + 
       (1 - cos(angle))*cross.Crossed(cross.Crossed(Normal));

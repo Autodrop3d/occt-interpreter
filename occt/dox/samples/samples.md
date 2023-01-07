@@ -14,6 +14,8 @@
     <br>A set of code snippets performing typical actions with @ref occt_user_guides__ocaf "OCAF" services for newcomers.
   * @ref samples__ocaf_func
     <br>A simple example dedicated to the usage of "Function Mechanism" of @ref occt_user_guides__ocaf "OCCT Application Framework".
+  * @ref tutorials__ais_object
+    <br>A programming tutorial teaching how to compute presentation within AIS_InteractiveObject subclass for displaying in @ref occt_user_guides__visualization "OCCT 3D Viewer".
 - @subpage samples__projects
   * @ref samples_qt_iesample
     <br>A cross-platform multi-document 3D Viewer sample with CAD import / export functionality based on **Qt Widgets** framework.
@@ -35,6 +37,8 @@
     <br>3D Viewer sample with CAD import for Android mobile platform based on Android SDK and JNI layer.
   * @ref occt_samples_ios_uikit
     <br>3D Viewer sample for iOS platform based on Apple **UIKit** framework.
+  * @ref occt_samples_glfw
+    <br>A cross-platform 3D Viewer sample using **GLFW** library.
 
 @page samples__tutorials Tutorials and Demos
 - @subpage samples__novice_guide
@@ -42,6 +46,7 @@
 - @subpage occt__tutorial
 - @subpage samples__ocaf
 - @subpage samples__ocaf_func
+- @subpage tutorials__ais_object
 
 @page samples__projects Sample Projects
 - @subpage samples_qt_iesample
@@ -54,3 +59,4 @@
 - @subpage occt_samples_webgl
 - @subpage samples_java_android_occt
 - @subpage occt_samples_ios_uikit
+- @subpage occt_samples_glfw

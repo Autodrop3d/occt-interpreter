@@ -25,7 +25,6 @@
 #include <OSD_Environment.hxx>
 #include <OSD_File.hxx>
 #include <OSD_OpenFile.hxx>
-#include <OSD_Protection.hxx>
 #include <Standard_Atomic.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_TextureRoot, Standard_Transient)
@@ -92,9 +91,10 @@ Graphic3d_TextureRoot::Graphic3d_TextureRoot (const TCollection_AsciiString& the
 : myParams   (new Graphic3d_TextureParams()),
   myPath     (theFileName),
   myRevision (0),
-  myType     (theType),
+  myType     (theType == Graphic3d_TOT_2D_MIPMAP ? Graphic3d_TypeOfTexture_2D : theType),
   myIsColorMap (true),
-  myIsTopDown  (true)
+  myIsTopDown  (true),
+  myHasMipmaps (theType == Graphic3d_TOT_2D_MIPMAP)
 {
   generateId();
 }
@@ -108,9 +108,10 @@ Graphic3d_TextureRoot::Graphic3d_TextureRoot (const Handle(Image_PixMap)&   theP
 : myParams   (new Graphic3d_TextureParams()),
   myPixMap   (thePixMap),
   myRevision (0),
-  myType     (theType),
+  myType     (theType == Graphic3d_TOT_2D_MIPMAP ? Graphic3d_TypeOfTexture_2D : theType),
   myIsColorMap (true),
-  myIsTopDown  (true)
+  myIsTopDown  (true),
+  myHasMipmaps (theType == Graphic3d_TOT_2D_MIPMAP)
 {
   generateId();
 }
@@ -214,9 +215,9 @@ Handle(Image_PixMap) Graphic3d_TextureRoot::GetImage (const Handle(Image_Support
 void Graphic3d_TextureRoot::convertToCompatible (const Handle(Image_SupportedFormats)& theSupported,
                                                  const Handle(Image_PixMap)& theImage)
 {
-  if (theSupported.IsNull()
-   || theSupported->IsSupported (theImage->Format())
-   || theImage.IsNull())
+  if (theImage.IsNull()
+   || theSupported.IsNull()
+   || theSupported->IsSupported (theImage->Format()))
   {
     return;
   }

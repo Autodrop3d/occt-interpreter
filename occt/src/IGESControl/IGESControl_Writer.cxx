@@ -18,11 +18,7 @@
 #include <BndLib_Add3dCurve.hxx>
 #include <BndLib_AddSurface.hxx>
 #include <BRepBndLib.hxx>
-#include <BRepToIGES_BREntity.hxx>
 #include <BRepToIGESBRep_Entity.hxx>
-#include <Geom_Curve.hxx>
-#include <Geom_Geometry.hxx>
-#include <Geom_Surface.hxx>
 #include <GeomAdaptor_Curve.hxx>
 #include <GeomAdaptor_Surface.hxx>
 #include <GeomToIGES_GeomCurve.hxx>
@@ -42,7 +38,6 @@
 #include <ShapeAnalysis_ShapeTolerance.hxx>
 #include <Standard_Stream.hxx>
 #include <Standard_Transient.hxx>
-#include <TopExp_Explorer.hxx>
 #include <TopoDS_Shape.hxx>
 #include <Transfer_FinderProcess.hxx>
 #include <XSAlgo.hxx>
@@ -254,7 +249,7 @@ Standard_Boolean IGESControl_Writer::Write
   (const Standard_CString file, const Standard_Boolean fnes)
 {
   const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::ostream> aStream = aFileSystem->OpenOStream (file, std::ios::out);
+  std::shared_ptr<std::ostream> aStream = aFileSystem->OpenOStream (file, std::ios::out | std::ios::binary);
   if (aStream.get() == NULL)
   {
     return Standard_False;

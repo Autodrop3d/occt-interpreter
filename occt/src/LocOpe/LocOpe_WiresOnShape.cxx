@@ -31,13 +31,11 @@
 #include <Geom_RectangularTrimmedSurface.hxx>
 #include <Geom_Surface.hxx>
 #include <Geom_TrimmedCurve.hxx>
-#include <GeomAdaptor_Surface.hxx>
 #include <GeomAPI_ProjectPointOnCurve.hxx>
 #include <GeomProjLib.hxx>
 #include <gp_Pnt2d.hxx>
 #include <gp_Vec.hxx>
 #include <gp_Vec2d.hxx>
-#include <LocOpe.hxx>
 #include <LocOpe_WiresOnShape.hxx>
 #include <Precision.hxx>
 #include <Standard_ConstructionError.hxx>
@@ -53,7 +51,6 @@
 #include <TopoDS_Wire.hxx>
 #include <TopTools_DataMapIteratorOfDataMapOfShapeShape.hxx>
 #include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
-#include <TopTools_ListIteratorOfListOfShape.hxx>
 #include <TopTools_ListOfShape.hxx>
 #include <TopTools_MapOfShape.hxx>
 #include <TopTools_DataMapOfShapeReal.hxx>
@@ -64,8 +61,6 @@
 #include <TopTools_SequenceOfShape.hxx>
 #include <BRepBndLib.hxx>
 #include <Bnd_Box.hxx>
-#include <Bnd_SeqOfBox.hxx>
-#include <NCollection_Handle.hxx>
 #include <TColStd_PackedMapOfInteger.hxx>
 #include <Extrema_ExtPS.hxx>
 
@@ -1295,6 +1290,10 @@ void FindInternalIntersections(const TopoDS_Edge& theEdge,
   Standard_Real aTolV[2];
   aTolV[0] =BRep_Tool::Tolerance(theVertices[0]);
   aTolV[1] =BRep_Tool::Tolerance(theVertices[1]);
+  Standard_Real ext = 16.; // = 4 * 4 - to avoid creating microedges, area around vertices is increased
+                           // up to 4 vertex tolerance. Such approach is usual for other topological
+                           // algorithms, for example, Boolean Operations.
+  Standard_Real aTolVExt[2] = { ext * aTolV[0] * aTolV[0], ext * aTolV[1] * aTolV[1] };
 
   BRepAdaptor_Curve2d thePCurve(theEdge, theFace);
   Bnd_Box2d theBox;
@@ -1304,6 +1303,9 @@ void FindInternalIntersections(const TopoDS_Edge& theEdge,
   Standard_Real  aFpar, aLpar;
   const Handle(Geom_Curve)& theCurve = BRep_Tool::Curve(theEdge, thePar[0], thePar[1]);
   GeomAdaptor_Curve theGAcurve(theCurve, thePar[0], thePar[1]);
+  Standard_Real aTolV2d[2] = { theGAcurve.Resolution(aTolV[0]), theGAcurve.Resolution(aTolV[1]) };
+  aTolV2d[0] = Max(aTolV2d[0], Precision::PConfusion());
+  aTolV2d[1] = Max(aTolV2d[1], Precision::PConfusion());
   Standard_Real aDistMax = Precision::Confusion() * Precision::Confusion();
   TopExp_Explorer Explo(theFace, TopAbs_EDGE);
   for (; Explo.More(); Explo.Next())
@@ -1330,6 +1332,23 @@ void FindInternalIntersections(const TopoDS_Edge& theEdge,
       isOverlapped = Standard_True;
       return;
     }
+    // Check extremity distances
+    Standard_Real dists[4];
+    gp_Pnt aP11, aP12, aP21, aP22;
+    anExtrema.TrimmedSquareDistances(dists[0], dists[1], dists[2], dists[3],
+      aP11, aP12, aP21, aP22);
+    for (i = 0; i < 4; ++i)
+    {
+      if (i < 2)
+        j = 0;
+      else
+        j = 1;
+      if (dists[i] < aTolVExt[j] / ext)
+      {
+        return;
+      }
+    }
+
     for (i = 1; i <= aNbExt; i++)
     {
       Standard_Real aDist = anExtrema.SquareDistance(i);
@@ -1342,7 +1361,7 @@ void FindInternalIntersections(const TopoDS_Edge& theEdge,
       Standard_Real anIntPar = aPOnC2.Parameter();
       for (j = 0; j < 2; j++) //try to find intersection on an extremity of "theEdge"
       {
-        if (Abs(theIntPar - thePar[j]) <= Precision::PConfusion())
+        if (Abs(theIntPar - thePar[j]) <= aTolV2d[j])
           break;
       }
       //intersection found in the middle of the edge
@@ -1351,10 +1370,10 @@ void FindInternalIntersections(const TopoDS_Edge& theEdge,
         gp_Pnt aPoint = aCurve->Value(anIntPar);
         gp_Pnt aPointInt = theCurve->Value(theIntPar);
     
-        if (aPointInt.SquareDistance(thePnt[0]) > aTolV[0] * aTolV[0] &&
-          aPointInt.SquareDistance(thePnt[1]) > aTolV[1] * aTolV[1] &&
-          aPoint.SquareDistance(thePnt[0]) > aTolV[0] * aTolV[0] &&
-          aPoint.SquareDistance(thePnt[1]) > aTolV[1] * aTolV[1])
+        if (aPointInt.SquareDistance(thePnt[0]) > aTolVExt[0] &&
+          aPointInt.SquareDistance(thePnt[1]) > aTolVExt[1]  &&
+          aPoint.SquareDistance(thePnt[0]) > aTolVExt[0]  &&
+          aPoint.SquareDistance(thePnt[1]) > aTolVExt[1])
         {
           SplitPars.Append(theIntPar);
           if( aDist > aDistMax)
@@ -1448,8 +1467,8 @@ void FindInternalIntersections(const TopoDS_Edge& theEdge,
 Standard_Boolean LocOpe_WiresOnShape::Add(const TopTools_SequenceOfShape& theEdges)
 {
   TopTools_SequenceOfShape anEdges;
-  Bnd_SeqOfBox anEdgeBoxes;
   Standard_Integer i = 1, nb = theEdges.Length();
+  NCollection_Array1<Bnd_Box> anEdgeBoxes(1, nb);
   for (; i <= nb; i++)
   {
     const TopoDS_Shape& aCurSplit = theEdges(i);
@@ -1464,7 +1483,7 @@ Standard_Boolean LocOpe_WiresOnShape::Add(const TopTools_SequenceOfShape& theEdg
         continue;
       Standard_Real aTolE = BRep_Tool::Tolerance(TopoDS::Edge(aCurE));
       aBoxE.SetGap(aTolE);
-      anEdgeBoxes.Append(aBoxE);
+      anEdgeBoxes.SetValue(i, aBoxE);
       anEdges.Append(aCurE);
 
     }

@@ -13,18 +13,20 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#if defined(_WIN32)
+  #include <windows.h>
+#endif
+
 #include <OpenGl_GlCore12.hxx>
 
-#include <OpenGl_Context.hxx>
+#include <OpenGl_FrameBuffer.hxx>
 #include <OpenGl_GraphicDriver.hxx>
 #include <OpenGl_Window.hxx>
-#include <OpenGl_FrameBuffer.hxx>
 
 #include <Aspect_GraphicDeviceDefinitionError.hxx>
-#include <Graphic3d_TransformUtils.hxx>
+#include <Aspect_Handle.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <TCollection_ExtendedString.hxx>
-#include <Graphic3d_GraphicDriver.hxx>
 
 #include <memory>
 
@@ -165,17 +167,31 @@ namespace
 // function : OpenGl_Window
 // purpose  :
 // =======================================================================
-OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
-                              const Handle(Aspect_Window)&  thePlatformWindow,
-                              Aspect_RenderingContext       theGContext,
-                              const Handle(OpenGl_Caps)&    theCaps,
-                              const Handle(OpenGl_Context)& theShareCtx)
-: myGlContext (new OpenGl_Context (theCaps)),
-  myOwnGContext (theGContext == 0),
-  myPlatformWindow (thePlatformWindow),
-  mySwapInterval (theCaps->swapInterval)
+OpenGl_Window::OpenGl_Window()
+: myOwnGContext (false),
+  mySwapInterval (0)
 {
-  myPlatformWindow->Size (myWidth, myHeight);
+  //
+}
+
+// =======================================================================
+// function : Init
+// purpose  :
+// =======================================================================
+void OpenGl_Window::Init (const Handle(OpenGl_GraphicDriver)& theDriver,
+                          const Handle(Aspect_Window)&  thePlatformWindow,
+                          const Handle(Aspect_Window)&  theSizeWindow,
+                          Aspect_RenderingContext       theGContext,
+                          const Handle(OpenGl_Caps)&    theCaps,
+                          const Handle(OpenGl_Context)& theShareCtx)
+{
+  myGlContext = new OpenGl_Context (theCaps);
+  myOwnGContext = (theGContext == 0);
+  myPlatformWindow = thePlatformWindow;
+  mySizeWindow = theSizeWindow;
+  mySwapInterval = theCaps->swapInterval;
+
+  mySizeWindow->Size (mySize.x(), mySize.y());
 
   Standard_Boolean isCoreProfile = Standard_False;
 
@@ -189,7 +205,6 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
     && (EGLContext )theGContext == EGL_NO_CONTEXT))
   {
     throw Aspect_GraphicDeviceDefinitionError("OpenGl_Window, EGL does not provide compatible configurations!");
-    return;
   }
 
   EGLSurface anEglSurf = EGL_NO_SURFACE;
@@ -221,8 +236,8 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
       #if !defined(__EMSCRIPTEN__) // eglCreatePbufferSurface() is not implemented by Emscripten EGL
         const int aSurfAttribs[] =
         {
-          EGL_WIDTH,  myWidth,
-          EGL_HEIGHT, myHeight,
+          EGL_WIDTH,  mySize.x(),
+          EGL_HEIGHT, mySize.y(),
           // EGL_KHR_gl_colorspace extension specifies if OpenGL should write into window buffer as into sRGB or RGB framebuffer
           //EGL_GL_COLORSPACE_KHR, !theCaps->sRGBDisable ? EGL_GL_COLORSPACE_SRGB_KHR : EGL_GL_COLORSPACE_LINEAR_KHR,
           EGL_NONE
@@ -254,8 +269,8 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
       #if !defined(__EMSCRIPTEN__) // eglCreatePbufferSurface() is not implemented by Emscripten EGL
         const int aSurfAttribs[] =
         {
-          EGL_WIDTH,  myWidth,
-          EGL_HEIGHT, myHeight,
+          EGL_WIDTH,  mySize.x(),
+          EGL_HEIGHT, mySize.y(),
           // EGL_KHR_gl_colorspace extension specifies if OpenGL should write into window buffer as into sRGB or RGB framebuffer
           //EGL_GL_COLORSPACE_KHR, !theCaps->sRGBDisable ? EGL_GL_COLORSPACE_SRGB_KHR : EGL_GL_COLORSPACE_LINEAR_KHR,
           EGL_NONE
@@ -318,7 +333,6 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
     TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: ChoosePixelFormat failed. Error code: ");
     aMsg += (int )GetLastError();
     throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
-    return;
   }
 
   DescribePixelFormat (aWindowDC, aPixelFrmtId, sizeof(aPixelFrmt), &aPixelFrmt);
@@ -336,7 +350,7 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
     HWND  aWinTmp     = NULL;
     HDC   aDevCtxTmp  = NULL;
     HGLRC aRendCtxTmp = NULL;
-    if ((!theCaps->contextDebug && !theCaps->contextNoAccel && theCaps->contextCompatible)
+    if ((!theCaps->contextDebug && !theCaps->contextNoAccel && theCaps->contextCompatible && !theCaps->buffersDeepColor)
      || RegisterClassW (&aClass) == 0)
     {
       aClass.lpszClassName = NULL;
@@ -400,7 +414,11 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
         WGL_PIXEL_TYPE_ARB,     WGL_TYPE_RGBA_ARB,
         //WGL_SAMPLE_BUFFERS_ARB, 1,
         //WGL_SAMPLES_ARB,        8,
-        WGL_COLOR_BITS_ARB,     24,
+        //WGL_COLOR_BITS_ARB,     24,
+        WGL_RED_BITS_ARB,   theCaps->buffersDeepColor ? 10 : 8,
+        WGL_GREEN_BITS_ARB, theCaps->buffersDeepColor ? 10 : 8,
+        WGL_BLUE_BITS_ARB,  theCaps->buffersDeepColor ? 10 : 8,
+        WGL_ALPHA_BITS_ARB, theCaps->buffersDeepColor ? 2  : 8,
         WGL_DEPTH_BITS_ARB,     24,
         WGL_STENCIL_BITS_ARB,   8,
         // WGL_EXT_colorspace extension specifies if OpenGL should write into window buffer as into sRGB or RGB framebuffer
@@ -411,7 +429,12 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
         0, 0,
       };
       unsigned int aFrmtsNb = 0;
-      aChoosePixProc (aWindowDC, aPixAttribs, NULL, 1, &aPixelFrmtId, &aFrmtsNb);
+      if (!aChoosePixProc (aWindowDC, aPixAttribs, NULL, 1, &aPixelFrmtId, &aFrmtsNb)
+        && theCaps->buffersDeepColor)
+      {
+        /// TODO
+        Message::SendFail() << "Error: unable to find RGB10_A2 window buffer format!";
+      }
     }
 
     // setup pixel format - may be set only once per window
@@ -422,7 +445,6 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
       TCollection_AsciiString aMsg("OpenGl_Window::CreateWindow: SetPixelFormat failed. Error code: ");
       aMsg += (int )GetLastError();
       throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
-      return;
     }
 
     // create GL context with extra options
@@ -513,7 +535,6 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
       TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: wglCreateContext failed. Error code: ");
       aMsg += (int )GetLastError();
       throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
-      return;
     }
   }
 
@@ -523,7 +544,6 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
     TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: wglShareLists failed. Error code: ");
     aMsg += (int )GetLastError();
     throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
-    return;
   }
 
   myGlContext->Init ((Aspect_Handle )aWindow, (Aspect_Handle )aWindowDC, (Aspect_RenderingContext )aGContext, isCoreProfile);
@@ -544,12 +564,10 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
   if (aVis.get() == NULL)
   {
     throw Aspect_GraphicDeviceDefinitionError("OpenGl_Window::CreateWindow: XGetVisualInfo is unable to choose needed configuration in existing OpenGL context. ");
-    return;
   }
   else if (glXGetConfig (aDisp, aVis.get(), GLX_USE_GL, &isGl) != 0 || !isGl)
   {
     throw Aspect_GraphicDeviceDefinitionError("OpenGl_Window::CreateWindow: window Visual does not support GL rendering!");
-    return;
   }
 
   // create new context
@@ -622,7 +640,6 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
     if (aGContext == NULL)
     {
       throw Aspect_GraphicDeviceDefinitionError("OpenGl_Window::CreateWindow: glXCreateContext failed.");
-      return;
     }
   }
 
@@ -662,7 +679,7 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
 #endif
   myGlContext->Share (theShareCtx);
   myGlContext->SetSwapInterval (mySwapInterval);
-  Init();
+  init();
 }
 
 // =======================================================================
@@ -745,29 +762,29 @@ Standard_Boolean OpenGl_Window::Activate()
 // =======================================================================
 void OpenGl_Window::Resize()
 {
-  Standard_Integer aWidth = 0, aHeight = 0;
-  myPlatformWindow->Size (aWidth, aHeight);
-  if (myWidth  == aWidth
-   && myHeight == aHeight)
+  Graphic3d_Vec2i aWinSize;
+  mySizeWindow->Size (aWinSize.x(), aWinSize.y());
+  if (mySize == aWinSize)
   {
     // if the size is not changed - do nothing
     return;
   }
 
-  myWidth  = aWidth;
-  myHeight = aHeight;
+  mySize = aWinSize;
 
-  Init();
+  init();
 }
 
 // =======================================================================
-// function : Init
+// function : init
 // purpose  :
 // =======================================================================
-void OpenGl_Window::Init()
+void OpenGl_Window::init()
 {
   if (!Activate())
+  {
     return;
+  }
 
 #if defined(HAVE_EGL)
   if ((EGLSurface )myGlContext->myWindow == EGL_NO_SURFACE)
@@ -785,7 +802,9 @@ void OpenGl_Window::Init()
       aDefFbo = new OpenGl_FrameBuffer();
     }
 
-    if (!aDefFbo->InitWithRB (myGlContext, Graphic3d_Vec2i (myWidth, myHeight), GL_RGBA8, GL_DEPTH24_STENCIL8))
+    OpenGl_ColorFormats aColorFormats;
+    aColorFormats.Append (GL_RGBA8);
+    if (!aDefFbo->InitRenderBuffer (myGlContext, mySize, aColorFormats, GL_DEPTH24_STENCIL8))
     {
       TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: default FBO creation failed");
       throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
@@ -793,26 +812,25 @@ void OpenGl_Window::Init()
     myGlContext->SetDefaultFrameBuffer (aDefFbo);
     aDefFbo->BindBuffer (myGlContext);
   }
-  else if (!myPlatformWindow->IsVirtual())
+  else if (!myPlatformWindow->IsVirtual()
+         && mySizeWindow == myPlatformWindow)
   {
-    eglQuerySurface ((EGLDisplay )myGlContext->myDisplay, (EGLSurface )myGlContext->myWindow, EGL_WIDTH,  &myWidth);
-    eglQuerySurface ((EGLDisplay )myGlContext->myDisplay, (EGLSurface )myGlContext->myWindow, EGL_HEIGHT, &myHeight);
+    eglQuerySurface ((EGLDisplay )myGlContext->myDisplay, (EGLSurface )myGlContext->myWindow, EGL_WIDTH,  &mySize.x());
+    eglQuerySurface ((EGLDisplay )myGlContext->myDisplay, (EGLSurface )myGlContext->myWindow, EGL_HEIGHT, &mySize.y());
   }
 #else
   //
 #endif
 
-  glDisable (GL_DITHER);
-  glDisable (GL_SCISSOR_TEST);
-  const Standard_Integer aViewport[4] = { 0, 0, myWidth, myHeight };
+  myGlContext->core11fwd->glDisable (GL_DITHER);
+  myGlContext->core11fwd->glDisable (GL_SCISSOR_TEST);
+  const Standard_Integer aViewport[4] = { 0, 0, mySize.x(), mySize.y() };
   myGlContext->ResizeViewport (aViewport);
-#if !defined(GL_ES_VERSION_2_0)
   myGlContext->SetDrawBuffer (GL_BACK);
   if (myGlContext->core11ffp != NULL)
   {
-    glMatrixMode (GL_MODELVIEW);
+    myGlContext->core11ffp->glMatrixMode (GL_MODELVIEW);
   }
-#endif
 }
 
 // =======================================================================

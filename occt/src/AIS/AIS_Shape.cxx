@@ -18,36 +18,25 @@
 
 #include <AIS_GraphicTool.hxx>
 #include <AIS_InteractiveContext.hxx>
-#include <Aspect_TypeOfLine.hxx>
-#include <BRep_Builder.hxx>
 #include <BRepBndLib.hxx>
 #include <BRepTools.hxx>
 #include <BRepTools_ShapeSet.hxx>
-#include <gp_Pnt.hxx>
-#include <Graphic3d_ArrayOfPolylines.hxx>
 #include <Graphic3d_AspectFillArea3d.hxx>
 #include <Graphic3d_AspectLine3d.hxx>
-#include <Graphic3d_AspectMarker3d.hxx>
-#include <Graphic3d_AspectText3d.hxx>
 #include <Graphic3d_Group.hxx>
 #include <Graphic3d_MaterialAspect.hxx>
-#include <Graphic3d_SequenceOfGroup.hxx>
 #include <Graphic3d_Structure.hxx>
 #include <Message.hxx>
 #include <Message_Messenger.hxx>
 #include <HLRBRep.hxx>
 #include <OSD_Timer.hxx>
-#include <Precision.hxx>
-#include <Prs3d.hxx>
 #include <Prs3d_Drawer.hxx>
-#include <Prs3d_IsoAspect.hxx>
 #include <Prs3d_Presentation.hxx>
 #include <Prs3d_ShadingAspect.hxx>
 #include <Prs3d_BndBox.hxx>
 #include <StdPrs_ToolTriangulatedShape.hxx>
 #include <Quantity_Color.hxx>
 #include <Select3D_SensitiveBox.hxx>
-#include <Select3D_SensitiveEntity.hxx>
 #include <Standard_ErrorHandler.hxx>
 #include <Standard_Failure.hxx>
 #include <Standard_Type.hxx>
@@ -56,10 +45,7 @@
 #include <StdPrs_ShadedShape.hxx>
 #include <StdPrs_WFShape.hxx>
 #include <StdSelect.hxx>
-#include <StdSelect_BRepOwner.hxx>
 #include <StdSelect_BRepSelectionTool.hxx>
-#include <TColStd_ListIteratorOfListOfInteger.hxx>
-#include <TopExp.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(AIS_Shape,AIS_InteractiveObject)
 
@@ -121,22 +107,21 @@ void AIS_Shape::Compute (const Handle(PrsMgr_PresentationManager)& ,
                          const Handle(Prs3d_Presentation)& thePrs,
                          const Standard_Integer theMode)
 {
-  if (myshape.IsNull())
+  if (myshape.IsNull()
+   || (myshape.ShapeType() == TopAbs_COMPOUND && myshape.NbChildren() == 0))
   {
     return;
   }
 
   // wire,edge,vertex -> pas de HLR + priorite display superieure
-  const Standard_Integer aShapeType = (Standard_Integer )myshape.ShapeType();
-  if (aShapeType > 4 && aShapeType < 8)
+  if (myshape.ShapeType() >= TopAbs_WIRE
+   && myshape.ShapeType() <= TopAbs_VERTEX)
   {
+    // TopAbs_WIRE -> 7, TopAbs_EDGE -> 8, TopAbs_VERTEX -> 9 (Graphic3d_DisplayPriority_Highlight)
+    const Standard_Integer aPrior = (Standard_Integer )Graphic3d_DisplayPriority_Above1
+                                  + (Standard_Integer )myshape.ShapeType() - TopAbs_WIRE;
     thePrs->SetVisual (Graphic3d_TOS_ALL);
-    thePrs->SetDisplayPriority (aShapeType + 2);
-  }
-  // Shape vide -> Assemblage vide.
-  if (myshape.ShapeType() == TopAbs_COMPOUND && myshape.NbChildren() == 0)
-  {
-    return;
+    thePrs->SetDisplayPriority ((Graphic3d_DisplayPriority )aPrior);
   }
 
   if (IsInfinite())
@@ -238,7 +223,7 @@ void AIS_Shape::computeHlrPresentation (const Handle(Graphic3d_Camera)& theProje
     case TopAbs_EDGE:
     case TopAbs_WIRE:
     {
-      thePrs->SetDisplayPriority (4);
+      thePrs->SetDisplayPriority (Graphic3d_DisplayPriority_Below);
       StdPrs_WFShape::Add (thePrs, theShape, theDrawer);
       return;
     }
@@ -355,16 +340,28 @@ void AIS_Shape::ComputeSelection(const Handle(SelectMgr_Selection)& aSelection,
   StdSelect::SetDrawerForBRepOwner(aSelection,myDrawer);
 }
 
-void AIS_Shape::Color( Quantity_Color& aColor ) const {
-  aColor = myDrawer->ShadingAspect()->Color(myCurrentFacingModel);
+void AIS_Shape::Color (Quantity_Color& theColor) const
+{
+  if (const Handle(Prs3d_ShadingAspect)& aShading = myDrawer->ShadingAspect())
+  {
+    theColor = aShading->Color(myCurrentFacingModel);
+  }
 }
 
-Graphic3d_NameOfMaterial AIS_Shape::Material() const {
-  return (myDrawer->ShadingAspect()->Material(myCurrentFacingModel)).Name();
+Graphic3d_NameOfMaterial AIS_Shape::Material() const
+{
+  const Handle(Prs3d_ShadingAspect)& aShading = myDrawer->ShadingAspect();
+  return !aShading.IsNull()
+        ? aShading->Material(myCurrentFacingModel).Name()
+        : Graphic3d_NameOfMaterial_DEFAULT;
 }
 
-Standard_Real AIS_Shape::Transparency() const {
-  return myDrawer->ShadingAspect()->Transparency(myCurrentFacingModel);
+Standard_Real AIS_Shape::Transparency() const
+{
+  const Handle(Prs3d_ShadingAspect)& aShading = myDrawer->ShadingAspect();
+  return !aShading.IsNull()
+        ? aShading->Transparency(myCurrentFacingModel)
+        : 0.0;
 }
 
 //=======================================================================
@@ -639,9 +636,10 @@ void AIS_Shape::setMaterial (const Handle(Prs3d_Drawer)&     theDrawer,
                              const Standard_Boolean          theToKeepColor,
                              const Standard_Boolean          theToKeepTransp) const
 {
+  theDrawer->SetupOwnShadingAspect();
+
   const Quantity_Color aColor  = theDrawer->ShadingAspect()->Color (myCurrentFacingModel);
   const Standard_Real  aTransp = theDrawer->ShadingAspect()->Transparency (myCurrentFacingModel);
-  theDrawer->SetupOwnShadingAspect();
   theDrawer->ShadingAspect()->SetMaterial (theMaterial, myCurrentFacingModel);
 
   if (theToKeepColor)

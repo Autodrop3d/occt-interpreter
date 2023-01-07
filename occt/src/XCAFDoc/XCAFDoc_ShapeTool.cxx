@@ -18,13 +18,11 @@
 #include <BRep_Builder.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Trsf.hxx>
-#include <Standard_GUID.hxx>
 #include <Standard_Type.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <TCollection_ExtendedString.hxx>
 #include <TCollection_HAsciiString.hxx>
 #include <TColStd_SequenceOfHAsciiString.hxx>
-#include <TDataStd_ChildNodeIterator.hxx>
 #include <TDataStd_Name.hxx>
 #include <TDataStd_TreeNode.hxx>
 #include <TDataStd_UAttribute.hxx>
@@ -34,12 +32,10 @@
 #include <TDF_Label.hxx>
 #include <TDF_LabelMap.hxx>
 #include <TDF_LabelSequence.hxx>
-#include <TDF_MapIteratorOfLabelMap.hxx>
 #include <TDF_RelocationTable.hxx>
 #include <TDF_Tool.hxx>
 #include <TDocStd_Document.hxx>
 #include <TNaming_Builder.hxx>
-#include <TNaming_NamedShape.hxx>
 #include <TNaming_Tool.hxx>
 #include <TopLoc_IndexedMapOfLocation.hxx>
 #include <TopLoc_Location.hxx>
@@ -418,6 +414,40 @@ void XCAFDoc_ShapeTool::MakeReference (const TDF_Label &L,
 
   if (theAutoNaming)
     SetLabelNameByLink(L);
+}
+
+//=======================================================================
+// function : SetLocation
+// purpose  :
+//=======================================================================
+Standard_Boolean XCAFDoc_ShapeTool::SetLocation (const TDF_Label& theShapeLabel,
+                                                 const TopLoc_Location& theLoc,
+                                                 TDF_Label& theRefLabel)
+{
+  if (theLoc.IsIdentity())
+  {
+    theRefLabel = theShapeLabel;
+    return Standard_True;
+  }
+  // if input label is reference -> just change the location attribute
+  if (IsReference (theShapeLabel))
+  {
+    TopLoc_Location anOldLoc;
+    anOldLoc = GetLocation (theShapeLabel);
+    TopLoc_Location aNewLoc (theLoc.Transformation() * anOldLoc.Transformation());
+    XCAFDoc_Location::Set(theShapeLabel, aNewLoc);
+    theRefLabel = theShapeLabel;
+    return Standard_True;
+  }
+  // if input label is shape, and it is free -> create reference to the shape
+  if (IsShape(theShapeLabel) && IsFree(theShapeLabel))
+  {
+    theRefLabel = TDF_TagSource::NewChild (Label());
+    MakeReference (theRefLabel, theShapeLabel, theLoc);
+    return Standard_True;
+  }
+  // other cases of label meaning doesn't need to apply new location
+  return Standard_False;
 }
 
 //=======================================================================

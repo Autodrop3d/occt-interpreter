@@ -13,12 +13,7 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-// pdn 15.11.98 new methods
-//:n3 abv 08.02.99: PRO17820: ShapeAnalysis::OuterWire instead of BRepTools::OuterWire()
-// szv #1 05.03.99: PRO15686: compute UV points for Plane surfaces in case of same vertices
-//#4 szv            S4163: optimizations
-//:s5 abv 22.04.99  Adding debug printouts in catch {} blocks
-//%21 pdn 15.04.99 CTS22655
+#include <ShapeAnalysis.hxx>
 
 #include <Bnd_Box2d.hxx>
 #include <BRep_Builder.hxx>
@@ -28,18 +23,12 @@
 #include <BRepTools.hxx>
 #include <BRepTopAdaptor_FClass2d.hxx>
 #include <Geom2d_Curve.hxx>
-#include <Geom_Plane.hxx>
 #include <Geom_Surface.hxx>
 #include <gp_Pnt2d.hxx>
-#include <gp_XY.hxx>
 #include <GProp_GProps.hxx>
-#include <Precision.hxx>
-#include <ShapeAnalysis.hxx>
 #include <ShapeAnalysis_Curve.hxx>
 #include <ShapeAnalysis_Edge.hxx>
 #include <ShapeExtend_WireData.hxx>
-#include <Standard_ErrorHandler.hxx>
-#include <Standard_Failure.hxx>
 #include <TColgp_SequenceOfPnt.hxx>
 #include <TColgp_SequenceOfPnt2d.hxx>
 #include <TopExp.hxx>
@@ -240,36 +229,31 @@ Standard_Boolean ShapeAnalysis::IsOuterBound(const TopoDS_Face& face)
 }
 
 //=======================================================================
-//function : OuterBound
-//purpose  : replacement of bad BRepTools::OuterBound(), to be merged
-// - skips internal vertices in face, if any, without exception
-// - returns positively oriented wire rather than greater one
+//function : OuterWire
+//purpose  : Returns positively oriented wire in the face.
+//           If there is no one - returns the last wire of the face.
 //=======================================================================
 
-TopoDS_Wire ShapeAnalysis::OuterWire(const TopoDS_Face& face) 
+TopoDS_Wire ShapeAnalysis::OuterWire(const TopoDS_Face& theFace) 
 {
-  TopoDS_Face F = face;
-  F.Orientation(TopAbs_FORWARD);
+  TopoDS_Face aF = theFace;
+  aF.Orientation (TopAbs_FORWARD);
 
-  BRep_Builder B;
-  TopoDS_Iterator anIt (F, Standard_False);
+  TopExp_Explorer anIt (aF, TopAbs_WIRE);
   while (anIt.More())
   {
-    TopoDS_Shape aWire = anIt.Value();
+    TopoDS_Wire aWire = TopoDS::Wire (anIt.Value());
     anIt.Next();
 
-    // skip possible internal vertices in face
-    if (aWire.ShapeType() != TopAbs_WIRE)
-      continue;
-
     // if current wire is the last one, return it without analysis
-    if (! anIt.More())
-      return TopoDS::Wire (aWire);
+    if (!anIt.More())
+      return aWire;
 
-    TopoDS_Shape aTestFace = F.EmptyCopied();
-    B.Add (aTestFace, aWire);
-    if (ShapeAnalysis::IsOuterBound (TopoDS::Face (aTestFace)))
-      return TopoDS::Wire (aWire);
+    // Check if the wire has positive area
+    Handle(ShapeExtend_WireData) aSEWD = new ShapeExtend_WireData (aWire);
+    Standard_Real anArea2d = ShapeAnalysis::TotCross2D (aSEWD, aF);
+    if (anArea2d >= 0.)
+      return aWire;
   }
   return TopoDS_Wire();
 }

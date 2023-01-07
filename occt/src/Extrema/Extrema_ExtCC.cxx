@@ -23,19 +23,13 @@
 #include <Bnd_Range.hxx>
 #include <ElCLib.hxx>
 #include <Extrema_CurveTool.hxx>
-#include <Extrema_ECC.hxx>
 #include <Extrema_ExtCC.hxx>
 #include <Extrema_ExtElC.hxx>
 #include <Extrema_ExtPElC.hxx>
 #include <Extrema_POnCurv.hxx>
 #include <Extrema_SequenceOfPOnCurv.hxx>
 #include <Geom_Circle.hxx>
-#include <Geom_Curve.hxx>
-#include <Geom_Ellipse.hxx>
-#include <Geom_Hyperbola.hxx>
 #include <Geom_Line.hxx>
-#include <Geom_Parabola.hxx>
-#include <Geom_TrimmedCurve.hxx>
 #include <GeomAbs_CurveType.hxx>
 #include <gp_Pnt.hxx>
 #include <Precision.hxx>
@@ -44,9 +38,7 @@
 #include <Standard_NullObject.hxx>
 #include <Standard_OutOfRange.hxx>
 #include <StdFail_NotDone.hxx>
-#include <TColStd_Array1OfReal.hxx>
 #include <TColStd_ListIteratorOfListOfTransient.hxx>
-#include <TColStd_SequenceOfReal.hxx>
 
 //=======================================================================
 //function : Extrema_ExtCC
@@ -610,6 +602,9 @@ void Extrema_ExtCC::PrepareParallelResult(const Standard_Real theUt11,
     const Bnd_Range aRange(theUt21, theUt22);
     Bnd_Range aProjRng1;
 
+    // Precision of the calculation depends on circles radii
+    const Standard_Real aPrecision = Max(Epsilon(myC[0]->Circle().Radius()), Epsilon(myC[1]->Circle().Radius()));
+
     // Project arc of the 1st circle between points theUt11 and theUt12 to the
     // 2nd circle. It is necessary to chose correct arc from two possible ones.
 
@@ -671,7 +666,7 @@ void Extrema_ExtCC::PrepareParallelResult(const Standard_Real theUt11,
       //    myIsParallel = TRUE and only the least distance will be returned.
       //4. Arcs are not parallel. Then several (or single) extremas will be returned.
 
-      if (aRng.Delta() > Precision::Angular())
+      if (aRng.Delta() > Precision::Confusion())
       {
         Standard_Real aPar = 0.0;
         aRng.GetIntermediatePoint(0.5, aPar);
@@ -686,7 +681,7 @@ void Extrema_ExtCC::PrepareParallelResult(const Standard_Real theUt11,
           aMinSqD = Min(aMinSqD, ExtPCir.SquareDistance(anExtID));
         }
 
-        if (aMinSqD <= aMinSquareDist + 10.* Epsilon(1. + aMinSqD))
+        if (aMinSqD <= aMinSquareDist + (1. + aMinSqD) * aPrecision)
         {
           ClearSolutions();
           mySqDist.Append(aMinSqD);
@@ -711,7 +706,6 @@ void Extrema_ExtCC::PrepareParallelResult(const Standard_Real theUt11,
             break;
           }
         }
-
         //Nearer solution can be found
       }
       else if (!aRng.IsVoid())
@@ -787,7 +781,7 @@ void Extrema_ExtCC::PrepareParallelResult(const Standard_Real theUt11,
             imin = k;
           }
         }
-        if (aDmin <= aMinSquareDist + 10.* Epsilon(1. + aDmin))
+        if (aDmin <= aMinSquareDist + (1. + aDmin) * aPrecision)
         {
           if (imin == 0)
           {

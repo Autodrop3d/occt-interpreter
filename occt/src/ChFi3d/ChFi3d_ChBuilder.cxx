@@ -16,12 +16,6 @@
 
 
 #include <Adaptor3d_TopolTool.hxx>
-#include <Blend_Point.hxx>
-#include <BlendFunc_SectionShape.hxx>
-#include <BRepAdaptor_Curve2d.hxx>
-#include <BRepAdaptor_Curve2d.hxx>
-#include <BRepAdaptor_Surface.hxx>
-#include <BRepAdaptor_Surface.hxx>
 #include <BRepBlend_Chamfer.hxx>
 #include <BRepBlend_ChamfInv.hxx>
 #include <BRepBlend_ConstThroat.hxx>
@@ -40,7 +34,6 @@
 #include <ChFiDS_CircSection.hxx>
 #include <ChFiDS_HData.hxx>
 #include <ChFiDS_ElSpine.hxx>
-#include <ChFiDS_ListIteratorOfListOfStripe.hxx>
 #include <ChFiDS_ListIteratorOfRegularities.hxx>
 #include <ChFiDS_ListOfStripe.hxx>
 #include <ChFiDS_Regul.hxx>
@@ -50,18 +43,15 @@
 #include <ChFiDS_SurfData.hxx>
 #include <ElSLib.hxx>
 #include <Extrema_GenLocateExtPS.hxx>
-#include <GeomAdaptor_Curve.hxx>
 #include <Standard_ConstructionError.hxx>
 #include <Standard_DomainError.hxx>
 #include <Standard_NotImplemented.hxx>
-#include <TopAbs.hxx>
 #include <TopoDS_Edge.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Shape.hxx>
 #include <TopoDS_Vertex.hxx>
 #include <TopOpeBRepBuild_HBuilder.hxx>
 #include <TopOpeBRepDS_HDataStructure.hxx>
-#include <TopTools_ListIteratorOfListOfShape.hxx>
 #include <memory>
 
 #ifdef OCCT_DEBUG
@@ -789,13 +779,8 @@ ChFi3d_ChBuilder::SimulSurf(Handle(ChFiDS_SurfData)&            Data,
     radius = Max(dis, radiusspine);
     locfleche = radius*1.e-2; //graphic criterion
 
-#if (defined(_MSC_VER) && (_MSC_VER < 1600))
-    std::auto_ptr<BlendFunc_GenChamfer>  pFunc;
-    std::auto_ptr<BlendFunc_GenChamfInv> pFInv;
-#else
     std::unique_ptr<BlendFunc_GenChamfer>  pFunc;
     std::unique_ptr<BlendFunc_GenChamfInv> pFInv;
-#endif  
     if (chsp->Mode() == ChFiDS_ClassicChamfer)
     {
       pFunc.reset(new BRepBlend_Chamfer(S1,S2,HGuide));
@@ -886,13 +871,8 @@ ChFi3d_ChBuilder::SimulSurf(Handle(ChFiDS_SurfData)&            Data,
     radius = Max(radius, radiusspine);
     locfleche = radius*1.e-2; //graphic criterion
 
-#if (defined(_MSC_VER) && (_MSC_VER < 1600))
-    std::auto_ptr<BlendFunc_GenChamfer>  pFunc;
-    std::auto_ptr<BlendFunc_GenChamfInv> pFInv;
-#else
     std::unique_ptr<BlendFunc_GenChamfer>  pFunc;
     std::unique_ptr<BlendFunc_GenChamfInv> pFInv;
-#endif  
     if (chsp->Mode() == ChFiDS_ClassicChamfer)
     {
       pFunc.reset(new BRepBlend_Chamfer(S1,S2,HGuide));
@@ -1202,11 +1182,7 @@ Standard_Boolean ChFi3d_ChBuilder::PerformFirstSection
     Standard_Real dis;
     chsp->GetDist(dis);
     
-#if (defined(_MSC_VER) && (_MSC_VER < 1600))
-    std::auto_ptr<BlendFunc_GenChamfer>  pFunc;
-#else
     std::unique_ptr<BlendFunc_GenChamfer>  pFunc;
-#endif  
     if (chsp->Mode() == ChFiDS_ClassicChamfer)
     {
       pFunc.reset(new BRepBlend_Chamfer(S1,S2,HGuide));
@@ -1274,11 +1250,7 @@ Standard_Boolean ChFi3d_ChBuilder::PerformFirstSection
     Standard_Real dis1, dis2;
     chsp->Dists(dis1, dis2);
     
-#if (defined(_MSC_VER) && (_MSC_VER < 1600))
-    std::auto_ptr<BlendFunc_GenChamfer>  pFunc;
-#else
     std::unique_ptr<BlendFunc_GenChamfer>  pFunc;
-#endif  
     if (chsp->Mode() == ChFiDS_ClassicChamfer)
     {
       pFunc.reset(new BRepBlend_Chamfer(S1,S2,HGuide));
@@ -1493,13 +1465,8 @@ ChFi3d_ChBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&          SeqData,
 
   if (chsp->IsChamfer() == ChFiDS_Sym) {
     
-#if (defined(_MSC_VER) && (_MSC_VER < 1600))
-    std::auto_ptr<BlendFunc_GenChamfer>  pFunc;
-    std::auto_ptr<BlendFunc_GenChamfInv> pFInv;
-#else
     std::unique_ptr<BlendFunc_GenChamfer>  pFunc;
     std::unique_ptr<BlendFunc_GenChamfInv> pFInv;
-#endif  
     if (chsp->Mode() == ChFiDS_ClassicChamfer)
     {
       pFunc.reset(new BRepBlend_Chamfer(S1,S2,HGuide));
@@ -1527,13 +1494,8 @@ ChFi3d_ChBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&          SeqData,
     Standard_Real d1, d2;
     chsp->Dists(d1,d2);
     
-#if (defined(_MSC_VER) && (_MSC_VER < 1600))
-    std::auto_ptr<BlendFunc_GenChamfer>  pFunc;
-    std::auto_ptr<BlendFunc_GenChamfInv> pFInv;
-#else
     std::unique_ptr<BlendFunc_GenChamfer>  pFunc;
     std::unique_ptr<BlendFunc_GenChamfInv> pFInv;
-#endif  
     if (chsp->Mode() == ChFiDS_ClassicChamfer)
     {
       pFunc.reset(new BRepBlend_Chamfer(S1,S2,HGuide));

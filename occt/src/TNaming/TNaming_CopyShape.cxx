@@ -16,14 +16,9 @@
 
 #include <TNaming_CopyShape.hxx>
 #include <TNaming_TranslateTool.hxx>
-#include <TopAbs.hxx>
 #include <TopLoc_Datum3D.hxx>
-#include <TopLoc_Location.hxx>
-#include <TopoDS_Edge.hxx>
-#include <TopoDS_Face.hxx>
 #include <TopoDS_Iterator.hxx>
 #include <TopoDS_Shape.hxx>
-#include <TopoDS_Vertex.hxx>
 
 //=======================================================================
 //function : CopyTool
@@ -128,7 +123,7 @@ void TNaming_CopyShape::Translate( const TopoDS_Shape& aShape,
   }
   
   aResult.Orientation(aShape.Orientation());
-  aResult.Location(TNaming_CopyShape::Translate(aShape.Location(), aMap));
+  aResult.Location(TNaming_CopyShape::Translate(aShape.Location(), aMap), false);
   TrTool->UpdateShape(aShape,aResult);
 // #ifdef OCCT_DEBUG
 //     if(fShar) {

@@ -17,23 +17,14 @@
 
 // if define _POLYGONES_ ColorPrsBuilder use ArrayOfPolygons for drawing faces
 
-#include <Aspect_SequenceOfColor.hxx>
-#include <gp_Pnt.hxx>
 #include <Graphic3d_ArrayOfPolygons.hxx>
-#include <Graphic3d_ArrayOfPolylines.hxx>
 #include <Graphic3d_ArrayOfPrimitives.hxx>
 #include <Graphic3d_ArrayOfSegments.hxx>
 #include <Graphic3d_ArrayOfTriangles.hxx>
-#include <Graphic3d_AspectFillArea3d.hxx>
-#include <Graphic3d_AspectLine3d.hxx>
-#include <Graphic3d_Group.hxx>
 #include <Graphic3d_Texture2D.hxx>
-#include <Graphic3d_TextureParams.hxx>
-#include <Graphic3d_TypeOfTextureMode.hxx>
 #include <Image_PixMap.hxx>
 #include <MeshVS_Buffer.hxx>
 #include <MeshVS_DataSource.hxx>
-#include <MeshVS_DisplayModeFlags.hxx>
 #include <MeshVS_Drawer.hxx>
 #include <MeshVS_DrawerAttribute.hxx>
 #include <MeshVS_HArray1OfSequenceOfInteger.hxx>
@@ -43,7 +34,6 @@
 #include <MeshVS_SymmetricPairHasher.hxx>
 #include <MeshVS_Tool.hxx>
 #include <NCollection_Map.hxx>
-#include <NCollection_Vector.hxx>
 #include <Prs3d_Drawer.hxx>
 #include <Prs3d_LineAspect.hxx>
 #include <Prs3d_Presentation.hxx>
@@ -56,7 +46,6 @@
 #include <TColStd_Array1OfReal.hxx>
 #include <TColStd_HArray1OfReal.hxx>
 #include <TColStd_HPackedMapOfInteger.hxx>
-#include <TColStd_ListIteratorOfListOfInteger.hxx>
 #include <TColStd_MapIteratorOfPackedMapOfInteger.hxx>
 #include <TColStd_SequenceOfInteger.hxx>
 
@@ -70,9 +59,10 @@ class MeshVS_ImageTexture2D : public Graphic3d_Texture2D
 {
 public:
 
-  MeshVS_ImageTexture2D (const Handle(Image_PixMap)& theImg) : Graphic3d_Texture2D (theImg, Graphic3d_TOT_2D)
+  MeshVS_ImageTexture2D (const Handle(Image_PixMap)& theImg)
+  : Graphic3d_Texture2D (theImg, Graphic3d_TypeOfTexture_2D)
   {
-    myParams->SetModulate (Standard_True);
+    myParams->SetModulate (true);
     myParams->SetFilter   (Graphic3d_TOTF_BILINEAR);
   }
 
@@ -80,9 +70,6 @@ public:
 
   DEFINE_STANDARD_RTTI_INLINE(MeshVS_ImageTexture2D,Graphic3d_Texture2D)
 };
-
-DEFINE_STANDARD_HANDLE    (MeshVS_ImageTexture2D, Graphic3d_Texture2D)
-
 
 //================================================================
 // Function : getNearestPow2

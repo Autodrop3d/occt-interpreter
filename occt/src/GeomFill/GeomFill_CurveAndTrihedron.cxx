@@ -25,7 +25,6 @@
 #include <gp_Pnt.hxx>
 #include <gp_Vec.hxx>
 #include <Precision.hxx>
-#include <Standard_OutOfRange.hxx>
 #include <Standard_Type.hxx>
 #include <TColStd_SequenceOfReal.hxx>
 
@@ -63,11 +62,11 @@ Handle(GeomFill_LocationLaw) GeomFill_CurveAndTrihedron::Copy() const
 //Function: SetCurve
 //Purpose :
 //==================================================================
- void GeomFill_CurveAndTrihedron::SetCurve(const Handle(Adaptor3d_Curve)& C) 
+ Standard_Boolean GeomFill_CurveAndTrihedron::SetCurve(const Handle(Adaptor3d_Curve)& C) 
 {
   myCurve = C;
   myTrimmed = C;
-  myLaw->SetCurve(C); 
+  return myLaw->SetCurve(C);
 }
 
  const Handle(Adaptor3d_Curve)& GeomFill_CurveAndTrihedron::GetCurve() const

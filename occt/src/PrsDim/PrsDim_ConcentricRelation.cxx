@@ -21,7 +21,6 @@
 #include <DsgPrs_ConcentricPresentation.hxx>
 #include <Geom_Circle.hxx>
 #include <Geom_Plane.hxx>
-#include <GeomAbs_CurveType.hxx>
 #include <gp_Ax1.hxx>
 #include <gp_Ax2.hxx>
 #include <gp_Dir.hxx>
@@ -33,7 +32,6 @@
 #include <Select3D_SensitiveSegment.hxx>
 #include <SelectMgr_EntityOwner.hxx>
 #include <SelectMgr_Selection.hxx>
-#include <Standard_NotImplemented.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Shape.hxx>
 #include <TopoDS_Vertex.hxx>
@@ -215,37 +213,39 @@ void PrsDim_ConcentricRelation::ComputeTwoEdgesConcentric(const Handle(Prs3d_Pre
 //purpose  : 
 //=======================================================================
 
-void PrsDim_ConcentricRelation::ComputeSelection(const Handle(SelectMgr_Selection)& aSelection, 
-					      const Standard_Integer)
+void PrsDim_ConcentricRelation::ComputeSelection (const Handle(SelectMgr_Selection)& aSelection,
+                                                  const Standard_Integer)
 {
-  Handle(SelectMgr_EntityOwner) own = new SelectMgr_EntityOwner(this,7);
+  Handle(SelectMgr_EntityOwner) anOwner = new SelectMgr_EntityOwner(this,7);
   
   //Creation of 2 sensitive circles
-     // the greater
-  gp_Ax2 ax(myCenter, myDir);
-  gp_Circ aCirc (ax, myRad);
-  Handle(Select3D_SensitiveCircle) sensit = new Select3D_SensitiveCircle (own, aCirc);
-  aSelection->Add(sensit);
-     // the smaller
-  aCirc.SetRadius(myRad/2);
-  sensit = new Select3D_SensitiveCircle (own, aCirc);
-  aSelection->Add(sensit);
+
+  // the greater
+  gp_Ax2 anAx (myCenter, myDir);
+  gp_Circ aCirc (anAx, myRad);
+  Handle(Select3D_SensitiveCircle) sensit = new Select3D_SensitiveCircle (anOwner, aCirc);
+  aSelection->Add (sensit);
+
+  // the smaller
+  aCirc.SetRadius (myRad / 2);
+  sensit = new Select3D_SensitiveCircle (anOwner, aCirc);
+  aSelection->Add (sensit);
 
   //Creation of 2 segments sensitive for the cross
   Handle(Select3D_SensitiveSegment) seg;
   gp_Pnt otherPnt = myPnt.Mirrored(myCenter);
-  seg = new Select3D_SensitiveSegment(own,
-				      otherPnt,
-				      myPnt);
-  aSelection->Add(seg);
+  seg = new Select3D_SensitiveSegment(anOwner,
+                                      otherPnt,
+                                      myPnt);
+  aSelection->Add (seg);
 
   gp_Ax1 RotateAxis(myCenter, myDir);
-  gp_Pnt FPnt = myCenter.Rotated(RotateAxis, M_PI/2);
-  gp_Pnt SPnt = myCenter.Rotated(RotateAxis, -M_PI/2);
-  seg = new Select3D_SensitiveSegment(own,
-				      FPnt,
-				      SPnt);
-  aSelection->Add(seg);
+  gp_Pnt FPnt = myCenter.Rotated (RotateAxis, M_PI_2);
+  gp_Pnt SPnt = myCenter.Rotated (RotateAxis, -M_PI_2);
+  seg = new Select3D_SensitiveSegment(anOwner,
+                                      FPnt,
+                                      SPnt);
+  aSelection->Add (seg);
 
 }
 

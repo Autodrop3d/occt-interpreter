@@ -18,14 +18,12 @@
 #include <AIS_AnimationCamera.hxx>
 #include <AIS_InteractiveContext.hxx>
 #include <gp_Ax2.hxx>
-#include <Graphic3d_ViewAffinity.hxx>
 #include <Graphic3d_Text.hxx>
 #include <NCollection_Lerp.hxx>
 #include <Prs3d.hxx>
 #include <Prs3d_Arrow.hxx>
 #include <Prs3d_DatumAspect.hxx>
 #include <Prs3d_Text.hxx>
-#include <Prs3d_ToolDisk.hxx>
 #include <Prs3d_ToolSphere.hxx>
 #include <SelectMgr_SequenceOfOwner.hxx>
 #include <V3d.hxx>
@@ -861,7 +859,7 @@ Standard_Boolean AIS_ViewCube::HasAnimation() const
 void AIS_ViewCube::viewFitAll (const Handle(V3d_View)& theView,
                                const Handle(Graphic3d_Camera)& theCamera)
 {
-  Bnd_Box aBndBox = myToFitSelected ? GetContext()->BoundingBoxOfSelection() : theView->View()->MinMaxValues();
+  Bnd_Box aBndBox = myToFitSelected ? GetContext()->BoundingBoxOfSelection (theView) : theView->View()->MinMaxValues();
   if (aBndBox.IsVoid()
    && myToFitSelected)
   {
@@ -1018,7 +1016,7 @@ void AIS_ViewCube::HilightOwnerWithColor (const Handle(PrsMgr_PresentationManage
 
   Handle(Prs3d_Presentation) aHiPrs = GetHilightPresentation (thePrsMgr);
   aHiPrs->Clear();
-  aHiPrs->CStructure()->ViewAffinity = thePrsMgr->StructureManager()->ObjectAffinity (Handle(Standard_Transient)(this));
+  aHiPrs->CStructure()->ViewAffinity = myViewAffinity;
   aHiPrs->SetTransformPersistence (TransformPersistence());
   aHiPrs->SetZLayer (aLayer);
 

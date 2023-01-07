@@ -16,7 +16,6 @@
 #include <OpenGl_Context.hxx>
 #include <OpenGl_TileSampler.hxx>
 #include <Graphic3d_RenderingParams.hxx>
-#include <TCollection_ExtendedString.hxx>
 
 // define to debug algorithm values
 //#define RAY_TRACE_PRINT_DEBUG_INFO
@@ -47,7 +46,7 @@ void OpenGl_TileSampler::GrabVarianceMap (const Handle(OpenGl_Context)& theConte
   }
 
   myVarianceRaw.Init (0);
-#if !defined(GL_ES_VERSION_2_0)
+
   theTexture->Bind (theContext);
   theContext->core11fwd->glPixelStorei (GL_PACK_ALIGNMENT,  1);
   theContext->core11fwd->glPixelStorei (GL_PACK_ROW_LENGTH, 0);
@@ -60,10 +59,6 @@ void OpenGl_TileSampler::GrabVarianceMap (const Handle(OpenGl_Context)& theConte
                              TCollection_AsciiString ("Error! Failed to fetch visual error map from the GPU ") + OpenGl_Context::FormatGlError (anErr));
     return;
   }
-#else
-  // glGetTexImage() is unavailable on OpenGL ES, FBO + glReadPixels() can be used instead
-  (void )theContext;
-#endif
 
   const float aFactor = 1.0f / myScaleFactor;
   for (Standard_Size aColIter = 0; aColIter < myVarianceMap.SizeX; ++aColIter)
@@ -274,9 +269,10 @@ bool OpenGl_TileSampler::upload (const Handle(OpenGl_Context)& theContext,
   {
     theSamplesTexture->Bind (theContext);
     theContext->core11fwd->glPixelStorei (GL_UNPACK_ALIGNMENT,  1);
-  #if !defined(GL_ES_VERSION_2_0)
-    theContext->core11fwd->glPixelStorei (GL_UNPACK_ROW_LENGTH, 0);
-  #endif
+    if (theContext->hasUnpackRowLength)
+    {
+      theContext->core11fwd->glPixelStorei (GL_UNPACK_ROW_LENGTH, 0);
+    }
     if (theSamplesTexture->SizeX() == (int )myTileSamples.SizeX
      && theSamplesTexture->SizeY() == (int )myTileSamples.SizeY)
     {
@@ -305,7 +301,7 @@ bool OpenGl_TileSampler::upload (const Handle(OpenGl_Context)& theContext,
       if (!theOffsetsTexture->Init (theContext,
                                     OpenGl_TextureFormat::FindSizedFormat (theContext, GL_RG32I),
                                     Graphic3d_Vec2i ((int )anOffsets.SizeX, (int )anOffsets.SizeY),
-                                    Graphic3d_TOT_2D))
+                                    Graphic3d_TypeOfTexture_2D))
       {
         hasErrors = true;
       }
@@ -314,9 +310,10 @@ bool OpenGl_TileSampler::upload (const Handle(OpenGl_Context)& theContext,
     {
       theOffsetsTexture->Bind (theContext);
       theContext->core11fwd->glPixelStorei (GL_UNPACK_ALIGNMENT,  1);
-    #if !defined(GL_ES_VERSION_2_0)
-      theContext->core11fwd->glPixelStorei (GL_UNPACK_ROW_LENGTH, 0);
-    #endif
+      if (theContext->hasUnpackRowLength)
+      {
+        theContext->core11fwd->glPixelStorei (GL_UNPACK_ROW_LENGTH, 0);
+      }
       theContext->core11fwd->glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, (int )anOffsets.SizeX, (int )anOffsets.SizeY, GL_RG_INTEGER, GL_INT, anOffsets.Data());
       if (theContext->core11fwd->glGetError() != GL_NO_ERROR)
       {

@@ -28,7 +28,6 @@
 #include <DrawTrSurf.hxx>
 #include <OSD_Timer.hxx>
 #include <TopoDS_Shape.hxx>
-#include <TopoDS.hxx>
 #include <Draw_ProgressIndicator.hxx>
 
 #include <stdio.h>

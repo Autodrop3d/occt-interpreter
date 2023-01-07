@@ -21,7 +21,6 @@
 #include <STEPCAFControl_GDTProperty.hxx>
 #include <StepBasic_MeasureValueMember.hxx>
 #include <StepGeom_CartesianPoint.hxx>
-#include <StepGeom_Direction.hxx>
 #include <StepDimTol_CylindricityTolerance.hxx>
 #include <StepDimTol_FlatnessTolerance.hxx>
 #include <StepDimTol_LineProfileTolerance.hxx>
@@ -30,7 +29,6 @@
 #include <StepDimTol_StraightnessTolerance.hxx>
 #include <StepDimTol_SurfaceProfileTolerance.hxx>
 #include <StepRepr_DescriptiveRepresentationItem.hxx>
-#include <StepVisual_CoordinatesList.hxx>
 #include <StepVisual_TessellatedCurveSet.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
@@ -1165,8 +1163,8 @@ StepDimTol_GeometricToleranceModifier STEPCAFControl_GDTProperty::
 //purpose  : Note: this function does not add anything to model
 //=======================================================================
 Handle(StepDimTol_HArray1OfDatumReferenceModifier) STEPCAFControl_GDTProperty::
-  GetDatumRefModifiers(const XCAFDimTolObjects_DatumModifiersSequence theModifiers,
-                       const XCAFDimTolObjects_DatumModifWithValue theModifWithVal,
+  GetDatumRefModifiers(const XCAFDimTolObjects_DatumModifiersSequence& theModifiers,
+                       const XCAFDimTolObjects_DatumModifWithValue& theModifWithVal,
                        const Standard_Real theValue,
                        const StepBasic_Unit theUnit)
 {

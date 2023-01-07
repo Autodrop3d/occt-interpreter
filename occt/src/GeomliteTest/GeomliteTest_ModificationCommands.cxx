@@ -20,7 +20,6 @@
 
 #include <Draw_Interpretor.hxx>
 
-#include <Precision.hxx>
 #include <GeomLib.hxx>
 
 #include <Geom2d_BezierCurve.hxx>

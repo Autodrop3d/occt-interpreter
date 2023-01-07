@@ -56,25 +56,38 @@
 // function : OpenGl_Window
 // purpose  :
 // =======================================================================
-OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
-                              const Handle(Aspect_Window)&  thePlatformWindow,
-                              Aspect_RenderingContext       theGContext,
-                              const Handle(OpenGl_Caps)&    theCaps,
-                              const Handle(OpenGl_Context)& theShareCtx)
-: myGlContext (new OpenGl_Context (theCaps)),
-  myOwnGContext (theGContext == 0),
-  myPlatformWindow (thePlatformWindow),
-#if defined(__APPLE__) && defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
-  myUIView (NULL),
-#endif
-  mySwapInterval (theCaps->swapInterval)
+OpenGl_Window::OpenGl_Window()
+: myOwnGContext (false),
+  mySwapInterval (0)
 {
+  //
+}
+
+// =======================================================================
+// function : Init
+// purpose  :
+// =======================================================================
+void OpenGl_Window::Init (const Handle(OpenGl_GraphicDriver)& theDriver,
+                          const Handle(Aspect_Window)&  thePlatformWindow,
+                          const Handle(Aspect_Window)&  theSizeWindow,
+                          Aspect_RenderingContext       theGContext,
+                          const Handle(OpenGl_Caps)&    theCaps,
+                          const Handle(OpenGl_Context)& theShareCtx)
+{
+  myGlContext = new OpenGl_Context (theCaps);
+  myOwnGContext = (theGContext == 0);
+  myPlatformWindow = thePlatformWindow;
+  mySizeWindow = theSizeWindow;
+#if defined(__APPLE__) && defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+  myUIView = NULL;
+#endif
+  mySwapInterval = theCaps->swapInterval;
+
   (void )theDriver;
-  myPlatformWindow->Size (myWidth, myHeight);
+  mySizeWindow->Size (mySize.x(), mySize.y());
 
 #if defined(__APPLE__)
-  myWidthPt  = myWidth;
-  myHeightPt = myHeight;
+  mySizePt = mySize;
 #endif
 
 #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
@@ -102,7 +115,6 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
       {
         TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: EAGLContext creation failed");
         throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
-        return;
       }
     }
 
@@ -114,7 +126,6 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
     {
       TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: EAGLContext can not be assigned");
       throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
-      return;
     }
 
     myGlContext->Init (aGLContext, Standard_False);
@@ -199,7 +210,6 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
     {
       TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: NSOpenGLContext creation failed");
       throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
-      return;
     }
 
     if (aTryStereo == 0
@@ -227,7 +237,7 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
 
   myGlContext->Share (theShareCtx);
   myGlContext->SetSwapInterval (mySwapInterval);
-  Init();
+  init();
 }
 
 // =======================================================================
@@ -264,11 +274,18 @@ OpenGl_Window::~OpenGl_Window()
 void OpenGl_Window::Resize()
 {
   // If the size is not changed - do nothing
-  Standard_Integer aWidthPt  = 0;
-  Standard_Integer aHeightPt = 0;
-  myPlatformWindow->Size (aWidthPt, aHeightPt);
-  if (myWidthPt  == aWidthPt
-   && myHeightPt == aHeightPt)
+  Graphic3d_Vec2i aWinSize;
+  mySizeWindow->Size (aWinSize.x(), aWinSize.y());
+  if (myPlatformWindow->IsVirtual()
+   || mySizeWindow != myPlatformWindow)
+  {
+    if (mySize == aWinSize)
+    {
+      return;
+    }
+    mySize = aWinSize;
+  }
+  else if (mySizePt == aWinSize)
   {
   #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
     return;
@@ -285,25 +302,24 @@ void OpenGl_Window::Resize()
 
     NSRect aBounds = [aView bounds];
     NSSize aRes    = [aView convertSizeToBacking: aBounds.size];
-    if (myWidth  == Standard_Integer(aRes.width)
-     && myHeight == Standard_Integer(aRes.height))
+    if (mySize.x() == Standard_Integer(aRes.width)
+     && mySize.y() == Standard_Integer(aRes.height))
     {
       return;
     }
   #endif
   }
 
-  myWidthPt  = aWidthPt;
-  myHeightPt = aHeightPt;
+  mySizePt = aWinSize;
 
-  Init();
+  init();
 }
 
 // =======================================================================
-// function : Init
+// function : init
 // purpose  :
 // =======================================================================
-void OpenGl_Window::Init()
+void OpenGl_Window::init()
 {
   if (!Activate())
   {
@@ -326,14 +342,14 @@ void OpenGl_Window::Init()
     EAGLContext* aGLCtx      = myGlContext->myGContext;
     CAEAGLLayer* anEaglLayer = (CAEAGLLayer* )myUIView.layer;
     GLuint aWinRBColor = 0;
-    ::glGenRenderbuffers (1, &aWinRBColor);
-    ::glBindRenderbuffer (GL_RENDERBUFFER, aWinRBColor);
+    myGlContext->Functions()->glGenRenderbuffers (1, &aWinRBColor);
+    myGlContext->Functions()->glBindRenderbuffer (GL_RENDERBUFFER, aWinRBColor);
     [aGLCtx renderbufferStorage: GL_RENDERBUFFER fromDrawable: anEaglLayer];
-    ::glGetRenderbufferParameteriv (GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH,  &myWidth);
-    ::glGetRenderbufferParameteriv (GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT, &myHeight);
-    ::glBindRenderbuffer (GL_RENDERBUFFER, 0);
+    myGlContext->Functions()->glGetRenderbufferParameteriv (GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH,  &mySize.x());
+    myGlContext->Functions()->glGetRenderbufferParameteriv (GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT, &mySize.y());
+    myGlContext->Functions()->glBindRenderbuffer (GL_RENDERBUFFER, 0);
 
-    if (!aDefFbo->InitWithRB (myGlContext, Graphic3d_Vec2i (myWidth, myHeight), GL_RGBA8, GL_DEPTH24_STENCIL8, aWinRBColor))
+    if (!aDefFbo->InitWithRB (myGlContext, mySize, GL_RGBA8, GL_DEPTH24_STENCIL8, aWinRBColor))
     {
       TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: default FBO creation failed");
       throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
@@ -349,47 +365,50 @@ void OpenGl_Window::Init()
       return;
     }
 
-    myWidth  = aDefFbo->GetVPSizeX();
-    myHeight = aDefFbo->GetVPSizeY();
+    mySize.x() = aDefFbo->GetVPSizeX();
+    mySize.y() = aDefFbo->GetVPSizeY();
   }
   myGlContext->SetDefaultFrameBuffer (aDefFbo);
   aDefFbo->BindBuffer (myGlContext);
   aDefFbo.Nullify();
 #else
-  NSOpenGLContext* aGLCtx  = myGlContext->myGContext;
-Standard_DISABLE_DEPRECATION_WARNINGS
-  NSView*          aView   = [aGLCtx view];
-Standard_ENABLE_DEPRECATION_WARNINGS
-  NSRect           aBounds = [aView bounds];
-
-  // we should call this method each time when window is resized
-  [aGLCtx update];
-
-  if ([aView respondsToSelector: @selector(convertSizeToBacking:)])
+  if (!myPlatformWindow->IsVirtual()
+    && mySizeWindow == myPlatformWindow)
   {
-    NSSize aRes = [aView convertSizeToBacking: aBounds.size];
-    myWidth  = Standard_Integer(aRes.width);
-    myHeight = Standard_Integer(aRes.height);
+    NSOpenGLContext* aGLCtx  = myGlContext->myGContext;
+  Standard_DISABLE_DEPRECATION_WARNINGS
+    NSView*          aView   = [aGLCtx view];
+  Standard_ENABLE_DEPRECATION_WARNINGS
+    NSRect           aBounds = [aView bounds];
+
+    // we should call this method each time when window is resized
+    [aGLCtx update];
+
+    if ([aView respondsToSelector: @selector(convertSizeToBacking:)])
+    {
+      NSSize aRes = [aView convertSizeToBacking: aBounds.size];
+      mySize.x() = Standard_Integer(aRes.width);
+      mySize.y() = Standard_Integer(aRes.height);
+    }
+    else
+    {
+      mySize.x() = Standard_Integer(aBounds.size.width);
+      mySize.y() = Standard_Integer(aBounds.size.height);
+    }
+    mySizePt.x() = Standard_Integer(aBounds.size.width);
+    mySizePt.y() = Standard_Integer(aBounds.size.height);
   }
-  else
-  {
-    myWidth  = Standard_Integer(aBounds.size.width);
-    myHeight = Standard_Integer(aBounds.size.height);
-  }
-  myWidthPt  = Standard_Integer(aBounds.size.width);
-  myHeightPt = Standard_Integer(aBounds.size.height);
 #endif
 
-  ::glDisable (GL_DITHER);
-  ::glDisable (GL_SCISSOR_TEST);
-  ::glViewport (0, 0, myWidth, myHeight);
-#if !defined(GL_ES_VERSION_2_0)
-  ::glDrawBuffer (GL_BACK);
+  myGlContext->core11fwd->glDisable (GL_DITHER);
+  myGlContext->core11fwd->glDisable (GL_SCISSOR_TEST);
+  const Standard_Integer aViewport[4] = { 0, 0, mySize.x(), mySize.y() };
+  myGlContext->ResizeViewport (aViewport);
+  myGlContext->SetDrawBuffer (GL_BACK);
   if (myGlContext->core11ffp != NULL)
   {
-    ::glMatrixMode (GL_MODELVIEW);
+    myGlContext->core11ffp->glMatrixMode (GL_MODELVIEW);
   }
-#endif
 }
 
 // =======================================================================

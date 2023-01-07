@@ -16,13 +16,13 @@
 #include <Aspect_CircularGrid.hxx>
 #include <Aspect_GradientBackground.hxx>
 #include <Aspect_Grid.hxx>
+#include <Aspect_NeutralWindow.hxx>
 #include <Aspect_RectangularGrid.hxx>
 #include <Aspect_Window.hxx>
 #include <Bnd_Box.hxx>
 #include <gp_Ax3.hxx>
 #include <gp_Dir.hxx>
 #include <gp_Pln.hxx>
-#include <Graphic3d_AspectMarker3d.hxx>
 #include <Graphic3d_GraphicDriver.hxx>
 #include <Graphic3d_Group.hxx>
 #include <Graphic3d_MapIteratorOfMapOfStructure.hxx>
@@ -38,13 +38,10 @@
 #include <Standard_Assert.hxx>
 #include <Standard_DivideByZero.hxx>
 #include <Standard_ErrorHandler.hxx>
-#include <Standard_MultiplyDefined.hxx>
 #include <Standard_ShortReal.hxx>
 #include <Standard_Type.hxx>
 #include <Standard_TypeMismatch.hxx>
-#include <TColgp_Array1OfPnt.hxx>
 #include <TColStd_Array2OfReal.hxx>
-#include <TColStd_HSequenceOfInteger.hxx>
 #include <V3d.hxx>
 #include <V3d_BadValue.hxx>
 #include <V3d_Light.hxx>
@@ -142,6 +139,27 @@ V3d_View::V3d_View (const Handle(V3d_Viewer)& theViewer, const Handle(V3d_View)&
 //=============================================================================
 V3d_View::~V3d_View()
 {
+  if (myParentView != nullptr)
+  {
+    myParentView->RemoveSubview (this);
+    myParentView = nullptr;
+  }
+  {
+    NCollection_Sequence<Handle(V3d_View)> aSubviews = mySubviews;
+    mySubviews.Clear();
+    for (const Handle(V3d_View)& aViewIter : aSubviews)
+    {
+      //aViewIter->Remove();
+      aViewIter->myParentView = nullptr;
+      aViewIter->MyWindow.Nullify();
+      aViewIter->myView->Remove();
+      if (aViewIter->MyViewer != nullptr)
+      {
+        aViewIter->MyViewer->SetViewOff (aViewIter);
+      }
+    }
+  }
+
   if (!myView->IsRemoved())
   {
     myView->Remove();
@@ -164,7 +182,7 @@ void V3d_View::SetMagnify (const Handle(Aspect_Window)& theWindow,
     Standard_Real aU1, aV1, aU2, aV2;
     thePreviousView->Convert (theX1, theY1, aU1, aV1);
     thePreviousView->Convert (theX2, theY2, aU2, aV2);
-    myView->SetWindow (theWindow);
+    myView->SetWindow (Handle(Graphic3d_CView)(), theWindow, nullptr);
     FitAll (aU1, aV1, aU2, aV2);
     MyViewer->SetViewOn (this);
     MyWindow = theWindow;
@@ -185,16 +203,63 @@ void V3d_View::SetWindow (const Handle(Aspect_Window)&  theWindow,
   {
     return;
   }
+  if (myParentView != nullptr)
+  {
+    throw Standard_ProgramError ("V3d_View::SetWindow() called twice");
+  }
 
   // method V3d_View::SetWindow() should assign the field MyWindow before calling Redraw()
   MyWindow = theWindow;
-  myView->SetWindow (theWindow, theContext);
+  myView->SetWindow (Handle(Graphic3d_CView)(), theWindow, theContext);
   MyViewer->SetViewOn (this);
   SetRatio();
   if (myImmediateUpdate)
   {
     Redraw();
   }
+}
+
+//=============================================================================
+//function : SetWindow
+//purpose  :
+//=============================================================================
+void V3d_View::SetWindow (const Handle(V3d_View)& theParentView,
+                          const Graphic3d_Vec2d& theSize,
+                          Aspect_TypeOfTriedronPosition theCorner,
+                          const Graphic3d_Vec2d& theOffset,
+                          const Graphic3d_Vec2i& theMargins)
+{
+  if (myView->IsRemoved())
+  {
+    return;
+  }
+
+  Handle(V3d_View) aParentView = !theParentView->IsSubview()
+                               ? theParentView
+                               : theParentView->ParentView();
+  if (aParentView != myParentView)
+  {
+    if (myParentView != nullptr)
+    {
+      throw Standard_ProgramError ("V3d_View::SetWindow() called twice");
+    }
+
+    myParentView = aParentView.get();
+    aParentView->AddSubview (this);
+  }
+
+  Handle(Aspect_NeutralWindow) aWindow = new Aspect_NeutralWindow();
+  aWindow->SetVirtual (true);
+  aWindow->SetSize (4, 4);
+  myView->SetSubviewCorner (theCorner);
+  myView->SetSubviewSize (theSize);
+  myView->SetSubviewOffset (theOffset);
+  myView->SetSubviewMargins (theMargins);
+
+  MyWindow = aWindow;
+  myView->SetWindow (aParentView->View(), aWindow, 0);
+  MyViewer->SetViewOn (this);
+  SetRatio();
 }
 
 //=============================================================================
@@ -212,10 +277,84 @@ void V3d_View::Remove()
     myTrihedron->Erase();
   }
 
-  MyViewer->DelView (this);
+  if (myParentView != nullptr)
+  {
+    myParentView->RemoveSubview (this);
+    myParentView = nullptr;
+  }
+  {
+    NCollection_Sequence<Handle(V3d_View)> aSubviews = mySubviews;
+    mySubviews.Clear();
+    for (const Handle(V3d_View)& aViewIter : aSubviews)
+    {
+      aViewIter->Remove();
+    }
+  }
+
+  if (MyViewer != nullptr)
+  {
+    MyViewer->DelView (this);
+    MyViewer = nullptr;
+  }
   myView->Remove();
-  Handle(Aspect_Window)& aWin = const_cast<Handle(Aspect_Window)&> (MyWindow);
-  aWin.Nullify();
+  MyWindow.Nullify();
+}
+
+// =======================================================================
+// function : AddSubview
+// purpose  :
+// =======================================================================
+void V3d_View::AddSubview (const Handle(V3d_View)& theView)
+{
+  mySubviews.Append (theView);
+}
+
+// =======================================================================
+// function : RemoveSubview
+// purpose  :
+// =======================================================================
+bool V3d_View::RemoveSubview (const V3d_View* theView)
+{
+  for (NCollection_Sequence<Handle(V3d_View)>::Iterator aViewIter (mySubviews); aViewIter.More(); aViewIter.Next())
+  {
+    if (aViewIter.Value() == theView)
+    {
+      mySubviews.Remove (aViewIter);
+      return true;
+    }
+  }
+  return false;
+}
+
+// =============================================================================
+// function : PickSubview
+// purpose  :
+// =============================================================================
+Handle(V3d_View) V3d_View::PickSubview (const Graphic3d_Vec2i& thePnt) const
+{
+  if (thePnt.x() < 0
+   || thePnt.x() >= MyWindow->Dimensions().x()
+   || thePnt.y() < 0
+   || thePnt.y() >= MyWindow->Dimensions().y())
+  {
+    return Handle(V3d_View)();
+  }
+
+  // iterate in opposite direction - from front to bottom views
+  for (Standard_Integer aSubviewIter = mySubviews.Upper(); aSubviewIter >= mySubviews.Lower(); --aSubviewIter)
+  {
+    const Handle(V3d_View)& aSubview = mySubviews.Value (aSubviewIter);
+    if (aSubview->View()->IsActive()
+     && thePnt.x() >= aSubview->View()->SubviewTopLeft().x()
+     && thePnt.x() < (aSubview->View()->SubviewTopLeft().x() + aSubview->Window()->Dimensions().x())
+     && thePnt.y() >= aSubview->View()->SubviewTopLeft().y()
+     && thePnt.y() < (aSubview->View()->SubviewTopLeft().y() + aSubview->Window()->Dimensions().y()))
+    {
+      return aSubview;
+    }
+  }
+
+  return this;
 }
 
 //=============================================================================
@@ -479,7 +618,7 @@ void V3d_View::SetBackgroundImage (const Standard_CString theFileName,
                                    const Aspect_FillMethod theFillStyle,
                                    const Standard_Boolean theToUpdate)
 {
-  Handle(Graphic3d_Texture2D) aTextureMap = new Graphic3d_Texture2Dmanual (theFileName);
+  Handle(Graphic3d_Texture2D) aTextureMap = new Graphic3d_Texture2D (theFileName);
   aTextureMap->DisableModulate();
   SetBackgroundImage (aTextureMap, theFillStyle, theToUpdate);
 }
@@ -527,6 +666,16 @@ void V3d_View::SetBackgroundCubeMap (const Handle(Graphic3d_CubeMap)& theCubeMap
   {
     Redraw();
   }
+}
+
+//=============================================================================
+//function : SetBackgroundSkydome
+//purpose  :
+//=============================================================================
+void V3d_View::SetBackgroundSkydome (const Aspect_SkydomeBackground& theAspect,
+                                     Standard_Boolean theToUpdatePBREnv)
+{
+  myView->SetBackgroundSkydome (theAspect, theToUpdatePBREnv);
 }
 
 //=============================================================================

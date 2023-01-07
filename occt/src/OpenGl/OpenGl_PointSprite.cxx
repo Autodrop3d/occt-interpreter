@@ -18,7 +18,6 @@
 #include <OpenGl_Context.hxx>
 #include <OpenGl_Sampler.hxx>
 #include <Standard_Assert.hxx>
-#include <Image_PixMap.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(OpenGl_PointSprite,OpenGl_Texture)
 
@@ -59,9 +58,7 @@ void OpenGl_PointSprite::Release (OpenGl_Context* theGlCtx)
 
     if (theGlCtx->IsValid())
     {
-    #if !defined(GL_ES_VERSION_2_0)
-      glDeleteLists (myBitmapList, 1);
-    #endif
+      theGlCtx->core11ffp->glDeleteLists (myBitmapList, 1);
     }
     myBitmapList = 0;
   }
@@ -84,12 +81,10 @@ void OpenGl_PointSprite::SetDisplayList (const Handle(OpenGl_Context)& theCtx,
 // function : DrawBitmap
 // purpose  :
 // =======================================================================
-void OpenGl_PointSprite::DrawBitmap (const Handle(OpenGl_Context)& ) const
+void OpenGl_PointSprite::DrawBitmap (const Handle(OpenGl_Context)& theCtx) const
 {
   if (myBitmapList != 0)
   {
-  #if !defined(GL_ES_VERSION_2_0)
-    glCallList (myBitmapList);
-  #endif
+    theCtx->core11ffp->glCallList (myBitmapList);
   }
 }

@@ -16,13 +16,11 @@
 
 #include <APIHeaderSection_EditHeader.hxx>
 #include <APIHeaderSection_MakeHeader.hxx>
-#include <HeaderSection.hxx>
 #include <IFSelect_EditForm.hxx>
 #include <IFSelect_SelectModelRoots.hxx>
 #include <IFSelect_SelectSignature.hxx>
 #include <IFSelect_SignAncestor.hxx>
 #include <IFSelect_SignCounter.hxx>
-#include <Interface_InterfaceModel.hxx>
 #include <Interface_Macros.hxx>
 #include <Interface_Static.hxx>
 #include <RWHeaderSection.hxx>
@@ -37,7 +35,6 @@
 #include <STEPEdit.hxx>
 #include <STEPEdit_EditContext.hxx>
 #include <STEPEdit_EditSDR.hxx>
-#include <StepSelect_StepType.hxx>
 #include <StepSelect_WorkLibrary.hxx>
 #include <STEPSelections_SelectAssembly.hxx>
 #include <STEPSelections_SelectDerived.hxx>
@@ -45,10 +42,8 @@
 #include <STEPSelections_SelectForTransfer.hxx>
 #include <STEPSelections_SelectGSCurves.hxx>
 #include <STEPSelections_SelectInstances.hxx>
-#include <TCollection_HAsciiString.hxx>
 #include <TopoDS_Shape.hxx>
 #include <Transfer_ActorOfTransientProcess.hxx>
-#include <Transfer_FinderProcess.hxx>
 #include <XSAlgo.hxx>
 #include <XSControl_WorkSession.hxx>
 
@@ -184,12 +179,66 @@ STEPControl_Controller::STEPControl_Controller ()
     Interface_Static::Init ("step","write.step.vertex.mode",'&',"eval One Compound");
     Interface_Static::Init ("step","write.step.vertex.mode",'&',"eval Single Vertex");
     Interface_Static::SetIVal("write.step.vertex.mode",0);
-  
+
     // abv 15.11.00: ShapeProcessing
-    Interface_Static::Init ("XSTEP","write.step.resource.name",'t',"STEP");
-    Interface_Static::Init ("XSTEP","read.step.resource.name",'t',"STEP");
-    Interface_Static::Init ("XSTEP","write.step.sequence",'t',"ToSTEP");
-    Interface_Static::Init ("XSTEP","read.step.sequence",'t',"FromSTEP");
+    Interface_Static::Init ("XSTEP", "write.step.resource.name",                      't', "STEP");
+    Interface_Static::Init ("XSTEP", "read.step.resource.name",                       't', "STEP");
+    Interface_Static::Init ("XSTEP", "write.step.sequence",                           't', "ToSTEP");
+    Interface_Static::Init ("XSTEP", "read.step.sequence",                            't', "FromSTEP");
+    Interface_Static::Init ("XSTEP", "ToSTEP.exec.op",                                't', "SplitCommonVertex,DirectFaces");
+    Interface_Static::Init ("XSTEP", "FromSTEP.exec.op",                              't', "FixShape");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.Tolerance3d",                 't', "&Runtime.Tolerance");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.MaxTolerance3d",              't', "&Runtime.MaxTolerance");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.MinTolerance3d",              't', "1.e-7");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixFreeShellMode",            't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixFreeFaceMode",             't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixFreeWireMode",             't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixSameParameterMode",        't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixSolidMode",                't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixShellOrientationMode",     't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.CreateOpenSolidMode",         't', "0");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixShellMode",                't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixFaceOrientationMode",      't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixFaceMode",                 't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixWireMode",                 't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixOrientationMode",          't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixAddNaturalBoundMode",      't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixMissingSeamMode",          't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixSmallAreaWireMode",        't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.RemoveSmallAreaFaceMode",     't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixIntersectingWiresMode",    't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixLoopWiresMode",            't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixSplitFaceMode",            't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.AutoCorrectPrecisionMode",    't', "1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.ModifyTopologyMode",          't', "0");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.ModifyGeometryMode",          't', "1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.ClosedWireMode",              't', "1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.PreferencePCurveMode",        't', "1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixReorderMode",              't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixSmallMode",                't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixConnectedMode",            't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixEdgeCurvesMode",           't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixDegeneratedMode",          't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixLackingMode",              't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixSelfIntersectionMode",     't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.RemoveLoopMode",              't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixReversed2dMode",           't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixRemovePCurveMode",         't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixRemoveCurve3dMode",        't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixAddPCurveMode",            't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixAddCurve3dMode",           't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixSeamMode",                 't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixShiftedMode",              't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixEdgeSameParameterMode",    't', "0");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixNotchedEdgesMode",         't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixTailMode",                 't', "0");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.MaxTailAngle",                't', "0.0");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.MaxTailWidth",                't', "-1.0");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixSelfIntersectingEdgeMode", 't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixIntersectingEdgesMode",    't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixNonAdjacentIntersectingEdgesMode", 't', "-1");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixVertexPositionMode",       't', "0");
+    Interface_Static::Init ("XSTEP", "FromSTEP.FixShape.FixVertexToleranceMode",      't', "-1"); 
 
     // ika 28.07.16: Parameter to read all top level solids and shells,
     // should be used only in case of invalid shape_representation without links to shapes.
@@ -221,32 +270,48 @@ STEPControl_Controller::STEPControl_Controller ()
     // Note: the numbers should be consistent with Resource_FormatType enumeration
     Interface_Static::Init("step", "read.step.codepage", 'e', "");
     Interface_Static::Init("step", "read.step.codepage", '&', "enum 0");
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval SJIS");         // Resource_FormatType_SJIS
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval EUC");          // Resource_FormatType_EUC
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval NoConversion"); // Resource_FormatType_NoConversion
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval GB");           // Resource_FormatType_GB
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval UTF8");         // Resource_FormatType_UTF8
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval SystemLocale"); // Resource_FormatType_SystemLocale
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1250");       // Resource_FormatType_CP1250
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1251");       // Resource_FormatType_CP1251
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1252");       // Resource_FormatType_CP1252
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1253");       // Resource_FormatType_CP1253
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1254");       // Resource_FormatType_CP1254
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1255");       // Resource_FormatType_CP1255
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1256");       // Resource_FormatType_CP1256
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1257");       // Resource_FormatType_CP1257
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1258");       // Resource_FormatType_CP1258
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-1");    // Resource_FormatType_iso8859_1
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-2");    // Resource_FormatType_iso8859_2
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-3");    // Resource_FormatType_iso8859_3
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-4");    // Resource_FormatType_iso8859_4
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-5");    // Resource_FormatType_iso8859_5
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-6");    // Resource_FormatType_iso8859_6
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-7");    // Resource_FormatType_iso8859_7
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-8");    // Resource_FormatType_iso8859_8
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-9");    // Resource_FormatType_iso8859_9
-    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP850");        // Resource_FormatType_CP850
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval SJIS");         // Resource_FormatType_SJIS 0
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval EUC");          // Resource_FormatType_EUC 1
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval NoConversion"); // Resource_FormatType_NoConversion 2
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval GB");           // Resource_FormatType_GB 3
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval UTF8");         // Resource_FormatType_UTF8 4
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval SystemLocale"); // Resource_FormatType_SystemLocale 5 
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1250");       // Resource_FormatType_CP1250 6
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1251");       // Resource_FormatType_CP1251 7
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1252");       // Resource_FormatType_CP1252 8
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1253");       // Resource_FormatType_CP1253 9
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1254");       // Resource_FormatType_CP1254 10
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1255");       // Resource_FormatType_CP1255 11
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1256");       // Resource_FormatType_CP1256 12
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1257");       // Resource_FormatType_CP1257 13
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP1258");       // Resource_FormatType_CP1258 14 
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-1");    // Resource_FormatType_iso8859_1 15
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-2");    // Resource_FormatType_iso8859_2 16 
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-3");    // Resource_FormatType_iso8859_3 17
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-4");    // Resource_FormatType_iso8859_4 18
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-5");    // Resource_FormatType_iso8859_5 19
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-6");    // Resource_FormatType_iso8859_6 20
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-7");    // Resource_FormatType_iso8859_7 21
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-8");    // Resource_FormatType_iso8859_8 22
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval iso8859-9");    // Resource_FormatType_iso8859_9 23
+    Interface_Static::Init("step", "read.step.codepage", '&', "eval CP850");        // Resource_FormatType_CP850 24
     Interface_Static::SetCVal("read.step.codepage", "UTF8");
+
+    // Tessellated geometry reading: Off by default
+    Interface_Static::Init("step", "read.step.tessellated", 'e', "");
+    Interface_Static::Init("step", "read.step.tessellated", '&', "enum 0");
+    Interface_Static::Init("step", "read.step.tessellated", '&', "eval Off");       // 0
+    Interface_Static::Init("step", "read.step.tessellated", '&', "eval On");        // 1
+    Interface_Static::Init("step", "read.step.tessellated", '&', "eval OnNoBRep");  // 2
+    Interface_Static::SetCVal("read.step.tessellated", "On");
+
+    // Tessellated geometry writing: Off by default
+    Interface_Static::Init("step", "write.step.tessellated", 'e', "");
+    Interface_Static::Init("step", "write.step.tessellated", '&', "enum 0");
+    Interface_Static::Init("step", "write.step.tessellated", '&', "eval Off");      // 0
+    Interface_Static::Init("step", "write.step.tessellated", '&', "eval On");       // 1
+    Interface_Static::Init("step", "write.step.tessellated", '&', "eval OnNoBRep"); // 2
+    Interface_Static::SetCVal("write.step.tessellated", "OnNoBRep");
 
     Standard_STATIC_ASSERT((int)Resource_FormatType_CP850 - (int)Resource_FormatType_CP1250 == 18); // "Error: Invalid Codepage Enumeration"
 

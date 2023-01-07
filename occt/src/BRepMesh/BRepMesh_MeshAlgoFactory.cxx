@@ -14,16 +14,15 @@
 // commercial license or contractual agreement.
 
 #include <BRepMesh_MeshAlgoFactory.hxx>
-#include <BRepMesh_DefaultRangeSplitter.hxx>
-#include <BRepMesh_NURBSRangeSplitter.hxx>
 #include <BRepMesh_SphereRangeSplitter.hxx>
 #include <BRepMesh_CylinderRangeSplitter.hxx>
 #include <BRepMesh_ConeRangeSplitter.hxx>
 #include <BRepMesh_TorusRangeSplitter.hxx>
 #include <BRepMesh_DelaunayBaseMeshAlgo.hxx>
-#include <BRepMesh_DelaunayNodeInsertionMeshAlgo.hxx>
 #include <BRepMesh_DelaunayDeflectionControlMeshAlgo.hxx>
 #include <BRepMesh_BoundaryParamsRangeSplitter.hxx>
+#include <BRepMesh_ExtrusionRangeSplitter.hxx>
+#include <BRepMesh_UndefinedRangeSplitter.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(BRepMesh_MeshAlgoFactory, IMeshTools_MeshAlgoFactory)
 
@@ -74,34 +73,55 @@ Handle(IMeshTools_MeshAlgo) BRepMesh_MeshAlgoFactory::GetAlgo(
   switch (theSurfaceType)
   {
   case GeomAbs_Plane:
-    return theParameters.InternalVerticesMode ?
-      new NodeInsertionMeshAlgo<BRepMesh_DefaultRangeSplitter>::Type :
-      new BaseMeshAlgo::Type;
+    return theParameters.EnableControlSurfaceDeflectionAllSurfaces ?
+      new DeflectionControlMeshAlgo<BRepMesh_DefaultRangeSplitter>::Type :
+        (theParameters.InternalVerticesMode ?
+         new NodeInsertionMeshAlgo<BRepMesh_DefaultRangeSplitter>::Type :
+         new BaseMeshAlgo::Type);
     break;
 
   case GeomAbs_Sphere:
-    return new NodeInsertionMeshAlgo<BRepMesh_SphereRangeSplitter>::Type;
+    return theParameters.EnableControlSurfaceDeflectionAllSurfaces ?
+      new DeflectionControlMeshAlgo<BRepMesh_SphereRangeSplitter>::Type :
+      new NodeInsertionMeshAlgo<BRepMesh_SphereRangeSplitter>::Type;
     break;
 
   case GeomAbs_Cylinder:
-    return theParameters.InternalVerticesMode ?
-      new NodeInsertionMeshAlgo<BRepMesh_CylinderRangeSplitter>::Type :
-      new BaseMeshAlgo::Type;
+    return theParameters.EnableControlSurfaceDeflectionAllSurfaces ?
+      new DeflectionControlMeshAlgo<BRepMesh_CylinderRangeSplitter>::Type :
+        (theParameters.InternalVerticesMode ?
+        new NodeInsertionMeshAlgo<BRepMesh_CylinderRangeSplitter>::Type :
+        new BaseMeshAlgo::Type);
     break;
 
   case GeomAbs_Cone:
-    return new NodeInsertionMeshAlgo<BRepMesh_ConeRangeSplitter>::Type;
+    return theParameters.EnableControlSurfaceDeflectionAllSurfaces ? 
+      new DeflectionControlMeshAlgo<BRepMesh_ConeRangeSplitter>::Type :
+      new NodeInsertionMeshAlgo<BRepMesh_ConeRangeSplitter>::Type;
     break;
 
   case GeomAbs_Torus:
-    return new NodeInsertionMeshAlgo<BRepMesh_TorusRangeSplitter>::Type;
+    return theParameters.EnableControlSurfaceDeflectionAllSurfaces ?
+      new DeflectionControlMeshAlgo<BRepMesh_TorusRangeSplitter>::Type :
+      new NodeInsertionMeshAlgo<BRepMesh_TorusRangeSplitter>::Type;
     break;
 
   case GeomAbs_SurfaceOfRevolution:
     return new DeflectionControlMeshAlgo<BRepMesh_BoundaryParamsRangeSplitter>::Type;
     break;
 
-  default:
+  case GeomAbs_SurfaceOfExtrusion:
+    return new DeflectionControlMeshAlgo<BRepMesh_ExtrusionRangeSplitter>::Type;
+    break;
+
+  case GeomAbs_BezierSurface:
+  case GeomAbs_BSplineSurface:
     return new DeflectionControlMeshAlgo<BRepMesh_NURBSRangeSplitter>::Type;
+    break;
+
+  case GeomAbs_OffsetSurface:
+  case GeomAbs_OtherSurface:
+  default:
+    return new DeflectionControlMeshAlgo<BRepMesh_UndefinedRangeSplitter>::Type;
   }
 }

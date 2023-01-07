@@ -14,16 +14,8 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-// Modified     Wed Apr  2 14:10:05 1997 by Gerard GRAS
-//              Add FirstQuantity access methods
-// Modified     Mon Apr  7 16:52:40 1997 by Patrick BOSINCO
-//              Add Dimensions access methods
-
-//		Convertir correctement les unites translatees
-
-#include <stdlib.h>
-
 #include <Units.hxx>
+
 #include <Units_Measurement.hxx>
 #include <Units_Quantity.hxx>
 #include <Units_Dimensions.hxx>
@@ -37,6 +29,8 @@
 #include <Standard_NoSuchObject.hxx>
 #include <TColStd_HSequenceOfHAsciiString.hxx>
 #include <Units_Operators.hxx>
+
+#include <stdlib.h>
 
 static Handle(Units_Dimensions) nulldimensions;
 static Handle(Units_UnitsLexicon) lexiconunits;
@@ -246,8 +240,6 @@ Standard_Real Units::ToSI(const Standard_Real aData,
                           Handle(Units_Dimensions) &dim)
 {
   if(lastunit != aUnit ) {
-
-    lastunit = TCollection_AsciiString(aUnit);
     Units_UnitSentence unitsentence(aUnit);
     if(!unitsentence.IsDone()) {
 #ifdef OCCT_DEBUG
@@ -263,6 +255,7 @@ Standard_Real Units::ToSI(const Standard_Real aData,
         Handle(Units_ShiftedToken)::DownCast(token) ;
       lastmove = stoken->Move();
     }
+    lastunit = TCollection_AsciiString(aUnit);
     lastdimension = token->Dimensions();
   }
   dim = lastdimension;
@@ -292,7 +285,6 @@ Standard_Real Units::FromSI(const Standard_Real aData,
                             Handle(Units_Dimensions) &dim)
 {
   if(lastunit != aUnit) {
-    lastunit = TCollection_AsciiString(aUnit);
     Units_UnitSentence unitsentence(aUnit);
     if(!unitsentence.IsDone()) {
 #ifdef OCCT_DEBUG
@@ -308,6 +300,7 @@ Standard_Real Units::FromSI(const Standard_Real aData,
         Handle(Units_ShiftedToken)::DownCast(token) ;
       lastmove = stoken->Move();
     }
+    lastunit = TCollection_AsciiString(aUnit);
     lastdimension = token->Dimensions();
   }
   dim = lastdimension;

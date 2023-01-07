@@ -30,11 +30,9 @@
 #include <Standard_ErrorHandler.hxx>
 #include <Standard_Failure.hxx>
 #include <Standard_Mutex.hxx>
-#include <Standard_NoSuchObject.hxx>
 #include <Standard_NullObject.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
-#include <TopoDS_Face.hxx>
 #include <TopoDS_Iterator.hxx>
 #include <TopoDS_Shape.hxx>
 #include <TopTools_MapOfShape.hxx>
@@ -346,8 +344,7 @@ private:
 //purpose  :
 //=======================================================================
 void BRepCheck_Analyzer::Init (const TopoDS_Shape& theShape,
-                               const Standard_Boolean B,
-                               const Standard_Boolean theIsParallel)
+                               const Standard_Boolean B)
 {
   if (theShape.IsNull())
   {
@@ -356,8 +353,8 @@ void BRepCheck_Analyzer::Init (const TopoDS_Shape& theShape,
 
   myShape = theShape;
   myMap.Clear();
-  Put (theShape, B, theIsParallel);
-  Perform (theIsParallel);
+  Put (theShape, B);
+  Perform();
 }
 
 //=======================================================================
@@ -365,8 +362,7 @@ void BRepCheck_Analyzer::Init (const TopoDS_Shape& theShape,
 //purpose  :
 //=======================================================================
 void BRepCheck_Analyzer::Put (const TopoDS_Shape& theShape,
-                              const Standard_Boolean B,
-                              const Standard_Boolean theIsParallel)
+                              const Standard_Boolean B)
 {
   if (myMap.Contains (theShape))
   {
@@ -382,6 +378,7 @@ void BRepCheck_Analyzer::Put (const TopoDS_Shape& theShape,
     case TopAbs_EDGE:
       HR = new BRepCheck_Edge (TopoDS::Edge (theShape));
       Handle(BRepCheck_Edge)::DownCast(HR)->GeometricControls (B);
+      Handle(BRepCheck_Edge)::DownCast(HR)->SetExactMethod(myIsExact);
       break;
     case TopAbs_WIRE:
       HR = new BRepCheck_Wire (TopoDS::Wire (theShape));
@@ -406,13 +403,13 @@ void BRepCheck_Analyzer::Put (const TopoDS_Shape& theShape,
 
   if (!HR.IsNull())
   {
-    HR->SetParallel (theIsParallel);
+    HR->SetParallel (myIsParallel);
   }
   myMap.Add (theShape, HR);
 
   for (TopoDS_Iterator theIterator (theShape); theIterator.More(); theIterator.Next())
   {
-    Put (theIterator.Value(), B, theIsParallel); // performs minimum on each shape
+    Put (theIterator.Value(), B); // performs minimum on each shape
   }
 }
 
@@ -420,7 +417,7 @@ void BRepCheck_Analyzer::Put (const TopoDS_Shape& theShape,
 //function : Perform
 //purpose  :
 //=======================================================================
-void BRepCheck_Analyzer::Perform (Standard_Boolean theIsParallel)
+void BRepCheck_Analyzer::Perform()
 {
   const Standard_Integer aMapSize = myMap.Size();
   const Standard_Integer aMinTaskSize = 10;
@@ -453,7 +450,7 @@ void BRepCheck_Analyzer::Perform (Standard_Boolean theIsParallel)
   }
 
   BRepCheck_ParallelAnalyzer aParallelAnalyzer (aArrayOfArray, myMap);
-  OSD_Parallel::For (0, aArrayOfArray.Size(), aParallelAnalyzer, !theIsParallel);
+  OSD_Parallel::For (0, aArrayOfArray.Size(), aParallelAnalyzer, !myIsParallel);
 }
 
 //=======================================================================

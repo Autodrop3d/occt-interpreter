@@ -23,7 +23,6 @@
 #include <math_MultipleVarFunctionWithGradient.hxx>
 #include <math_Vector.hxx>
 #include <Standard_OutOfRange.hxx>
-#include <Standard_TypeMismatch.hxx>
 #include <StdFail_NotDone.hxx>
 
 //! This class represents distance objective function for surface / surface.
@@ -117,6 +116,15 @@ Extrema_GenExtSS::Extrema_GenExtSS()
 {
   myDone = Standard_False;
   myInit = Standard_False;
+}
+
+// =======================================================================
+// function : ~Extrema_GenExtSS
+// purpose  :
+// =======================================================================
+Extrema_GenExtSS::~Extrema_GenExtSS()
+{
+  //
 }
 
 //=======================================================================

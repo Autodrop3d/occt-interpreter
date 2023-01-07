@@ -36,7 +36,6 @@
 #include <Message_ProgressScope.hxx>
 #include <Standard_ErrorHandler.hxx>
 #include <Standard_Failure.hxx>
-#include <Standard_OutOfRange.hxx>
 #include <Standard_Stream.hxx>
 #include <TColgp_Array1OfPnt.hxx>
 #include <TColStd_Array1OfInteger.hxx>
@@ -115,9 +114,9 @@ Standard_Integer  GeomTools_CurveSet::Index
 //purpose  : 
 //=======================================================================
 
-static void Print(const gp_Pnt P,
-		  Standard_OStream& OS,
-		  const Standard_Boolean compact)
+static void Print(const gp_Pnt&          P,
+                  Standard_OStream&      OS,
+                  const Standard_Boolean compact)
 {
   OS << P.X();
   if (!compact) OS << ",";
@@ -134,9 +133,9 @@ static void Print(const gp_Pnt P,
 //purpose  : 
 //=======================================================================
 
-static void Print(const gp_Dir D,
-		  Standard_OStream& OS,
-		  const Standard_Boolean compact)
+static void Print(const gp_Dir&          D,
+                  Standard_OStream&      OS,
+                  const Standard_Boolean compact)
 {
   OS << D.X();
   if (!compact) OS << ",";

@@ -21,7 +21,6 @@
 #include <Standard_Handle.hxx>
 
 #include <Standard_Boolean.hxx>
-#include <Standard_CString.hxx>
 #include <Draw_Interpretor.hxx>
 class TDocStd_Application;
 class TDocStd_Document;
@@ -85,26 +84,6 @@ public:
   //! ShapeSchema_Read
   Standard_EXPORT static void ShapeSchemaCommands(Draw_Interpretor& theCommands);
 
-
-protected:
-
-
-
-
-
-private:
-
-
-
-
-friend class DDocStd_DrawDocument;
-
 };
-
-
-
-
-
-
 
 #endif // _DDocStd_HeaderFile

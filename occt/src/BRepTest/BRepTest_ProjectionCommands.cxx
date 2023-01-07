@@ -21,10 +21,7 @@
 #include <Draw_Interpretor.hxx>
 #include <Draw.hxx>
 #include <BRepProj_Projection.hxx>
-#include <TopExp_Explorer.hxx>
 #include <BRepTest.hxx>
-#include <TopoDS.hxx>
-#include <stdio.h>
 
 //=======================================================================
 //function : prj

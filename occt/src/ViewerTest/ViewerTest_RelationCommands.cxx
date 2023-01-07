@@ -17,11 +17,7 @@
 #include <ViewerTest.hxx>
 
 #include <AIS_Circle.hxx>
-#include <AIS_DisplayMode.hxx>
 #include <AIS_InteractiveContext.hxx>
-#include <AIS_ListIteratorOfListOfInteractive.hxx>
-#include <AIS_ListOfInteractive.hxx>
-#include <AIS_MapOfInteractive.hxx>
 #include <AIS_Point.hxx>
 #include <AIS_Shape.hxx>
 #include <PrsDim_AngleDimension.hxx>
@@ -42,16 +38,12 @@
 #include <PrsDim_TangentRelation.hxx>
 #include <BRep_Builder.hxx>
 #include <BRep_Tool.hxx>
-#include <BRepAdaptor_Curve.hxx>
-#include <BRepBuilderAPI_MakeVertex.hxx>
 #include <BRepExtrema_ExtCC.hxx>
-#include <BRepExtrema_ExtPC.hxx>
 #include <BRepExtrema_ExtCF.hxx>
 #include <BRepExtrema_ExtPF.hxx>
 #include <BRepExtrema_ExtFF.hxx>
 #include <BRepTools.hxx>
 #include <Draw_Interpretor.hxx>
-#include <Draw.hxx>
 #include <Draw_Appli.hxx>
 #include <Draw_Window.hxx>
 #include <DBRep.hxx>
@@ -71,25 +63,17 @@
 #include <IntAna_Quadric.hxx>
 #include <Message.hxx>
 #include <Precision.hxx>
-#include <StdSelect.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <TCollection_ExtendedString.hxx>
-#include <TColStd_MapOfInteger.hxx>
 #include <TColStd_SequenceOfReal.hxx>
-#include <TopAbs.hxx>
 #include <TopAbs_ShapeEnum.hxx>
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Face.hxx>
-#include <TopoDS_Solid.hxx>
 #include <TopoDS_Vertex.hxx>
-#include <V3d_Viewer.hxx>
 #include <V3d_View.hxx>
-#include <V3d.hxx>
-#include <ViewerTest_DoubleMapOfInteractiveAndName.hxx>
 #include <ViewerTest_DoubleMapIteratorOfDoubleMapOfInteractiveAndName.hxx>
-#include <ViewerTest_EventManager.hxx>
 
 extern Standard_Boolean VDisplayAISObject (const TCollection_AsciiString& theName,
                                            const Handle(AIS_InteractiveObject)& theAISObj,
@@ -1927,86 +1911,89 @@ static int VMoveDim (Draw_Interpretor& theDi, Standard_Integer theArgNum, const 
 
 void ViewerTest::RelationCommands(Draw_Interpretor& theCommands)
 {
-  const char *group = "AISRelations";
+  const char* aGroup = "AIS Viewer";
+  const char* aFileName = __FILE__;
+  auto addCmd = [&](const char* theName, Draw_Interpretor::CommandFunction theFunc, const char* theHelp)
+  {
+    theCommands.Add (theName, theHelp, aFileName, theFunc, aGroup);
+  };
 
-  theCommands.Add("vdimension",
-      "vdimension name {-angle|-length|-radius|-diameter}"
-      "[-shapes shape1 [shape2 [shape3]]\n"
-      "[-selected]\n"
-      "[-text 3d|2d wf|sh|wireframe|shading IntegerSize]\n"
-      "[-font FontName]\n"
-      "[-label left|right|hcenter|hfit top|bottom|vcenter|vfit]\n"
-      "[-arrow external|internal|fit]\n"
-      "[-zoomablearrow]\n"
-      "[{-arrowlength|-arlen} RealArrowLength]\n"
-      "[{-arrowangle|-arangle} ArrowAngle(degrees)]\n"
-      "[-plane xoy|yoz|zox]\n"
-      "[-flyout FloatValue -extension FloatValue]\n"
-      "[-autovalue]\n"
-      "[-value CustomRealValue]\n"
-      "[-textvalue CustomTextValue]\n"
-      "[-dispunits DisplayUnitsString]\n"
-      "[-modelunits ModelUnitsString]\n"
-      "[-showunits | -hideunits]\n"
-      " -Builds angle, length, radius and diameter dimensions.\n"
-      " -See also: vdimparam, vmovedim.\n",
-      __FILE__,VDimBuilder,group);
+  addCmd ("vdimension", VDimBuilder, /* [vdimension] */ R"(
+vdimension name {-angle|-length|-radius|-diameter}
+    [-shapes shape1 [shape2 [shape3]]
+    [-selected]
+    [-text 3d|2d wf|sh|wireframe|shading IntegerSize]
+    [-font FontName]
+    [-label left|right|hcenter|hfit top|bottom|vcenter|vfit]
+    [-arrow external|internal|fit]
+    [-zoomablearrow]
+    [{-arrowlength|-arlen} RealArrowLength]
+    [{-arrowangle|-arangle} ArrowAngle(degrees)]
+    [-plane xoy|yoz|zox]
+    [-flyout FloatValue -extension FloatValue]
+    [-autovalue]
+    [-value CustomRealValue]
+    [-textvalue CustomTextValue]
+    [-dispunits DisplayUnitsString]
+    [-modelunits ModelUnitsString]
+    [-showunits | -hideunits]
+Builds angle, length, radius and diameter dimensions.
+See also: vdimparam, vmovedim.
+)" /* [vdimension] */);
 
-  theCommands.Add ("vrelation",
-      "vrelation name {-concentric|-equaldistance|-equalradius|-fix|-identic|-offset|-parallel|-perpendicular|-tangent|-symmetric}"
-      "\n\t\t: concentric - 2 circled edges."
-      "\n\t\t: equaldistance - 4 vertex/edges."
-      "\n\t\t: equalradius - 1 or 2 circled edges."
-      "\n\t\t: fix - 1 edge."
-      "\n\t\t: identic - 2 faces, edges or vertices."
-      "\n\t\t: offset - 2 faces."
-      "\n\t\t: parallel - 2 faces or 2 edges."
-      "\n\t\t: perpendicular - 2 faces or 2 edges."
-      "\n\t\t: tangent - two coplanar edges (first the circular edge then the tangent edge) or two faces."
-      "\n\t\t: symmetric - 3 edges or 1 edge and 2 vertices."
-      "-Builds specific relation from selected objects.",
-      __FILE__, VRelationBuilder, group);
+  addCmd ("vrelation", VRelationBuilder, /* [vrelation] */ R"(
+vrelation name {-concentric|-equaldistance|-equalradius|-fix|
+                -identic|-offset|-parallel|-perpendicular|-tangent|-symmetric}
+Builds specific relation from selected objects:
+ -concentric    - 2 circled edges
+ -equaldistance - 4 vertex/edges
+ -equalradius   - 1 or 2 circled edges
+ -fix           - 1 edge
+ -identic       - 2 faces, edges or vertices
+ -offset        - 2 faces
+ -parallel      - 2 faces or 2 edges
+ -perpendicular - 2 faces or 2 edges
+ -tangent       - two coplanar edges (first the circular edge then the tangent edge) or two faces
+ -symmetric     - 3 edges or 1 edge and 2 vertices
+)" /* [vrelation] */);
 
-  theCommands.Add("vdimparam",
-    "vdimparam name"
-    "[-text 3d|2d wf|sh|wireframe|shading IntegerSize]\n"
-    "[-font FontName]\n"
-    "[-label left|right|hcenter|hfit top|bottom|vcenter|vfit]\n"
-    "[-arrow external|internal|fit]\n"
-    "[-zoomablearrow 0|1]\n"
-    "[{-arrowlength|-arlen} RealArrowLength]\n"
-    "[{-arrowangle|-arangle} ArrowAngle(degrees)]\n"
-    "[-plane xoy|yoz|zox]\n"
-    "[-flyout FloatValue -extension FloatValue]\n"
-    "[-value CustomNumberValue]\n"
-    "[-textvalue CustomTextValue]\n"
-    "[-dispunits DisplayUnitsString]\n"
-    "[-modelunits ModelUnitsString]\n"
-    "[-showunits | -hideunits]\n"
-    " -Sets parameters for angle, length, radius and diameter dimensions.\n"
-    " -See also: vmovedim, vdimension.\n",
-    __FILE__,VDimParam,group);
+  addCmd ("vdimparam", VDimParam, /* [vdimparam] */ R"(
+vdimparam name
+    [-text 3d|2d wf|sh|wireframe|shading IntegerSize]
+    [-font FontName]
+    [-label left|right|hcenter|hfit top|bottom|vcenter|vfit]
+    [-arrow external|internal|fit]
+    [-zoomablearrow 0|1]
+    [{-arrowlength|-arlen} RealArrowLength]
+    [{-arrowangle|-arangle} ArrowAngle(degrees)]
+    [-plane xoy|yoz|zox]
+    [-flyout FloatValue -extension FloatValue]
+    [-value CustomNumberValue]
+    [-textvalue CustomTextValue]
+    [-dispunits DisplayUnitsString]
+    [-modelunits ModelUnitsString]
+    [-showunits | -hideunits]
+Sets parameters for angle, length, radius and diameter dimensions.
+See also: vmovedim, vdimension.
+)" /* [vdimparam] */);
 
-  theCommands.Add("vlengthparam",
-    "vlengthparam name"
-    "[-direction {ox|oy|oz|x y z|autodirection}]\n"
-    " -Sets parameters for length dimension.\n"
-    " -See also: vdimparam, vdimension.\n",
-    __FILE__,VLengthParam,group);
+  addCmd ("vlengthparam", VLengthParam, /* [vlengthparam] */ R"(
+vlengthparam name [-direction {ox|oy|oz|x y z|autodirection}]
+Sets parameters for length dimension.
+See also: vdimparam, vdimension.
+)" /* [vlengthparam] */);
 
-  theCommands.Add("vangleparam",
-    "vangleparam name"
-    "[-type interior|exterior]\n"
-    "[-showarrow first|second|both|none]\n"
-    " -Sets parameters for angle dimension.\n"
-    " -See also: vdimparam, vdimension.\n",
-    __FILE__,VAngleParam,group);
+  addCmd ("vangleparam", VAngleParam, /* [vangleparam] */ R"(
+vangleparam name [-type interior|exterior]
+            [-showarrow first|second|both|none]
+Sets parameters for angle dimension.
+See also: vdimparam, vdimension.
+)" /* [vangleparam] */);
 
-  theCommands.Add("vmovedim",
-      "vmovedim : vmovedim [name] [x y z]"
-      "\n\t\t: Moves picked or named (if name defined)"
-      "\n\t\t: dimension to picked mouse position or input point."
-      "\n\t\t: Text label of dimension 'name' is moved to position, another parts of dimensionare adjusted.",
-		  __FILE__,VMoveDim,group);
-
+  addCmd ("vmovedim", VMoveDim, /* [vmovedim] */ R"(
+vmovedim [name] [x y z]
+Moves picked or named (if name defined)
+dimension to picked mouse position or input point.
+Text label of dimension 'name' is moved to position, another parts of dimension are adjusted.
+)" /* [vmovedim] */);
 }

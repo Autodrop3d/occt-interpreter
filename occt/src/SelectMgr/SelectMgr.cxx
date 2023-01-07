@@ -13,11 +13,9 @@
 
 #include <SelectMgr.hxx>
 
+#include <Geom_Circle.hxx>
 #include <Graphic3d_ArrayOfPoints.hxx>
 #include <Graphic3d_AspectMarker3d.hxx>
-#include <Graphic3d_Group.hxx>
-#include <Graphic3d_Structure.hxx>
-#include <Poly_Array1OfTriangle.hxx>
 #include <Poly_Triangulation.hxx>
 #include <Prs3d.hxx>
 #include <Prs3d_LineAspect.hxx>
@@ -25,6 +23,8 @@
 #include <TColgp_HArray1OfPnt.hxx>
 #include <TColgp_SequenceOfPnt.hxx>
 #include <Select3D_SensitiveBox.hxx>
+#include <Select3D_SensitiveCircle.hxx>
+#include <Select3D_SensitiveCylinder.hxx>
 #include <Select3D_SensitiveEntity.hxx>
 #include <Select3D_SensitiveFace.hxx>
 #include <Select3D_SensitivePoint.hxx>
@@ -133,6 +133,58 @@ namespace
       theSeqLines.Append (aPoints);
     }
   }
+
+  //! Fill in circle polylines.
+  static void addCircle (Prs3d_NListOfSequenceOfPnt& theSeqLines,
+                         const Standard_Real theRadius,
+                         const gp_Trsf& theTrsf,
+                         const Standard_Real theHeight = 0)
+  {
+    const Standard_Real anUStep = 0.1;
+    gp_XYZ aVec (0, 0, theHeight);
+
+    Handle(TColgp_HSequenceOfPnt) aPoints = new TColgp_HSequenceOfPnt();
+    Geom_Circle aGeom (gp_Ax2(), theRadius);
+    for (Standard_Real anU = 0.0f; anU < (2.0 * M_PI + anUStep); anU += anUStep)
+    {
+      gp_Pnt aCircPnt = aGeom.Value (anU).Coord() + aVec;
+      aCircPnt.Transform (theTrsf);
+      aPoints->Append (aCircPnt);
+    }
+    theSeqLines.Append (aPoints);
+  }
+
+  //! Fill in cylinder polylines.
+  static void addCylinder (Prs3d_NListOfSequenceOfPnt& theSeqLines,
+                           const Handle(Select3D_SensitiveCylinder)& theSensCyl,
+                           const gp_Trsf& theLoc)
+  {
+    Handle(TColgp_HSequenceOfPnt) aVertLine1 = new TColgp_HSequenceOfPnt();
+    Handle(TColgp_HSequenceOfPnt) aVertLine2 = new TColgp_HSequenceOfPnt();
+
+    const gp_Trsf& aTrsf = theLoc.Multiplied (theSensCyl->Transformation());
+    const Standard_Real aHeight = theSensCyl->Height();
+
+    for (int aCircNum = 0; aCircNum < 3; aCircNum++)
+    {
+      Standard_Real aRadius = 0.5 * (2 - aCircNum) * theSensCyl->BottomRadius()
+                            + 0.5 * aCircNum * theSensCyl->TopRadius();
+      const gp_XYZ aVec (0, 0, aHeight * 0.5 * aCircNum);
+
+      if (aCircNum != 1)
+      {
+        aVertLine1->Append (gp_Pnt (gp_XYZ (aRadius, 0, 0) + aVec).Transformed (aTrsf));
+        aVertLine2->Append (gp_Pnt (gp_XYZ (-aRadius, 0, 0) + aVec).Transformed (aTrsf));
+      }
+
+      if (aRadius > Precision::Confusion())
+      {
+        addCircle (theSeqLines, aRadius, aTrsf, aVec.Z());
+      }
+    }
+    theSeqLines.Append (aVertLine1);
+    theSeqLines.Append (aVertLine2);
+  }
 }
 
 //=======================================================================
@@ -154,6 +206,14 @@ void SelectMgr::ComputeSensitivePrs (const Handle(Graphic3d_Structure)& thePrs,
     if (Handle(Select3D_SensitiveBox) aSensBox = Handle(Select3D_SensitiveBox)::DownCast (anEnt))
     {
       addBoundingBox (aSeqLines, aSensBox, theLoc);
+    }
+    else if (Handle(Select3D_SensitiveCylinder) aSensCyl = Handle(Select3D_SensitiveCylinder)::DownCast (anEnt))
+    {
+      addCylinder (aSeqLines, aSensCyl, theLoc);
+    }
+    else if (Handle(Select3D_SensitiveCircle) aSensCircle = Handle(Select3D_SensitiveCircle)::DownCast (anEnt))
+    {
+      addCircle (aSeqLines, aSensCircle->Radius(), theLoc.Multiplied (aSensCircle->Transformation()));
     }
     else if (Handle(Select3D_SensitiveFace) aFace = Handle(Select3D_SensitiveFace)::DownCast(anEnt))
     {

@@ -14,10 +14,8 @@
 // commercial license or contractual agreement.
 
 #include <OpenGl_CappingAlgo.hxx>
-#include <OpenGl_Context.hxx>
 #include <OpenGl_GlCore11.hxx>
 #include <OpenGl_ClippingIterator.hxx>
-#include <OpenGl_GraphicDriver.hxx>
 #include <OpenGl_ShaderManager.hxx>
 #include <OpenGl_ShaderProgram.hxx>
 #include <OpenGl_StructureShadow.hxx>
@@ -59,7 +57,6 @@ void OpenGl_Structure::renderBoundingBox (const Handle(OpenGl_Workspace)& theWor
     aCtx->core20fwd->glDrawArrays (GL_LINES, 0, aBoundBoxVertBuffer->GetElemsNb());
     aBoundBoxVertBuffer->UnbindAttribute(aCtx, Graphic3d_TOA_POS);
   }
-#if !defined(GL_ES_VERSION_2_0)
   else if (aCtx->core11ffp != NULL)
   {
     const Graphic3d_Vec3d aMind = myBndBox.CornerMin() + aMoveVec;
@@ -94,7 +91,6 @@ void OpenGl_Structure::renderBoundingBox (const Handle(OpenGl_Workspace)& theWor
     aCtx->core11fwd->glDrawArrays (GL_LINE_STRIP, 0, 16);
     aCtx->core11ffp->glDisableClientState (GL_VERTEX_ARRAY);
   }
-#endif
   aCtx->BindTextures (aPrevTexture, Handle(OpenGl_ShaderProgram)());
 }
 
@@ -444,7 +440,7 @@ void OpenGl_Structure::Render (const Handle(OpenGl_Workspace) &theWorkspace) con
   aModelWorld = myRenderTrsf;
 
   const Standard_Boolean anOldGlNormalize = aCtx->IsGlNormalizeEnabled();
-#if !defined(GL_ES_VERSION_2_0)
+
   // detect scale transform
   if (aCtx->core11ffp != NULL
   && !myTrsf.IsNull())
@@ -455,7 +451,6 @@ void OpenGl_Structure::Render (const Handle(OpenGl_Workspace) &theWorkspace) con
       aCtx->SetGlNormalizeEnabled (Standard_True);
     }
   }
-#endif
 
   bool anOldCastShadows = false;
 #ifdef GL_DEPTH_CLAMP
@@ -703,7 +698,6 @@ void OpenGl_Structure::applyPersistence (const Handle(OpenGl_Context)& theCtx,
                         theCtx->VirtualViewport()[2], theCtx->VirtualViewport()[3]);
   }
 
-#if !defined(GL_ES_VERSION_2_0)
   if (!theCtx->IsGlNormalizeEnabled()
     && theCtx->core11ffp != NULL)
   {
@@ -713,7 +707,6 @@ void OpenGl_Structure::applyPersistence (const Handle(OpenGl_Context)& theCtx,
       theCtx->SetGlNormalizeEnabled (true);
     }
   }
-#endif
 }
 
 // =======================================================================

@@ -13,13 +13,11 @@
 
 
 #include <IFSelect_ContextWrite.hxx>
-#include <IFSelect_GeneralModifier.hxx>
 #include <IGESAppli.hxx>
 #include <IGESAppli_Protocol.hxx>
 #include <IGESData_FileProtocol.hxx>
 #include <IGESData_IGESDumper.hxx>
 #include <IGESData_IGESEntity.hxx>
-#include <IGESData_IGESModel.hxx>
 #include <IGESData_IGESWriter.hxx>
 #include <IGESData_Protocol.hxx>
 #include <IGESDefs.hxx>
@@ -41,7 +39,6 @@
 #include <Standard_Stream.hxx>
 #include <Standard_Transient.hxx>
 #include <Standard_Type.hxx>
-#include <TColStd_HSequenceOfInteger.hxx>
 
 #include <errno.h>
 IMPLEMENT_STANDARD_RTTIEXT(IGESSelect_WorkLibrary,IFSelect_WorkLibrary)
@@ -102,7 +99,7 @@ static  Handle(IGESData_FileProtocol) IGESProto;
 
   if (igesmod.IsNull() || prot.IsNull()) return Standard_False;
   const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::ostream> aStream = aFileSystem->OpenOStream (ctx.FileName(), std::ios::out);
+  std::shared_ptr<std::ostream> aStream = aFileSystem->OpenOStream (ctx.FileName(), std::ios::out | std::ios::binary);
   if (aStream.get() == NULL)
   {
     ctx.CCheck(0)->AddFail("IGES File could not be created");

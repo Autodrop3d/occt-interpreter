@@ -202,7 +202,14 @@ public:
   //! orientation to have  matter in the solid. Returns
   //! False if the solid is unOrientable (open or incoherent)
   Standard_EXPORT static Standard_Boolean OrientClosedSolid (TopoDS_Solid& solid);
-  
+
+  //! Returns the order of continuity between two faces
+  //! connected by an edge
+  Standard_EXPORT static GeomAbs_Shape ContinuityOfFaces(const TopoDS_Edge&  theEdge,
+                                                         const TopoDS_Face&  theFace1,
+                                                         const TopoDS_Face&  theFace2,
+                                                         const Standard_Real theAngleTol);
+
   //! Encodes the Regularity of edges on a Shape.
   //! Warning: <TolAng> is an angular tolerance, expressed in Rad.
   //! Warning: If the edges's regularity are coded before, nothing
@@ -282,38 +289,6 @@ public:
                                          const Standard_Boolean theExtVMax,
                                          TopoDS_Face& theFExtended);
 
-
-protected:
-
-
-
-
-
-private:
-
-
-
-
-friend class BRepLib_Command;
-friend class BRepLib_MakeShape;
-friend class BRepLib_MakeVertex;
-friend class BRepLib_MakeEdge;
-friend class BRepLib_MakeEdge2d;
-friend class BRepLib_MakePolygon;
-friend class BRepLib_MakeFace;
-friend class BRepLib_MakeWire;
-friend class BRepLib_MakeShell;
-friend class BRepLib_MakeSolid;
-friend class BRepLib_FindSurface;
-friend class BRepLib_FuseEdges;
-friend class BRepLib_CheckCurveOnSurface;
-
 };
-
-
-
-
-
-
 
 #endif // _BRepLib_HeaderFile

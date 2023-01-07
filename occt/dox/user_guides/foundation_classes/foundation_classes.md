@@ -1331,7 +1331,7 @@ Therefore if the user of *NCollection* does not specify any allocator as a param
 Nevertheless, it is possible to define a custom *Allocator* type to manage the memory in the most optimal or convenient way for this algorithm.
 
 As one possible choice, the class *NCollection_IncAllocator* is included.
-Unlike *NCollection_BaseAllocator*, the memory is allocated in big blocks (about 20kB) and the allocator keeps track of the amount of occupied memory.
+Unlike *NCollection_BaseAllocator*, the memory is allocated in big blocks (about 12kB) and the allocator keeps track of the amount of occupied memory.
 The method *Allocate* just increments the pointer to non-occupied memory and returns its previous value.
 Memory is only released in the destructor of *NCollection_IncAllocator*, the method *Free* is empty.
 If used properly, this Allocator can greatly improve the performance of specific algorithms.
@@ -1837,7 +1837,7 @@ bool areEqualAngles (double theAngle1, double theAngle2)
 {
   return Abs(theAngle1  - theAngle2) < Precision::Angular();
 }
-~~~
+~~~~
 
 It is also possible to check parallelism of two vectors as follows:
 ~~~~{.cpp}
@@ -1845,7 +1845,7 @@ bool areParallelVectors (const gp_Vec& theVec1, const gp_Vec& theVec2)
 {
   return theVec1.IsParallel (theVec2, Precision::Angular());
 }
-~~~
+~~~~
 
 Note that *Precision::Angular()* can be used on both dot and cross products because for small angles the *Sine* and the *Angle* are equivalent.
 So to test if two directions of type *gp_Dir* are perpendicular, it is legal to use the following code:
@@ -1854,7 +1854,7 @@ bool arePerpendicular (const gp_Dir& theDir1, const gp_Dir& theDir2)
 {
   return Abs(theDir1 * theDir2) < Precision::Angular();
 }
-~~~
+~~~~
 
 #### Precision::Confusion
 
@@ -1875,7 +1875,7 @@ bool isNullVector (const gp_Vec& theVec)
 {
   return theVec.Magnitude() < Precision::Confusion();
 }
-~~~
+~~~~
 
 #### Precision::Intersection
 

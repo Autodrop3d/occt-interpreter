@@ -1,4 +1,5 @@
 TKBRep
+TKXDE
 TKTopAlgo
 TKMath
 TKGeomBase
@@ -8,8 +9,10 @@ TKG2d
 TKG3d
 TKMesh
 TKHLR
+TKRWMesh
 TKService
 TKGeomAlgo
 TKV3d
 TKLCAF
 TKXCAF
+TKXSBase

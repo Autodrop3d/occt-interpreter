@@ -25,8 +25,7 @@
 #include <OSD_CachedFileSystem.hxx>
 #include <OSD_FileSystem.hxx>
 #include <OSD_ThreadPool.hxx>
-
-#include <fstream>
+#include <RWGltf_GltfLatePrimitiveArray.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(RWGltf_CafReader, RWMesh_CafReader)
 
@@ -191,7 +190,7 @@ Standard_Boolean RWGltf_CafReader::performMesh (const TCollection_AsciiString& t
   aPSentry.Show();
 
   const Handle(OSD_FileSystem)& aFileSystem = OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::istream> aFile = aFileSystem->OpenIStream (theFile, std::ios::in | std::ios::binary);
+  std::shared_ptr<std::istream> aFile = aFileSystem->OpenIStream (theFile, std::ios::in | std::ios::binary);
   if (aFile.get() == NULL || !aFile->good())
   {
     Message::SendFail (TCollection_AsciiString ("File '") + theFile + "' is not found");

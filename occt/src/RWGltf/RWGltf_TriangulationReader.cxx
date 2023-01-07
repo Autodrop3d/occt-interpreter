@@ -154,7 +154,7 @@ bool RWGltf_TriangulationReader::readFileData (const Handle(RWGltf_GltfLatePrimi
                                                const Handle(OSD_FileSystem)& theFileSystem) const
 {
   const Handle(OSD_FileSystem)& aFileSystem = !theFileSystem.IsNull() ? theFileSystem : OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::istream> aSharedStream = aFileSystem->OpenIStream
+  std::shared_ptr<std::istream> aSharedStream = aFileSystem->OpenIStream
     (theGltfData.StreamUri, std::ios::in | std::ios::binary, theGltfData.StreamOffset);
   if (aSharedStream.get() == NULL)
   {
@@ -215,7 +215,7 @@ bool RWGltf_TriangulationReader::readDracoBuffer (const Handle(RWGltf_GltfLatePr
 {
   const TCollection_AsciiString& aName = theSourceGltfMesh->Id();
   const Handle(OSD_FileSystem)& aFileSystem = !theFileSystem.IsNull() ? theFileSystem : OSD_FileSystem::DefaultFileSystem();
-  opencascade::std::shared_ptr<std::istream> aSharedStream = aFileSystem->OpenIStream (theGltfData.StreamUri, std::ios::in | std::ios::binary, theGltfData.StreamOffset);
+  std::shared_ptr<std::istream> aSharedStream = aFileSystem->OpenIStream (theGltfData.StreamUri, std::ios::in | std::ios::binary, theGltfData.StreamOffset);
   if (aSharedStream.get() == NULL)
   {
     reportError (TCollection_AsciiString("Buffer '") + aName + "' refers to invalid file '" + theGltfData.StreamUri + "'.");
@@ -224,7 +224,7 @@ bool RWGltf_TriangulationReader::readDracoBuffer (const Handle(RWGltf_GltfLatePr
 
 #ifdef HAVE_DRACO
   std::vector<char> aReadData;
-  aReadData.resize (theGltfData.StreamLength);
+  aReadData.resize ((size_t )theGltfData.StreamLength);
   aSharedStream->read (aReadData.data(), (std::streamsize )theGltfData.StreamLength);
   if (!aSharedStream->good())
   {
@@ -297,6 +297,7 @@ bool RWGltf_TriangulationReader::readDracoBuffer (const Handle(RWGltf_GltfLatePr
           myCoordSysConverter.TransformPosition (anXYZ.ChangeCoord());
           setNodePosition (theDestMesh, THE_LOWER_NODE_INDEX + aVertIter, anXYZ);
         }
+        break;
       }
       case RWGltf_GltfArrayType_Normal:
       {

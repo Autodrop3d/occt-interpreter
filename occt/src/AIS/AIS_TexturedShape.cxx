@@ -22,13 +22,11 @@
 #include <Graphic3d_AspectFillArea3d.hxx>
 #include <Graphic3d_Group.hxx>
 #include <Graphic3d_StructureManager.hxx>
-#include <Graphic3d_Texture2Dmanual.hxx>
+#include <Graphic3d_Texture2D.hxx>
 #include <Message.hxx>
 #include <Message_Messenger.hxx>
-#include <Precision.hxx>
 #include <Prs3d_Drawer.hxx>
 #include <Prs3d_Presentation.hxx>
-#include <Prs3d_LineAspect.hxx>
 #include <Prs3d_ShadingAspect.hxx>
 #include <PrsMgr_PresentationManager.hxx>
 #include <Standard_ErrorHandler.hxx>
@@ -36,7 +34,6 @@
 #include <StdPrs_ShadedShape.hxx>
 #include <StdPrs_ToolTriangulatedShape.hxx>
 #include <StdPrs_WFShape.hxx>
-#include <TopExp_Explorer.hxx>
 
 
 IMPLEMENT_STANDARD_RTTIEXT(AIS_TexturedShape,AIS_Shape)
@@ -281,17 +278,17 @@ void AIS_TexturedShape::updateAttributes (const Handle(Prs3d_Presentation)& theP
     TCollection_AsciiString aTextureDesc;
     if (!myTexturePixMap.IsNull())
     {
-      myTexture = new Graphic3d_Texture2Dmanual (myTexturePixMap);
+      myTexture = new Graphic3d_Texture2D (myTexturePixMap);
       aTextureDesc = " (custom image)";
     }
     else if (myPredefTexture != Graphic3d_NOT_2D_UNKNOWN)
     {
-      myTexture = new Graphic3d_Texture2Dmanual (myPredefTexture);
+      myTexture = new Graphic3d_Texture2D (myPredefTexture);
       aTextureDesc = TCollection_AsciiString(" (predefined texture ") + myTexture->GetId() + ")";
     }
     else
     {
-      myTexture = new Graphic3d_Texture2Dmanual (myTextureFile.ToCString());
+      myTexture = new Graphic3d_Texture2D (myTextureFile.ToCString());
       aTextureDesc = TCollection_AsciiString(" (") + myTextureFile + ")";
     }
 
@@ -349,24 +346,20 @@ void AIS_TexturedShape::Compute (const Handle(PrsMgr_PresentationManager)& ,
                                  const Handle(Prs3d_Presentation)& thePrs,
                                  const Standard_Integer theMode)
 {
-  if (myshape.IsNull())
+  if (myshape.IsNull()
+   || (myshape.ShapeType() == TopAbs_COMPOUND && myshape.NbChildren() == 0))
   {
     return;
   }
 
-  if (myshape.ShapeType() > TopAbs_FACE && myshape.ShapeType() < TopAbs_SHAPE)
+  if (myshape.ShapeType() >= TopAbs_WIRE
+   && myshape.ShapeType() <= TopAbs_VERTEX)
   {
+    // TopAbs_WIRE -> 7, TopAbs_EDGE -> 8, TopAbs_VERTEX -> 9 (Graphic3d_DisplayPriority_Highlight)
+    const Standard_Integer aPrior = (Standard_Integer )Graphic3d_DisplayPriority_Above1
+                                  + (Standard_Integer )myshape.ShapeType() - TopAbs_WIRE;
     thePrs->SetVisual (Graphic3d_TOS_ALL);
-    thePrs->SetDisplayPriority (myshape.ShapeType() + 2);
-  }
-
-  if (myshape.ShapeType() == TopAbs_COMPOUND)
-  {
-    TopExp_Explorer anExplor (myshape, TopAbs_VERTEX);
-    if (!anExplor.More())
-    {
-      return;
-    }
+    thePrs->SetDisplayPriority ((Graphic3d_DisplayPriority )aPrior);
   }
 
   if (IsInfinite())
