@@ -50,7 +50,7 @@
 #include <DBRep.hxx>
 #include <Draw_Interpretor.hxx>
 #include <DrawTrSurf.hxx>
-#include <DrawTrSurf_Point.hxx>
+// #include <DrawTrSurf_Point.hxx>
 
 #include <gp.hxx>
 #include <Precision.hxx>

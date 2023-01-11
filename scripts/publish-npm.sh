@@ -18,3 +18,4 @@ ls $PCKG"/package/"
 cd $PCKG"/package/"
 npm publish --access public
 cd -
+git push

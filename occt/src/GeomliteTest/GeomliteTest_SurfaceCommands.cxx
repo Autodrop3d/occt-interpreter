@@ -62,8 +62,8 @@
 #include <GeomConvert_CurveToAnaCurve.hxx>
 #include <GeomConvert_ConvType.hxx>
 
-#include <DrawTrSurf_BezierSurface.hxx>
-#include <DrawTrSurf_BSplineSurface.hxx>
+// #include <DrawTrSurf_BezierSurface.hxx>
+// #include <DrawTrSurf_BSplineSurface.hxx>
 #include <GeomConvert_ApproxSurface.hxx>
 #include <GeomLib_Tool.hxx>
 #include <Geom_Curve.hxx>

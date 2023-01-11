@@ -22,6 +22,7 @@
 #include <BRepGProp.hxx>
 #include <TopoDS_Shape.hxx>
 #include <GProp_PrincipalProps.hxx>
+#include <gp_Ax2.hxx>
 
 #include <Precision.hxx>
 
