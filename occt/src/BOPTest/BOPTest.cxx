@@ -27,10 +27,12 @@
 #include <Message_Msg.hxx>
 #include <Message_Messenger.hxx>
 #include <Message_Report.hxx>
+#include <SWDRAW.hxx>
 #include <TopoDS_AlertWithShape.hxx>
 
 #include <BOPAlgo_Alerts.hxx>
 #include <BOPTest_Objects.hxx>
+
 
 //=======================================================================
 //function : AllCommands
@@ -75,7 +77,7 @@ void  BOPTest::AllCommands(Draw_Interpretor& theCommands)
   // MeshTest::Commands(theCommands);
   // HLRTest::Commands(theCommands);
   BOPTest::AllCommands(theCommands);
-  // SWDRAW::Init (theCommands);
+  SWDRAW::Init (theCommands);
 }
 // // Declare entry point PLUGINFACTORY
 // DPLUGIN(BOPTest)
