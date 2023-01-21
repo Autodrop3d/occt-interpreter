@@ -290,7 +290,7 @@ interrogate(const TopoDS_Shape& aShape, Standard_Real aDeflection = 3, Standard_
 
   // removes all the triangulations of the faces , 
   //and all the polygons on the triangulations of the edges: 
-  BRepTools::Clean(aShape);  
+  // BRepTools::Clean(aShape);  
   
   TopTools_IndexedDataMapOfShapeListOfShape edgeFaceMap;
   TopExp::MapShapesAndAncestors(aShape, TopAbs_EDGE, TopAbs_FACE, edgeFaceMap);
