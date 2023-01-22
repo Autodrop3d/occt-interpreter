@@ -295,7 +295,7 @@ interrogate(const TopoDS_Shape& aShape, Standard_Real aDeflection = 3, Standard_
   TopTools_IndexedDataMapOfShapeListOfShape edgeFaceMap;
   TopExp::MapShapesAndAncestors(aShape, TopAbs_EDGE, TopAbs_FACE, edgeFaceMap);
 
-  BRepMesh_IncrementalMesh(aShape,aDeflection);  
+  // BRepMesh_IncrementalMesh(aShape,aDeflection);  
   DATA facesOut = Array();
   TopExp_Explorer aExpFace; 
   for(aExpFace.Init(aShape,TopAbs_FACE);aExpFace.More();aExpFace.Next()) 
@@ -466,8 +466,8 @@ void dispose(io::DATA request) {
 }
 
 void UpdateTessellation(TopoDS_Shape& shape, double deflection) {
-  BRepTools::Clean(shape);  
-  BRepMesh_IncrementalMesh(shape, deflection);  
+  // BRepTools::Clean(shape);  
+  // BRepMesh_IncrementalMesh(shape, deflection);  
 }
 
 } //io
