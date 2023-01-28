@@ -46,6 +46,7 @@
 #include <BRep_TFace.hxx>
 #include <BRep_ListIteratorOfListOfCurveRepresentation.hxx>
 #include <BRep_TEdge.hxx>
+#include <Standard_DomainError.hxx>
 
 namespace e0 {
 namespace io {
@@ -308,8 +309,12 @@ interrogate(const TopoDS_Shape& aShape, Standard_Real aDeflection = 3, Standard_
     Handle(Geom_Surface) aSurface = BRep_Tool::Surface(aFace);
     DATA surfaceOut = NULL;
     if (aSurface->IsKind("Geom_BoundedSurface")) {
-      Handle(Geom_BSplineSurface) bSpline = GeomConvert::SurfaceToBSplineSurface(aSurface);
-      surfaceOut = surfaceWrite(bSpline);
+      try {
+        Handle(Geom_BSplineSurface) bSpline = GeomConvert::SurfaceToBSplineSurface(aSurface);
+        surfaceOut = surfaceWrite(bSpline);
+      } catch(Standard_DomainError e) {
+        surfaceOut = {"TYPE", "UNKNOWN"};
+      }
       //if BRepPrimAPI_MakePrism(,,,canonicalize = true ) then all swept surfaces(walls) are forced to planes if possible
     } else if (aSurface->IsKind("Geom_ElementarySurface")) {
 //        printf("INTER TYPE: Geom_ElementarySurface \n");
